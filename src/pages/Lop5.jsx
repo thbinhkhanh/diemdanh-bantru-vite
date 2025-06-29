@@ -107,7 +107,6 @@ export default function Lop5() {
       setIsLoading(false);
     }
   };
-  // force redeploy
 
   const fetchClassList = async (namHoc) => {
     try {
