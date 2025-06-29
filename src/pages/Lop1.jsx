@@ -378,10 +378,16 @@ export default function Lop1() {
                 Thông tin tóm tắt
               </Typography>
               <Stack direction="row" spacing={4} sx={{ pl: 2 }}>
-                <Typography variant="body2">Sĩ số lớp: <strong>{filteredStudents.length}</strong></Typography>
-                <Typography variant="body2">Vắng: Có phép: <strong>{filteredStudents.filter(s => !s.diemDanh && s.vangCoPhep === 'có phép').length}</strong></Typography>
-                <Typography variant="body2">Không phép: <strong>{filteredStudents.filter(s => !s.diemDanh && s.vangCoPhep === 'không phép').length}</strong></Typography>
+                <Typography variant="body2">
+                  Sĩ số: <strong>{filteredStudents.length}</strong>
+                </Typography>
+                <Typography variant="body2">
+                  Vắng: Phép: <strong>{filteredStudents.filter(s => !s.diemDanh && s.vangCoPhep === 'có phép').length}</strong>
+                  <span style={{ display: 'inline-block', width: '32px' }}></span>
+                  Không: <strong>{filteredStudents.filter(s => !s.diemDanh && s.vangCoPhep === 'không phép').length}</strong>
+                </Typography>
               </Stack>
+
               <Typography variant="subtitle1" fontWeight="bold" sx={{ mt: 2 }}>
                 Danh sách học sinh vắng:
               </Typography>
@@ -403,33 +409,95 @@ export default function Lop1() {
               <Table size="small" stickyHeader>
                 <TableHead>
                   <TableRow>
-                    <TableCell align="center" sx={{ fontWeight: 'bold', backgroundColor: '#1976d2', color: 'white' }}>STT</TableCell>
-                    <TableCell align="center" sx={{ fontWeight: 'bold', backgroundColor: '#1976d2', color: 'white' }}>HỌ VÀ TÊN</TableCell>
-                    <TableCell align="center" sx={{ fontWeight: 'bold', backgroundColor: '#1976d2', color: 'white' }}>ĐIỂM DANH</TableCell>
-                    <TableCell align="center" sx={{ fontWeight: 'bold', backgroundColor: '#1976d2', color: 'white' }}>BÁN TRÚ</TableCell>
+                    <TableCell
+                      align="center"
+                      sx={{
+                        fontWeight: 'bold',
+                        backgroundColor: '#1976d2',
+                        color: 'white',
+                        px: { xs: 0.5, sm: 2 },      // giảm padding ngang khi trên điện thoại
+                        width: { xs: 30, sm: 'auto' }, // thu hẹp trên điện thoại
+                      }}
+                    >
+                      STT
+                    </TableCell>
+                    <TableCell
+                      align="center"
+                      sx={{
+                        fontWeight: 'bold',
+                        backgroundColor: '#1976d2',
+                        color: 'white',
+                      }}
+                    >
+                      HỌ VÀ TÊN
+                    </TableCell>
+                    <TableCell
+                      align="center"
+                      sx={{
+                        fontWeight: 'bold',
+                        backgroundColor: '#1976d2',
+                        color: 'white',
+                        px: { xs: 0.5, sm: 2 },
+                        width: { xs: 60, sm: 'auto' },
+                      }}
+                    >
+                      ĐIỂM DANH
+                    </TableCell>
+                    <TableCell
+                      align="center"
+                      sx={{
+                        fontWeight: 'bold',
+                        backgroundColor: '#1976d2',
+                        color: 'white',
+                        px: { xs: 0.5, sm: 2 },
+                        width: { xs: 60, sm: 'auto' },
+                        whiteSpace: { xs: 'pre-wrap', sm: 'nowrap' }, // cho phép TRÚ xuống dòng trên mobile
+                      }}
+                    >
+                      BÁN{"\n"}TRÚ
+                    </TableCell>
                   </TableRow>
                 </TableHead>
+
                 <TableBody>
                   {filteredStudents.map((student, index) => (
                     <React.Fragment key={student.id}>
                       <TableRow>
-                        <TableCell align="center">{index + 1}</TableCell>
-                        <TableCell align="left">
+                        <TableCell
+                          align="center"
+                          sx={{ px: { xs: 0.5, sm: 2 }, width: { xs: 40, sm: 'auto' } }}
+                        >
+                          {index + 1}
+                        </TableCell>
+
+                        <TableCell
+                          align="left"
+                          sx={{
+                            px: { xs: 0.5, sm: 2 },
+                            width: { xs: 200, sm: 'auto' },
+                            maxWidth: { xs: 200, sm: 'none' },
+                          }}
+                        >
                           <Typography
                             sx={{
                               cursor: 'pointer',
-                              color: '#000000', // Hoặc 'black'
+                              color: '#000000',
                               '&:hover': student.trangThai === 'vang' ? { textDecoration: 'underline' } : undefined,
                               textDecoration: student.trangThai === 'vang' ? 'none' : 'none',
+                              whiteSpace: 'nowrap',
+                              overflowX: 'auto',
+                              WebkitOverflowScrolling: 'touch',
                             }}
                             onClick={() => handleRowExpandToggle(student.id)}
                           >
                             {student.hoVaTen || 'Không có tên'}
                           </Typography>
-
                         </TableCell>
 
-                        <TableCell align="center">
+                        <TableCell
+                          align="center"
+                          sx={{ px: { xs: 0.5, sm: 2 }, width: { xs: 40, sm: 'auto' } }}
+                        >
                           <Checkbox
                             checked={student.diemDanh}
                             onChange={() => toggleDiemDanh(index)}
@@ -437,7 +505,11 @@ export default function Lop1() {
                             color="primary"
                           />
                         </TableCell>
-                        <TableCell align="center">
+
+                        <TableCell
+                          align="center"
+                          sx={{ px: { xs: 0.5, sm: 2 }, width: { xs: 50, sm: 'auto' } }}
+                        >
                           {student.showRegisterCheckbox && (
                             <Checkbox
                               checked={student.registered ?? false}
@@ -480,7 +552,6 @@ export default function Lop1() {
                                 />
                               </Stack>
 
-                              {/* Lý do + Nút Xuất Zalo */}
                               <Stack direction="row" spacing={2} alignItems="center">
                                 <TextField
                                   label="Lý do"
@@ -498,9 +569,9 @@ export default function Lop1() {
                                     whiteSpace: 'nowrap',
                                     px: 2.5,
                                     height: '40px',
-                                    backgroundColor: '#e3f2fd', // Màu nền nhạt xanh dương
+                                    backgroundColor: '#e3f2fd',
                                     '&:hover': {
-                                      backgroundColor: '#bbdefb', // Màu khi hover
+                                      backgroundColor: '#bbdefb',
                                     },
                                   }}
                                 >
@@ -510,11 +581,12 @@ export default function Lop1() {
                             </Stack>
                           </TableCell>
                         </TableRow>
-
                       )}
                     </React.Fragment>
                   ))}
                 </TableBody>
+
+
               </Table>
             </TableContainer>
           </>
