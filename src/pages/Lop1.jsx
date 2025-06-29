@@ -37,7 +37,9 @@ export default function Lop1() {
   const saveTimeout = useRef(null);
   const intervalRef = useRef(null);
 
-  
+  const [viewMode, setViewMode] = useState('diemDanh'); // 'diemDanh' | 'banTru'
+  const [showBanTruColumn, setShowBanTruColumn] = useState(true);
+
 
   const fetchNamHoc = async () => {
     try {
@@ -347,7 +349,7 @@ export default function Lop1() {
 
   return (
     <Box sx={{ minHeight: '100vh', background: 'linear-gradient(to bottom, #e3f2fd, #bbdefb)', py: 6, px: 2, mt: 6, display: 'flex', justifyContent: 'center' }}>
-      <Card sx={{ p: { xs: 2, sm: 3, md: 4 }, maxWidth: 550, width: '100%', borderRadius: 4, boxShadow: '0 8px 30px rgba(0,0,0,0.15)', backgroundColor: 'white' }} elevation={10}>
+      <Card sx={{ p: { xs: 2, sm: 3, md: 4 }, maxWidth: 450, width: '100%', borderRadius: 4, boxShadow: '0 8px 30px rgba(0,0,0,0.15)', backgroundColor: 'white' }} elevation={10}>
         <Typography variant="h5" align="center" gutterBottom fontWeight="bold" color="primary" sx={{ mb: 4, borderBottom: '3px solid #1976d2', pb: 1 }}>
           DANH SÁCH HỌC SINH
         </Typography>
@@ -363,6 +365,37 @@ export default function Lop1() {
           </FormControl>
         </Stack>
 
+        <Stack direction="row" justifyContent="center" spacing={2} sx={{ mb: 2 }}>
+          <FormControlLabel
+            value="diemDanh"
+            control={
+              <Radio
+                checked={viewMode === 'diemDanh'}
+                onChange={() => {
+                  setViewMode('diemDanh');
+                  setExpandedRowId(null); // ✅ Thêm vào đây
+                }}
+              />
+            }
+            label="Điểm danh"
+          />
+          <FormControlLabel
+            value="banTru"
+            control={
+              <Radio
+                checked={viewMode === 'banTru'}
+                onChange={() => {
+                  setViewMode('banTru');
+                  setExpandedRowId(null); // ✅ Thêm vào đây
+                }}
+              />
+            }
+            label="Bán trú"
+          />
+        </Stack>
+
+
+
         {isLoading ? (
           <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', my: 2 }}>
             <Box sx={{ width: '50%' }}><LinearProgress /></Box>
@@ -373,36 +406,39 @@ export default function Lop1() {
         ) : (
           <>
             {/* Tóm tắt học sinh */}
-            <Box sx={{ mb: 2, p: 2, backgroundColor: '#f1f8e9', borderRadius: 2 }}>
-              <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-                Thông tin tóm tắt
-              </Typography>
-              <Stack direction="row" spacing={4} sx={{ pl: 2 }}>
-                <Typography variant="body2">
-                  Sĩ số: <strong>{filteredStudents.length}</strong>
+            {viewMode !== 'banTru' && (
+              <Box sx={{ mb: 2, p: 2, backgroundColor: '#f1f8e9', borderRadius: 2 }}>
+                <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                  Thông tin tóm tắt
                 </Typography>
-                <Typography variant="body2">
-                  Vắng: Phép: <strong>{filteredStudents.filter(s => !s.diemDanh && s.vangCoPhep === 'có phép').length}</strong>
-                  <span style={{ display: 'inline-block', width: '32px' }}></span>
-                  Không: <strong>{filteredStudents.filter(s => !s.diemDanh && s.vangCoPhep === 'không phép').length}</strong>
-                </Typography>
-              </Stack>
+                <Stack direction="row" spacing={4} sx={{ pl: 2 }}>
+                  <Typography variant="body2">
+                    Sĩ số: <strong>{filteredStudents.length}</strong>
+                  </Typography>
+                  <Typography variant="body2">
+                    Vắng: Phép: <strong>{filteredStudents.filter(s => !s.diemDanh && s.vangCoPhep === 'có phép').length}</strong>
+                    <span style={{ display: 'inline-block', width: '32px' }}></span>
+                    Không: <strong>{filteredStudents.filter(s => !s.diemDanh && s.vangCoPhep === 'không phép').length}</strong>
+                  </Typography>
+                </Stack>
 
-              <Typography variant="subtitle1" fontWeight="bold" sx={{ mt: 2 }}>
-                Danh sách học sinh vắng:
-              </Typography>
-              <Box sx={{ pl: 2 }}>
-                {filteredStudents.filter(s => !s.diemDanh).length === 0 ? (
-                  <Typography variant="body2">Không có học sinh vắng.</Typography>
-                ) : (
-                  <Box component="ul" sx={{ pl: 2, mt: 0.5 }}>
-                    {filteredStudents.filter(s => !s.diemDanh).map((s, i) => (
-                      <li key={i}>{s.hoVaTen || 'Không tên'} ({s.vangCoPhep === 'có phép' ? 'P' : 'K'})</li>
-                    ))}
-                  </Box>
-                )}
+                <Typography variant="subtitle1" fontWeight="bold" sx={{ mt: 2 }}>
+                  Danh sách học sinh vắng:
+                </Typography>
+                <Box sx={{ pl: 2 }}>
+                  {filteredStudents.filter(s => !s.diemDanh).length === 0 ? (
+                    <Typography variant="body2">Không có học sinh vắng.</Typography>
+                  ) : (
+                    <Box component="ul" sx={{ pl: 2, mt: 0.5 }}>
+                      {filteredStudents.filter(s => !s.diemDanh).map((s, i) => (
+                        <li key={i}>{s.hoVaTen || 'Không tên'} ({s.vangCoPhep === 'có phép' ? 'P' : 'K'})</li>
+                      ))}
+                    </Box>
+                  )}
+                </Box>
               </Box>
-            </Box>
+            )}
+
 
             {/* Bảng học sinh */}
             <TableContainer component={Paper} sx={{ borderRadius: 2, mt: 2 }}>
@@ -415,12 +451,15 @@ export default function Lop1() {
                         fontWeight: 'bold',
                         backgroundColor: '#1976d2',
                         color: 'white',
-                        px: { xs: 0.5, sm: 2 },      // giảm padding ngang khi trên điện thoại
-                        width: { xs: 30, sm: 'auto' }, // thu hẹp trên điện thoại
+                        //px: { xs: 0.5, sm: 2 },
+                        //width: { xs: 30, sm: 'auto' },
+                        px: { xs: 1, sm: 2 }, // 👈 tăng padding ngang cho màn hình nhỏ
+                        width: { xs: 30, sm: 'auto' }, // 👈 tăng width nếu cần
                       }}
                     >
                       STT
                     </TableCell>
+
                     <TableCell
                       align="center"
                       sx={{
@@ -431,31 +470,41 @@ export default function Lop1() {
                     >
                       HỌ VÀ TÊN
                     </TableCell>
-                    <TableCell
-                      align="center"
-                      sx={{
-                        fontWeight: 'bold',
-                        backgroundColor: '#1976d2',
-                        color: 'white',
-                        px: { xs: 0.5, sm: 2 },
-                        width: { xs: 60, sm: 'auto' },
-                      }}
-                    >
-                      ĐIỂM DANH
-                    </TableCell>
-                    <TableCell
-                      align="center"
-                      sx={{
-                        fontWeight: 'bold',
-                        backgroundColor: '#1976d2',
-                        color: 'white',
-                        px: { xs: 0.5, sm: 2 },
-                        width: { xs: 60, sm: 'auto' },
-                        whiteSpace: { xs: 'pre-wrap', sm: 'nowrap' }, // cho phép TRÚ xuống dòng trên mobile
-                      }}
-                    >
-                      BÁN{"\n"}TRÚ
-                    </TableCell>
+
+                    {viewMode === 'diemDanh' && (
+                      <TableCell
+                        align="center"
+                        sx={{
+                          fontWeight: 'bold',
+                          backgroundColor: '#1976d2',
+                          color: 'white',
+                          //px: { xs: 0.5, sm: 2 },
+                         //width: { xs: 60, sm: 'auto' },
+                          px: { xs: 1, sm: 2 }, // 👈 tăng padding ngang cho màn hình nhỏ
+                          width: { xs: 55, sm: 'auto' }, // 👈 tăng width nếu cần
+                        }}
+                      >
+                        ĐIỂM{"\n"}DANH
+                      </TableCell>
+                    )}
+
+                    {viewMode === 'banTru' && (
+                      <TableCell
+                        align="center"
+                        sx={{
+                          fontWeight: 'bold',
+                          backgroundColor: '#1976d2',
+                          color: 'white',
+                          //px: { xs: 0.5, sm: 2 },
+                          //width: { xs: 60, sm: 'auto' },
+                          px: { xs: 0.5, sm: 2 }, // 👈 tăng padding ngang cho màn hình nhỏ
+                          width: { xs: 55, sm: 'auto' }, // 👈 tăng width nếu cần
+                          whiteSpace: { xs: 'pre-wrap', sm: 'nowrap' },
+                        }}
+                      >
+                        BÁN{"\n"}TRÚ
+                      </TableCell>
+                    )}
                   </TableRow>
                 </TableHead>
 
@@ -494,36 +543,43 @@ export default function Lop1() {
                           </Typography>
                         </TableCell>
 
-                        <TableCell
-                          align="center"
-                          sx={{ px: { xs: 0.5, sm: 2 }, width: { xs: 40, sm: 'auto' } }}
-                        >
-                          <Checkbox
-                            checked={student.diemDanh}
-                            onChange={() => toggleDiemDanh(index)}
-                            size="small"
-                            color="primary"
-                          />
-                        </TableCell>
-
-                        <TableCell
-                          align="center"
-                          sx={{ px: { xs: 0.5, sm: 2 }, width: { xs: 50, sm: 'auto' } }}
-                        >
-                          {student.showRegisterCheckbox && (
+                        {viewMode === 'diemDanh' && (
+                          <TableCell
+                            align="center"
+                            sx={{ px: { xs: 0.5, sm: 2 }, width: { xs: 40, sm: 'auto' } }}
+                          >
                             <Checkbox
-                              checked={student.registered ?? false}
-                              onChange={() => toggleRegister(index)}
+                              checked={student.diemDanh}
+                              onChange={() => toggleDiemDanh(index)}
                               size="small"
                               color="primary"
                             />
-                          )}
-                        </TableCell>
+                          </TableCell>
+                        )}
+
+                        {viewMode === 'banTru' && (
+                          <TableCell
+                            align="center"
+                            sx={{ px: { xs: 0.5, sm: 2 }, width: { xs: 50, sm: 'auto' } }}
+                          >
+                            {student.showRegisterCheckbox && (
+                              <Checkbox
+                                checked={student.registered ?? false}
+                                onChange={() => toggleRegister(index)}
+                                size="small"
+                                color="primary"
+                              />
+                            )}
+                          </TableCell>
+                        )}
                       </TableRow>
 
                       {!student.diemDanh && student.id === expandedRowId && (
                         <TableRow>
-                          <TableCell colSpan={4} sx={{ backgroundColor: '#f9f9f9' }}>
+                          <TableCell
+                            colSpan={viewMode === 'banTru' ? 4 : 3}
+                            sx={{ backgroundColor: '#f9f9f9' }}
+                          >
                             <Stack spacing={1} sx={{ pl: 2, py: 1 }}>
                               <Stack direction="row" spacing={4}>
                                 <FormControlLabel
@@ -585,6 +641,8 @@ export default function Lop1() {
                     </React.Fragment>
                   ))}
                 </TableBody>
+
+
 
 
               </Table>
