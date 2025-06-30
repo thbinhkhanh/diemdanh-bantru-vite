@@ -5,12 +5,12 @@ import {
   Route,
   Link,
   useLocation,
+  Navigate,
 } from 'react-router-dom';
 
 import {
   Box,
   Typography,
-  TextField,
   Menu,
   MenuItem,
   Button,
@@ -31,6 +31,13 @@ import Admin from './Admin';
 import DangNhap from './DangNhap';
 import Footer from './pages/Footer';
 import HuongDan from './pages/HuongDan';
+import Login from "./Login";
+
+// Component bảo vệ route chỉ cho phép vào nếu loggedIn = true trong localStorage
+function PrivateRoute({ children }) {
+  const isLoggedIn = localStorage.getItem("loggedIn") === "true";
+  return isLoggedIn ? children : <Navigate to="/login" replace />;
+}
 
 function App() {
   return (
@@ -38,15 +45,21 @@ function App() {
       <Navigation />
       <div style={{ paddingTop: 0 }}>
         <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/lop1" element={<Lop1 />} />
-          <Route path="/lop2" element={<Lop2 />} />
-          <Route path="/lop3" element={<Lop3 />} />
-          <Route path="/lop4" element={<Lop4 />} />
-          <Route path="/lop5" element={<Lop5 />} />
+          <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="/login" element={<Login />} />
+
+          {/* Các route yêu cầu đăng nhập */}
+          <Route path="/home" element={<PrivateRoute><Home /></PrivateRoute>} />
+          <Route path="/lop1" element={<PrivateRoute><Lop1 /></PrivateRoute>} />
+          <Route path="/lop2" element={<PrivateRoute><Lop2 /></PrivateRoute>} />
+          <Route path="/lop3" element={<PrivateRoute><Lop3 /></PrivateRoute>} />
+          <Route path="/lop4" element={<PrivateRoute><Lop4 /></PrivateRoute>} />
+          <Route path="/lop5" element={<PrivateRoute><Lop5 /></PrivateRoute>} />
+          <Route path="/quanly" element={<PrivateRoute><QuanLy /></PrivateRoute>} />
+          <Route path="/admin" element={<PrivateRoute><Admin /></PrivateRoute>} />
+
+          {/* Các trang không cần đăng nhập */}
           <Route path="/dangnhap" element={<DangNhap />} />
-          <Route path="/quanly" element={<QuanLy />} />
-          <Route path="/admin" element={<Admin />} />
           <Route path="/gioithieu" element={<About />} />
           <Route path="/huongdan" element={<HuongDan />} />
           <Route path="/chucnang" element={<About />} />
@@ -61,8 +74,6 @@ function Navigation() {
   const location = useLocation();
   const [selectedYear, setSelectedYear] = useState('');
   const [anchorEl, setAnchorEl] = useState(null);
-
-  const yearOptions = ['2024-2025', '2025-2026'];
 
   useEffect(() => {
     const fetchYear = async () => {
@@ -83,16 +94,6 @@ function Navigation() {
     fetchYear();
   }, []);
 
-  const handleYearChange = async (e) => {
-    const newYear = e.target.value;
-    setSelectedYear(newYear);
-    try {
-      await setDoc(doc(db, 'NAMHOC', 'current'), { nam: newYear });
-    } catch (error) {
-      console.error('Lỗi cập nhật năm học:', error);
-    }
-  };
-
   const handleMenuOpen = (event) => {
     setAnchorEl(event.currentTarget);
   };
@@ -102,13 +103,13 @@ function Navigation() {
   };
 
   const navItems = [
-    { path: '/', name: 'Trang chủ' },
+    { path: '/home', name: 'Trang chủ' },
     { path: '/lop1', name: 'Lớp 1' },
     { path: '/lop2', name: 'Lớp 2' },
     { path: '/lop3', name: 'Lớp 3' },
     { path: '/lop4', name: 'Lớp 4' },
     { path: '/lop5', name: 'Lớp 5' },
-    { path: '/dangnhap', name: 'Quản lý' },
+    { path: '/login', name: 'Đăng nhập' },
   ];
 
   return (
@@ -165,7 +166,7 @@ function Navigation() {
           </Link>
         ))}
 
-        {/* Dropdown Giới thiệu */}
+        {/* Dropdown Trợ giúp */}
         <Button
           onClick={handleMenuOpen}
           style={{
@@ -243,7 +244,6 @@ function Navigation() {
             {selectedYear}
           </Typography>
         </Box>
-
       </Box>
     </nav>
   );
