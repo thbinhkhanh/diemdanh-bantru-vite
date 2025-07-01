@@ -33,7 +33,7 @@ import Footer from './pages/Footer';
 import HuongDan from './pages/HuongDan';
 import Login from "./Login";
 
-// Component bảo vệ route chỉ cho phép vào nếu loggedIn = true trong localStorage
+// ✅ Component bảo vệ route
 function PrivateRoute({ children }) {
   const isLoggedIn = localStorage.getItem("loggedIn") === "true";
   return isLoggedIn ? children : <Navigate to="/login" replace />;
@@ -48,7 +48,7 @@ function App() {
           <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="/login" element={<Login />} />
 
-          {/* Các route yêu cầu đăng nhập */}
+          {/* ✅ Các route yêu cầu đăng nhập */}
           <Route path="/home" element={<PrivateRoute><Home /></PrivateRoute>} />
           <Route path="/lop1" element={<PrivateRoute><Lop1 /></PrivateRoute>} />
           <Route path="/lop2" element={<PrivateRoute><Lop2 /></PrivateRoute>} />
@@ -58,7 +58,7 @@ function App() {
           <Route path="/quanly" element={<PrivateRoute><QuanLy /></PrivateRoute>} />
           <Route path="/admin" element={<PrivateRoute><Admin /></PrivateRoute>} />
 
-          {/* Các trang không cần đăng nhập */}
+          {/* ✅ Các trang không cần đăng nhập */}
           <Route path="/dangnhap" element={<DangNhap />} />
           <Route path="/gioithieu" element={<About />} />
           <Route path="/huongdan" element={<HuongDan />} />

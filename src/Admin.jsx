@@ -62,12 +62,12 @@ export default function Admin({ onCancel }) {
         const accounts = ["admin", "yte", "ketoan", "bgh"];
         const newPasswords = {};
         for (const acc of accounts) {
-          const snap = await getDoc(doc(db, "SETTINGS", acc.toUpperCase()));
+          const snap = await getDoc(doc(db, "ACCOUNT", acc.toUpperCase()));
           newPasswords[acc] = snap.exists() ? snap.data().password || "" : "";
         }
         setPasswords(newPasswords);
 
-        const toggleSnap = await getDoc(doc(db, "SETTINGS", "TAIDULIEU"));
+        const toggleSnap = await getDoc(doc(db, "ACCOUNT", "TAIDULIEU"));
         if (toggleSnap.exists()) setFirestoreEnabled(toggleSnap.data().theokhoi);
       } catch (error) {
         console.error("❌ Lỗi khi tải cấu hình:", error);
@@ -118,7 +118,7 @@ export default function Admin({ onCancel }) {
     const newValue = e.target.value === "khoi";
     setFirestoreEnabled(newValue);
     try {
-      await setDoc(doc(db, "SETTINGS", "TAIDULIEU"), { theokhoi: newValue });
+      await setDoc(doc(db, "ACCOUNT", "TAIDULIEU"), { theokhoi: newValue });
     } catch (error) {
       alert("❌ Không thể cập nhật chế độ Firestore!");
     }
@@ -130,6 +130,7 @@ export default function Admin({ onCancel }) {
       return;
     }
 
+    
     // Mapping tên hiển thị cho các tài khoản
     const accountDisplayNames = {
       yte: "Y tế",
@@ -140,7 +141,7 @@ export default function Admin({ onCancel }) {
 
     try {
       await setDoc(
-        doc(db, "SETTINGS", type.toUpperCase()),
+        doc(db, "ACCOUNT", type.toUpperCase()),
         { password: newPassword },
         { merge: true } // Giữ lại các field khác
       );
@@ -158,6 +159,39 @@ export default function Admin({ onCancel }) {
     }
   };
 
+  const handleCreateAccounts = async () => {
+  try {
+    const truongRef = doc(db, "DANHSACH_2024-2025", "TRUONG");
+    const truongSnap = await getDoc(truongRef);
+
+    if (!truongSnap.exists()) {
+      alert("❌ Không tìm thấy dữ liệu TRUONG!");
+      return;
+    }
+
+    const list = truongSnap.data().list; // là mảng như ["1.1", "1.2", "2.1"]
+      if (!Array.isArray(list)) {
+        alert("❌ Danh sách lớp không hợp lệ!");
+        return;
+      }
+
+      const created = [];
+
+      for (const lop of list) {
+        await setDoc(doc(db, "ACCOUNT", lop), {
+          password: "123456" // hoặc sinh mật khẩu riêng cho mỗi lớp
+        });
+        created.push(lop);
+      }
+
+      alert(`✅ Đã tạo ${created.length} tài khoản lớp: ${created.join(", ")}`);
+    } catch (error) {
+      console.error("❌ Lỗi khi tạo tài khoản:", error.message);
+      alert("❌ Không thể tạo tài khoản lớp!");
+    }
+  };
+
+
   const handleDeleteAll = async () => {
     const confirmed = window.confirm(`⚠️ Bạn có chắc chắn muốn xóa tất cả dữ liệu điểm danh của năm ${selectedYear}?`);
     if (!confirmed) return;
@@ -170,6 +204,7 @@ export default function Admin({ onCancel }) {
       namHocValue: selectedYear, // ✅ Truyền giá trị năm học động vào đây
     });
   };
+
 
   const handleSetDefault = async () => {
     const confirmed = window.confirm("⚠️ Bạn có chắc muốn reset điểm danh?");
@@ -328,6 +363,15 @@ export default function Admin({ onCancel }) {
                 startIcon={<LockResetIcon />}
               >
                 Đổi mật khẩu
+              </Button>
+              
+              <Button
+                variant="outlined"
+                color="secondary"
+                onClick={handleCreateAccounts}
+                sx={{ maxWidth: 300, width: "100%" }}
+              >
+                🆕 Tạo tài khoản mặc định
               </Button>
 
               <FormControl>
