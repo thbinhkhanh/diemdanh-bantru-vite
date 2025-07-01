@@ -661,10 +661,6 @@ export default function Lop1() {
                     </React.Fragment>
                   ))}
                 </TableBody>
-
-
-
-
               </Table>
             </TableContainer>
           </>

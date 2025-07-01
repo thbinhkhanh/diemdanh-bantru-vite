@@ -15,8 +15,9 @@ import { enrichStudents } from '../pages/ThanhPhan/enrichStudents';
 import { saveRegistrationChanges } from '../pages/ThanhPhan/saveRegistration';
 import { saveMultipleDiemDanh } from '../pages/ThanhPhan/saveDiemDanh';
 import { saveSingleDiemDanh } from '../pages/ThanhPhan/saveSingleDiemDanh';
+import { MySort } from '../utils/MySort';
 
-export default function Lop4() {
+export default function Lop1() {
   const location = useLocation();
   const useNewVersion = location.state?.useNewVersion ?? false;
 
@@ -34,8 +35,27 @@ export default function Lop4() {
   const [lastSaved, setLastSaved] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState(null);
+  const [showSavedAlert, setShowSavedAlert] = useState(false);
+  const [lastSavedTime, setLastSavedTime] = useState(null);
 
   const today = new Date().toISOString().split('T')[0];
+
+  useEffect(() => {
+    if (lastSaved && !isSaving) {
+      // So sánh nếu thời gian mới khác với trước đó
+      const newTime = lastSaved.getTime();
+      if (newTime !== lastSavedTime) {
+        setLastSavedTime(newTime);
+        setShowSavedAlert(true);
+
+        const timer = setTimeout(() => {
+          setShowSavedAlert(false);
+        }, 2000); // 5 giây
+
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [lastSaved, isSaving]);
 
   useEffect(() => {
     const fetchNamHoc = async () => {
@@ -79,10 +99,13 @@ export default function Lop4() {
         const col = `BANTRU_${namHoc}`;
         const raw = await fetchStudentsFromFirestore(col, selectedClass, useNewVersion);
         const enriched = enrichStudents(raw, today, selectedClass, useNewVersion);
-        setStudents(enriched);
-
+  
+        const sorted = MySort(enriched); // ✅ SẮP XẾP SAU KHI enrich
+  
+        setStudents(sorted);
+  
         const initMap = {};
-        enriched.forEach(s => (initMap[s.id] = s.registered));
+        sorted.forEach(s => (initMap[s.id] = s.registered));
         setOriginalRegistered(initMap);
       } catch (err) {
         console.error('Lỗi khi tải học sinh:', err.message);
@@ -120,6 +143,7 @@ export default function Lop4() {
   const toggleDiemDanh = async (index) => {
     const updated = [...students];
     updated[index].diemDanh = !updated[index].diemDanh;
+
     if (updated[index].diemDanh) {
       updated[index].vangCoPhep = '';
       updated[index].lyDo = '';
@@ -127,10 +151,25 @@ export default function Lop4() {
     } else {
       updated[index].registered = false;
       setExpandedRowId(updated[index].id);
+
+      // ✅ GỌI LƯU BÁN TRÚ NGAY LÚC ĐÓ
+      await saveRegistrationChanges([updated[index]], namHoc);
+
+      // ✅ CẬP NHẬT BẢN SAO CỦA originalRegistered CHỈ VỚI HỌC SINH ĐÓ
+      setOriginalRegistered(prev => ({
+        ...prev,
+        [updated[index].id]: false,
+      }));
     }
+
     setStudents(updated);
+
+    // ✅ Điểm danh luôn lưu như cũ
     await saveSingleDiemDanh(updated[index], namHoc);
   };
+
+
+
 
   const toggleRegister = (index) => {
     const updated = [...students];
@@ -160,6 +199,12 @@ export default function Lop4() {
     const updated = [...students];
     updated[index].lyDo = value;
     setStudents(updated);
+
+    // Gọi lưu sau khi cập nhật lý do
+    clearTimeout(saveTimeout.current);
+    saveTimeout.current = setTimeout(() => {
+      saveSingleDiemDanh(updated[index], namHoc);
+    }, 500); // debounce tránh lưu quá nhanh khi người dùng đang gõ
   };
 
   const handleSendZalo = (student) => {
@@ -168,214 +213,311 @@ export default function Lop4() {
   };
 
   return (
-  <Box sx={{ display: 'flex', justifyContent: 'center', mt: 12 }}>
-    <Card
-      sx={{
-        p: { xs: 2, sm: 3, md: 4 },
-        maxWidth: 450,
-        width: '100%',
-        borderRadius: 4,
-        boxShadow: '0 8px 30px rgba(0,0,0,0.15)',
-        backgroundColor: 'white'
-      }}
-      elevation={10}
-    >
-      <Typography
-        variant="h5"
-        align="center"
-        gutterBottom
-        fontWeight="bold"
-        color="primary"
-        sx={{ mb: 4, borderBottom: '3px solid #1976d2', pb: 1 }}
+    <Box sx={{ display: 'flex', justifyContent: 'center', mt: 12 }}>
+      <Card
+        sx={{
+          p: { xs: 2, sm: 3, md: 4 },
+          maxWidth: 450,
+          width: '100%',
+          borderRadius: 4,
+          boxShadow: '0 8px 30px rgba(0,0,0,0.15)',
+          backgroundColor: 'white'
+        }}
+        elevation={10}
       >
-        DANH SÁCH HỌC SINH
-      </Typography>
+        <Typography
+          variant="h5"
+          align="center"
+          gutterBottom
+          fontWeight="bold"
+          color="primary"
+          sx={{ mb: 4, borderBottom: '3px solid #1976d2', pb: 1 }}
+        >
+          DANH SÁCH HỌC SINH
+        </Typography>
 
-      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 1 }}>
-        <FormControl size="small" sx={{ width: 120 }}>
-          <InputLabel>Lớp</InputLabel>
-          <Select value={selectedClass} label="Lớp" onChange={handleClassChange}>
-            {classList.map(cls => (
-              <MenuItem key={cls} value={cls}>{cls}</MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-      </Box>
-
-      <Stack direction="row" spacing={2} justifyContent="center" sx={{ mt: 1, mb: 2 }}>
-        <FormControlLabel
-          value="diemdanh"
-          control={<Radio checked={viewMode === 'diemdanh'} onChange={() => setViewMode('diemdanh')} />}
-          label="Điểm danh"
-        />
-        <FormControlLabel
-          value="bantru"
-          control={<Radio checked={viewMode === 'bantru'} onChange={() => setViewMode('bantru')} />}
-          label="Bán trú"
-        />
-      </Stack>
-
-      {/* Tóm tắt học sinh - chỉ hiện nếu không phải "bán trú" */}
-      {viewMode !== 'bantru' && (
-        <Box sx={{ mb: 2, p: 2, backgroundColor: '#f1f8e9', borderRadius: 2 }}>
-          <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-            Thông tin tóm tắt
-          </Typography>
-          <Stack direction="row" spacing={4} sx={{ pl: 2 }}>
-            <Typography variant="body2">
-              Sĩ số: <strong>{students.length}</strong>
-            </Typography>
-            <Typography variant="body2">
-              Vắng: Phép: <strong>{students.filter(s => !s.diemDanh && s.vangCoPhep === 'có phép').length}</strong>
-              &nbsp;&nbsp;
-              Không: <strong>{students.filter(s => !s.diemDanh && s.vangCoPhep === 'không phép').length}</strong>
-            </Typography>
-          </Stack>
-
-          <Typography variant="subtitle1" fontWeight="bold" sx={{ mt: 2 }}>
-            Danh sách học sinh vắng:
-          </Typography>
-          <Box sx={{ pl: 2 }}>
-            {students.filter(s => !s.diemDanh).length === 0 ? (
-              <Typography variant="body2">Không có học sinh vắng.</Typography>
-            ) : (
-              <Box component="ul" sx={{ pl: 2, mt: 0.5 }}>
-                {students.filter(s => !s.diemDanh).map((s, i) => (
-                  <li key={i}>
-                    {s.hoVaTen || 'Không tên'} ({s.vangCoPhep === 'có phép' ? 'P' : 'K'})
-                  </li>
-                ))}
-              </Box>
-            )}
-          </Box>
-        </Box>
-      )}
-
-      {isLoading ? (
-      <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-        <LinearProgress sx={{ width: '50%' }} />
-      </Box>
-    ) : (
-        <TableContainer component={Paper}>
-          <Table size="small">
-            <TableHead>
-              <TableRow sx={{ backgroundColor: '#1976d2', height: 48 }}>
-                <TableCell align="center" sx={{ color: 'white' }}><strong>STT</strong></TableCell>
-                <TableCell align="left" sx={{ color: 'white' }}><strong>HỌ VÀ TÊN</strong></TableCell>
-                {viewMode === 'diemdanh' && (
-                  <TableCell align="center" sx={{ color: 'white' }}><strong>ĐIỂM DANH</strong></TableCell>
-                )}
-                {viewMode === 'bantru' && (
-                  <TableCell align="center" sx={{ color: 'white' }}><strong>BÁN TRÚ</strong></TableCell>
-                )}
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {students.map((s, index) => (
-                <React.Fragment key={s.id}>
-                  <TableRow hover sx={{ height: 48 }}>
-                    <TableCell align="center">{index + 1}</TableCell>
-                    <TableCell align="left">
-                      <Typography
-                        sx={{ cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
-                        onClick={() => setExpandedRowId(prev => prev === s.id ? null : s.id)}
-                      >
-                        {s.hoVaTen || 'Không có tên'}
-                      </Typography>
-                    </TableCell>
-
-                    {viewMode === 'diemdanh' && (
-                      <TableCell align="center">
-                        <Checkbox checked={s.diemDanh} onChange={() => toggleDiemDanh(index)} />
-                      </TableCell>
-                    )}
-
-                    {viewMode === 'bantru' && (
-                      <TableCell align="center">
-                        {s.showRegisterCheckbox && (
-                          <Checkbox checked={s.registered} onChange={() => toggleRegister(index)} />
-                        )}
-                      </TableCell>
-                    )}
-                  </TableRow>
-
-                  {!s.diemDanh && viewMode === 'diemdanh' && expandedRowId === s.id && (
-                    <TableRow>
-                      <TableCell colSpan={3} sx={{ backgroundColor: '#f9f9f9' }}>
-                        <Stack spacing={1} sx={{ pl: 2, py: 1 }}>
-                          <Stack direction="row" spacing={4}>
-                            <FormControlLabel
-                              control={
-                                <Radio
-                                  checked={s.vangCoPhep === 'có phép'}
-                                  onChange={() => handleVangCoPhepChange(index, 'có phép')}
-                                  value="có phép"
-                                  size="small"
-                                />
-                              }
-                              label="Có phép"
-                            />
-                            <FormControlLabel
-                              control={
-                                <Radio
-                                  checked={s.vangCoPhep === 'không phép'}
-                                  onChange={() => handleVangCoPhepChange(index, 'không phép')}
-                                  value="không phép"
-                                  size="small"
-                                />
-                              }
-                              label="Không phép"
-                            />
-                          </Stack>
-                          <Stack direction="row" spacing={2} alignItems="center">
-                            <TextField
-                              label="Lý do"
-                              value={s.lyDo || ''}
-                              onChange={(e) => handleLyDoChange(index, e.target.value)}
-                              size="small"
-                              sx={{ flex: 1 }}
-                            />
-                            <Button
-                              variant="outlined"
-                              onClick={() => handleSendZalo(s)}
-                              size="small"
-                              sx={{
-                                px: 2.5,
-                                height: '40px',
-                                backgroundColor: '#e3f2fd',
-                                '&:hover': { backgroundColor: '#bbdefb' },
-                              }}
-                            >
-                              Xuất Zalo
-                            </Button>
-                          </Stack>
-                        </Stack>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </React.Fragment>
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 1 }}>
+          <FormControl size="small" sx={{ width: 120 }}>
+            <InputLabel>Lớp</InputLabel>
+            <Select value={selectedClass} label="Lớp" onChange={handleClassChange}>
+              {classList.map(cls => (
+                <MenuItem key={cls} value={cls}>{cls}</MenuItem>
               ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      )}
+            </Select>
+          </FormControl>
+        </Box>
 
-      {/* Thông báo lưu */}
-      <Box sx={{ mt: 2 }}>
-        {isSaving && (
-          <Alert severity="info" sx={{ fontSize: '0.875rem' }}>
-            Đang lưu...
-          </Alert>
+        <Stack direction="row" spacing={2} justifyContent="center" sx={{ mt: 1, mb: 2 }}>
+          <FormControlLabel
+            value="diemdanh"
+            control={<Radio checked={viewMode === 'diemdanh'} onChange={() => setViewMode('diemdanh')} />}
+            label="Điểm danh"
+          />
+          <FormControlLabel
+            value="bantru"
+            control={<Radio checked={viewMode === 'bantru'} onChange={() => setViewMode('bantru')} />}
+            label="Bán trú"
+          />
+        </Stack>
+
+        {/* Tóm tắt học sinh - chỉ hiện nếu không phải "bán trú" */}
+        {viewMode !== 'bantru' && (
+          <Box sx={{ mb: 2, p: 2, backgroundColor: '#f1f8e9', borderRadius: 2 }}>
+            <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+              Thông tin tóm tắt
+            </Typography>
+            <Stack direction="row" spacing={4} sx={{ pl: 2 }}>
+              <Typography variant="body2">
+                Sĩ số: <strong>{students.length}</strong>
+              </Typography>
+              <Typography variant="body2">
+                Vắng: Phép: <strong>{students.filter(s => !s.diemDanh && s.vangCoPhep === 'có phép').length}</strong>
+                &nbsp;&nbsp;
+                Không: <strong>{students.filter(s => !s.diemDanh && s.vangCoPhep === 'không phép').length}</strong>
+              </Typography>
+            </Stack>
+
+            <Typography variant="subtitle1" fontWeight="bold" sx={{ mt: 2 }}>
+              Danh sách học sinh vắng:
+            </Typography>
+            <Box sx={{ pl: 2 }}>
+              {students.filter(s => !s.diemDanh).length === 0 ? (
+                <Typography variant="body2">Không có học sinh vắng.</Typography>
+              ) : (
+                <Box component="ul" sx={{ pl: 2, mt: 0.5 }}>
+                  {students.filter(s => !s.diemDanh).map((s, i) => (
+                    <li key={i}>
+                      {s.hoVaTen || 'Không tên'} ({s.vangCoPhep === 'có phép' ? 'P' : 'K'})
+                    </li>
+                  ))}
+                </Box>
+              )}
+            </Box>
+          </Box>
         )}
-        {lastSaved && !isSaving && (
-          <Alert severity="success" sx={{ fontSize: '0.875rem' }}>
-            Đã lưu lúc {lastSaved.toLocaleTimeString('vi-VN')}
-          </Alert>
+
+        {isLoading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+          <LinearProgress sx={{ width: '50%' }} />
+        </Box>
+      ) : (
+          <TableContainer component={Paper} sx={{ borderRadius: 2, mt: 2 }}>
+            <Table size="small" stickyHeader>
+              <TableHead>
+                <TableRow>
+                  <TableCell
+                    align="center"
+                    sx={{
+                      fontWeight: 'bold',
+                      backgroundColor: '#1976d2',
+                      color: 'white',
+                      px: { xs: 1, sm: 2 },
+                      width: { xs: 30, sm: 'auto' },
+                    }}
+                  >
+                    STT
+                  </TableCell>
+
+                  <TableCell
+                    align="center"
+                    sx={{
+                      fontWeight: 'bold',
+                      backgroundColor: '#1976d2',
+                      color: 'white',
+                    }}
+                  >
+                    HỌ VÀ TÊN
+                  </TableCell>
+
+                  {viewMode === 'diemdanh' && (
+                    <TableCell
+                      align="center"
+                      sx={{
+                        fontWeight: 'bold',
+                        backgroundColor: '#1976d2',
+                        color: 'white',
+                        px: { xs: 1, sm: 2 },
+                        width: { xs: 55, sm: 'auto' },
+                      }}
+                    >
+                      ĐIỂM{"\n"}DANH
+                    </TableCell>
+                  )}
+
+                  {viewMode === 'bantru' && (
+                    <TableCell
+                      align="center"
+                      sx={{
+                        fontWeight: 'bold',
+                        backgroundColor: '#1976d2',
+                        color: 'white',
+                        px: { xs: 0.5, sm: 2 },
+                        width: { xs: 55, sm: 'auto' },
+                        whiteSpace: { xs: 'pre-wrap', sm: 'nowrap' },
+                      }}
+                    >
+                      BÁN{"\n"}TRÚ
+                    </TableCell>
+                  )}
+                </TableRow>
+              </TableHead>
+
+              <TableBody>
+                {students.map((s, index) => (
+                  <React.Fragment key={s.id}>
+                    <TableRow>
+                      <TableCell
+                        align="center"
+                        sx={{ px: { xs: 1, sm: 2 }, width: { xs: 30, sm: 'auto' } }}
+                      >
+                        {index + 1}
+                      </TableCell>
+
+                      <TableCell
+                        align="left"
+                        sx={{
+                          px: { xs: 1, sm: 2 },
+                          width: { xs: 200, sm: 'auto' },
+                          maxWidth: { xs: 200, sm: 'none' },
+                        }}
+                      >
+                       <Typography
+                          sx={{
+                            cursor: !s.diemDanh ? 'pointer' : 'default',
+                            color: '#000000',
+                            '&:hover': !s.diemDanh ? { textDecoration: 'underline' } : undefined,
+                            whiteSpace: 'nowrap',
+                            overflowX: 'auto',
+                            WebkitOverflowScrolling: 'touch',
+                          }}
+                          onClick={() => {
+                            if (!s.diemDanh) {
+                              setExpandedRowId(prev => (prev === s.id ? null : s.id));
+                            }
+                          }}
+                        >
+                          {s.hoVaTen || 'Không có tên'}
+                        </Typography>
+                      </TableCell>
+
+                      {viewMode === 'diemdanh' && (
+                        <TableCell
+                          align="center"
+                          sx={{ px: { xs: 1, sm: 2 }, width: { xs: 40, sm: 'auto' } }}
+                        >
+                          <Checkbox
+                            checked={s.diemDanh}
+                            onChange={() => toggleDiemDanh(index)}
+                            size="small"
+                            color="primary"
+                          />
+                        </TableCell>
+                      )}
+
+                      {viewMode === 'bantru' && (
+                        <TableCell
+                          align="center"
+                          sx={{ px: { xs: 1, sm: 2 }, width: { xs: 50, sm: 'auto' } }}
+                        >
+                          {s.showRegisterCheckbox && (
+                            <Checkbox
+                              checked={s.registered ?? false}
+                              onChange={() => toggleRegister(index)}
+                              size="small"
+                              color="primary"
+                            />
+                          )}
+                        </TableCell>
+                      )}
+                    </TableRow>
+
+                    {!s.diemDanh && expandedRowId === s.id && (
+
+                        <TableRow>
+                          <TableCell
+                            colSpan={viewMode === 'bantru' ? 4 : 3}
+                            sx={{ backgroundColor: '#f9f9f9' }}
+                          >
+                            <Stack spacing={1} sx={{ pl: 2, py: 1 }}>
+                              <Stack direction="row" spacing={4}>
+                                <FormControlLabel
+                                  control={
+                                    <Radio
+                                      checked={s.vangCoPhep === 'có phép'}
+                                      onChange={() => handleVangCoPhepChange(index, 'có phép')}
+                                      value="có phép"
+                                      color="primary"
+                                      size="small"
+                                    />
+                                  }
+                                  label="Có phép"
+                                />
+                                <FormControlLabel
+                                  control={
+                                    <Radio
+                                      checked={s.vangCoPhep === 'không phép'}
+                                      onChange={() => handleVangCoPhepChange(index, 'không phép')}
+                                      value="không phép"
+                                      color="primary"
+                                      size="small"
+                                    />
+                                  }
+                                  label="Không phép"
+                                />
+                              </Stack>
+
+                              <Stack direction="row" spacing={2} alignItems="center">
+                                <TextField
+                                  label="Lý do"
+                                  value={s.lyDo || ''}
+                                  onChange={(e) => handleLyDoChange(index, e.target.value)}
+                                  size="small"
+                                  sx={{ flex: 1 }}
+                                />
+                                <Button
+                                  variant="outlined"
+                                  color="primary"
+                                  onClick={() => handleSendZalo(s)}
+                                  size="small"
+                                  sx={{
+                                    whiteSpace: 'nowrap',
+                                    px: 2.5,
+                                    height: '40px',
+                                    backgroundColor: '#e3f2fd',
+                                    '&:hover': {
+                                      backgroundColor: '#bbdefb',
+                                    },
+                                  }}
+                                >
+                                  Xuất Zalo
+                                </Button>
+                              </Stack>
+                            </Stack>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                  </React.Fragment>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+
         )}
-      </Box>
-    </Card>
-  </Box>
-);
 
-
+        {/* Thông báo lưu */}
+        <Box sx={{ mt: 2 }}>
+          {isSaving && (
+            <Alert severity="info" sx={{ fontSize: '0.875rem' }}>
+              Đang lưu...
+            </Alert>
+          )}
+          {lastSaved && !isSaving && showSavedAlert && (
+            <Alert severity="success" sx={{ fontSize: '0.875rem' }}>
+              Đã lưu lúc {lastSaved.toLocaleTimeString('vi-VN')}
+            </Alert>
+          )}
+        </Box>
+      </Card>
+    </Box>
+  );
 }

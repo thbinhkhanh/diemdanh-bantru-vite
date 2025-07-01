@@ -7,23 +7,25 @@ export const saveSingleDiemDanh = async (student, namHoc) => {
 
   try {
     if (!student.diemDanh) {
+      // ✅ Khi học sinh VẮNG
       const value =
         student.vangCoPhep === 'có phép' ? 'P' :
         student.vangCoPhep === 'không phép' ? 'K' :
         '';
 
       await updateDoc(docRef, {
-        lyDo: student.lyDo || '',
         [`Diemdanh.${today}`]: value,
         [`LyDoVang.${today}`]: student.lyDo || '',
-        vang: 'x' // ✅ Quan trọng: đánh dấu học sinh vắng
+        vang: 'x',
+        lyDo: student.lyDo || '',
       });
     } else {
+      // ✅ Khi học sinh đi học lại → xoá dữ liệu ngày hôm nay
       await updateDoc(docRef, {
-        lyDo: deleteField(),
         [`Diemdanh.${today}`]: deleteField(),
         [`LyDoVang.${today}`]: deleteField(),
-        vang: '' // ✅ Trở lại trạng thái đi học
+        lyDo: deleteField(),
+        vang: '', // hoặc bạn có thể bỏ hẳn field này nếu không dùng
       });
     }
   } catch (err) {
