@@ -1,44 +1,3 @@
-import React, { useState } from 'react';
-import {
-  Box,
-  Tabs,
-  Tab,
-  Typography,
-  Grid,
-  Button,
-  Card,
-  CardContent,
-} from '@mui/material';
-import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-
-// Components chức năng
-import ChotSoLieu from '../ChotSoLieu';
-import SoLieuNgay from '../SoLieuNgay';
-import DieuChinhSuatAn from '../DieuChinhSuatAn';
-import XoaDLNgay from '../XoaDLNgay';
-import ThongkeNgay from '../ThongKeNgay';
-import ThongkeThang from '../ThongKeThang';
-import ThongkeNam from '../ThongKeNam';
-import CapNhatDS from '../CapNhatDS';
-import LapDanhSach from '../LapDanhSach';
-import TaiDanhSach from '../TaiDanhSach';
-import Banner from './Banner';
-
-// Icons
-import LockIcon from '@mui/icons-material/Lock';
-import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
-import PlaylistAddCheckIcon from '@mui/icons-material/PlaylistAddCheck';
-import DeleteIcon from '@mui/icons-material/Delete';
-import BarChartIcon from '@mui/icons-material/BarChart';
-import QueryStatsIcon from '@mui/icons-material/QueryStats';
-import TimelineIcon from '@mui/icons-material/Timeline';
-import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
-import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
-import FileUploadIcon from '@mui/icons-material/FileUpload';
-import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
-import StorageIcon from '@mui/icons-material/Storage'; // ✅ icon mới
-
 export default function QuanLy() {
   const loginRole = localStorage.getItem('loginRole');
 
@@ -51,11 +10,7 @@ export default function QuanLy() {
   const [selectedFunction, setSelectedFunction] = useState('');
   const navigate = useNavigate();
 
-<<<<<<< HEAD
   const handleChange = (event, newValue) => {
-=======
-  const handleChange = (event: React.SyntheticEvent, newValue: number) => {
->>>>>>> e8f327fbdff0783522107a27b2a68ead4bdd32d1
     const isQuanTriTab = loginRole === 'admin' && newValue === tabs.length - 1;
     if (isQuanTriTab) {
       navigate('/admin');
@@ -64,11 +19,7 @@ export default function QuanLy() {
     }
   };
 
-<<<<<<< HEAD
   const handleFunctionSelect = (code) => {
-=======
-  const handleFunctionSelect = (code: string) => {
->>>>>>> e8f327fbdff0783522107a27b2a68ead4bdd32d1
     if (code === 'ADMIN') {
       navigate('/admin');
     } else {

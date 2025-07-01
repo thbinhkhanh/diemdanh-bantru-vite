@@ -6,7 +6,8 @@ import {
   getDocs,
   collection
 } from "firebase/firestore";
-import { db } from "./firebaseConfig"; // Đường dẫn file config Firebase của bạn
+
+import { db, auth } from "./firebase";
 
 const Admin = () => {
   const [firestoreEnabled, setFirestoreEnabled] = useState(false);
