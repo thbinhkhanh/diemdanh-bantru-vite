@@ -221,7 +221,8 @@ export default function Lop1() {
           width: '100%',
           borderRadius: 4,
           boxShadow: '0 8px 30px rgba(0,0,0,0.15)',
-          backgroundColor: 'white'
+          backgroundColor: 'white',
+          minHeight: '100vh'
         }}
         elevation={10}
       >

@@ -222,7 +222,8 @@ export default function Lop1() {
           width: '100%',
           borderRadius: 4,
           boxShadow: '0 8px 30px rgba(0,0,0,0.15)',
-          backgroundColor: 'white'
+          backgroundColor: 'white',
+          minHeight: '100vh'
         }}
         elevation={10}
       >
@@ -302,7 +303,7 @@ export default function Lop1() {
           <LinearProgress sx={{ width: '50%' }} />
         </Box>
       ) : (
-          <TableContainer component={Paper} sx={{ borderRadius: 2, mt: 2 }}>
+          <TableContainer component={Paper} sx={{ borderRadius: 1, mt: 2 }}>
             <Table size="small" stickyHeader>
               <TableHead>
                 <TableRow>
