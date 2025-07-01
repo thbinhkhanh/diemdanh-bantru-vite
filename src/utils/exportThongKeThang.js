@@ -1,5 +1,9 @@
+<<<<<<< HEAD
 import * as XLSX from 'xlsx';
 
+=======
+import * as XLSX from "sheetjs-style";
+>>>>>>> e8f327fbdff0783522107a27b2a68ead4bdd32d1
 
 export function exportThongKeThangToExcel(dataList, selectedDate, selectedClass, daySet) {
   const month = selectedDate.getMonth() + 1;

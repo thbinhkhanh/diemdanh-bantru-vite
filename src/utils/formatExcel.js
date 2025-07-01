@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx';
+import * as XLSX from "sheetjs-style";
 
 export function formatExcel(dataList, columnDates, year, selectedClass) {
   if (!dataList || dataList.length === 0) return;
@@ -33,13 +33,18 @@ export function formatExcel(dataList, columnDates, year, selectedClass) {
   const finalData = [headerRow, ...dataRows];
   const ws = XLSX.utils.aoa_to_sheet(finalData);
 
-  // ✅ Đặt độ rộng cột
+  // Đặt độ rộng cột
   ws["!cols"] = [
-    { wch: 5 }, { wch: 15 }, { wch: 20 }, { wch: 30 }, { wch: 8 }, { wch: 12 },
-    ...columnDates.map(() => ({ wch: 12 })),
+    { wch: 5 },   // stt
+    { wch: 15 },  // id
+    { wch: 20 },  // maDinhDanh
+    { wch: 30 },  // hoVaTen
+    { wch: 8 },   // lop
+    { wch: 12 },  // huyDangKy
+    ...columnDates.map(() => ({ wch: 12 })),  // các ngày
   ];
 
-  // ✅ Styling
+  // Styling cho từng ô
   const range = XLSX.utils.decode_range(ws["!ref"]);
   for (let R = 0; R <= range.e.r; ++R) {
     for (let C = 0; C <= range.e.c; ++C) {
@@ -77,7 +82,7 @@ export function formatExcel(dataList, columnDates, year, selectedClass) {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Backup");
 
-  // ✅ Tạo tên file theo format chuẩn
+  // Tạo tên file theo chuẩn với timestamp
   const now = new Date();
   const day = String(now.getDate()).padStart(2, "0");
   const month = String(now.getMonth() + 1).padStart(2, "0");
@@ -89,4 +94,3 @@ export function formatExcel(dataList, columnDates, year, selectedClass) {
 
   XLSX.writeFile(wb, filename);
 }
-
