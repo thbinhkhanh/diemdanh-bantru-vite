@@ -89,7 +89,7 @@ export default function Lop5() {
     const fetchClassList = async () => {
       if (!namHoc) return;
       try {
-        const docRef = doc(db, `DANHSACH_${namHoc}`, 'K1');
+        const docRef = doc(db, `DANHSACH_${namHoc}`, 'K5');
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           const data = docSnap.data();
