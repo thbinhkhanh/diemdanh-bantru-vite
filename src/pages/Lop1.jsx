@@ -41,6 +41,10 @@ export default function Lop1() {
   const today = new Date().toISOString().split('T')[0];
 
   useEffect(() => {
+    setExpandedRowId(null);
+  }, [viewMode]);
+
+  useEffect(() => {
     if (lastSaved && !isSaving) {
       // So sánh nếu thời gian mới khác với trước đó
       const newTime = lastSaved.getTime();
