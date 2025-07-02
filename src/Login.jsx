@@ -83,8 +83,11 @@ export default function Login() {
               color="primary"
               textAlign="center"
             >
-              QUẢN LÝ BÁN TRÚ
+              {(username && username.toLowerCase() === "admin")
+                ? "QUẢN TRỊ HỆ THỐNG"
+                : "QUẢN LÝ BÁN TRÚ"}
             </Typography>
+
 
             <FormControl fullWidth>
               <InputLabel id="account-label">Loại tài khoản</InputLabel>
