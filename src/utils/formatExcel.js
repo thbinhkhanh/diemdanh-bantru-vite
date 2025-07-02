@@ -1,4 +1,4 @@
-import * as XLSX from "sheetjs-style";
+import * as XLSX from 'xlsx';
 
 export function formatExcel(dataList, columnDates, year, selectedClass) {
   if (!dataList || dataList.length === 0) return;

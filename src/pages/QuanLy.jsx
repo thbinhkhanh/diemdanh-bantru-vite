@@ -1,3 +1,47 @@
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+
+// MUI Components
+import {
+  Box,
+  Tabs,
+  Tab,
+  Typography,
+  Grid,
+  Button,
+  Card,
+  CardContent,
+} from '@mui/material';
+
+// MUI Icons
+import LockIcon from '@mui/icons-material/Lock';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import PlaylistAddCheckIcon from '@mui/icons-material/PlaylistAddCheck';
+import DeleteIcon from '@mui/icons-material/Delete';
+import BarChartIcon from '@mui/icons-material/BarChart';
+import QueryStatsIcon from '@mui/icons-material/QueryStats';
+import TimelineIcon from '@mui/icons-material/Timeline';
+import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
+import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
+import FileUploadIcon from '@mui/icons-material/FileUpload';
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+import StorageIcon from '@mui/icons-material/Storage';
+
+// Components chức năng
+import ChotSoLieu from '../ChotSoLieu';
+import SoLieuNgay from '../SoLieuNgay';
+import DieuChinhSuatAn from '../DieuChinhSuatAn';
+import XoaDLNgay from '../XoaDLNgay';
+import ThongkeNgay from '../ThongKeNgay';
+import ThongkeThang from '../ThongKeThang';
+import ThongkeNam from '../ThongKeNam';
+import CapNhatDS from '../CapNhatDS';
+import LapDanhSach from '../LapDanhSach';
+import TaiDanhSach from '../TaiDanhSach';
+import Banner from './Banner';
+
+
 export default function QuanLy() {
   const loginRole = localStorage.getItem('loginRole');
 
