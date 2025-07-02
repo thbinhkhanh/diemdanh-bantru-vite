@@ -55,11 +55,11 @@ export default function TaiDanhSach({ onBack }) {
 
   const handleUpload = async () => {
     const loginRole = localStorage.getItem("loginRole");
-    if (loginRole !== "admin" && loginRole !== "bgh") {
-      setMessage("❌ Bạn không có quyền tải danh sách lên hệ thống!");
-      setSuccess(false);
-      return;
-    }
+    //if (loginRole !== "admin" && loginRole !== "bgh") {
+    //  setMessage("❌ Bạn không có quyền tải danh sách lên hệ thống!");
+    //  setSuccess(false);
+    //  return;
+    //}
 
     if (!selectedFile) {
       setMessage('❗ Chưa chọn file!');
