@@ -5,7 +5,11 @@ import {
   TextField,
   Button,
   Stack,
-  Card
+  Card,
+  MenuItem,
+  Select,
+  InputLabel,
+  FormControl,
 } from "@mui/material";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "./firebase";
@@ -13,7 +17,7 @@ import { useNavigate } from "react-router-dom";
 import Banner from "./pages/Banner";
 
 export default function Login() {
-  const [username, setUsername] = useState("");
+  const [username, setUsername] = useState("yte");
   const [passwordInput, setPasswordInput] = useState("");
   const navigate = useNavigate();
 
@@ -23,7 +27,7 @@ export default function Login() {
       return;
     }
 
-    const userKey = username.trim().toUpperCase();
+    const userKey = username.toUpperCase();
     const docRef = doc(db, "ACCOUNT", userKey);
 
     try {
@@ -39,24 +43,25 @@ export default function Login() {
         return;
       }
 
-      // ✅ Đăng nhập thành công
+      // Lưu thông tin đăng nhập
       localStorage.setItem("loggedIn", "true");
       localStorage.setItem("account", userKey);
+      localStorage.setItem("loginRole", userKey.toLowerCase()); // ✅ Lưu role là chữ thường
 
+      // Điều hướng theo quyền
       if (userKey === "ADMIN") {
-        localStorage.setItem("userClass", "admin");
         navigate("/admin");
       } else {
-        const classNumber = userKey.split(".")[0]; // "1.4" => "1"
-        localStorage.setItem("userClass", classNumber);
+        let targetTab = "dulieu"; // mặc định YTE
+        if (userKey === "KETOAN") targetTab = "thongke";
+        else if (userKey === "BGH") targetTab = "danhsach";
 
-        const allowedPath = `/lop${classNumber}`;
-        navigate(allowedPath, {
-          state: { account: userKey }
+        navigate("/quanly", {
+          state: {
+            account: userKey,
+            tab: targetTab,
+          },
         });
-
-        // ⚠️ Tùy chọn reload để chắc chắn bảo vệ route hoạt động
-        window.location.reload();
       }
     } catch (error) {
       console.error("🔥 Lỗi đăng nhập:", error);
@@ -78,15 +83,23 @@ export default function Login() {
               color="primary"
               textAlign="center"
             >
-              QUẢN TRỊ HỆ THỐNG
+              QUẢN LÝ BÁN TRÚ
             </Typography>
 
-            <TextField
-              label="👤 Tài khoản"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              fullWidth
-            />
+            <FormControl fullWidth>
+              <InputLabel id="account-label">Loại tài khoản</InputLabel>
+              <Select
+                labelId="account-label"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                label="Loại tài khoản"
+              >
+                <MenuItem value="yte">🧾 Y tế</MenuItem>
+                <MenuItem value="ketoan">💰 Kế toán</MenuItem>
+                <MenuItem value="bgh">📋 BGH</MenuItem>
+                <MenuItem value="admin">🔐 Admin</MenuItem>
+              </Select>
+            </FormControl>
 
             <TextField
               label="🔐 Mật khẩu"
@@ -104,7 +117,7 @@ export default function Login() {
               sx={{
                 fontWeight: "bold",
                 textTransform: "none",
-                fontSize: "1rem"
+                fontSize: "1rem",
               }}
             >
               🔐 Đăng nhập

@@ -1,8 +1,6 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-
-// MUI Components
 import {
   Box,
   Tabs,
@@ -14,7 +12,7 @@ import {
   CardContent,
 } from '@mui/material';
 
-// MUI Icons
+// Icons
 import LockIcon from '@mui/icons-material/Lock';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import PlaylistAddCheckIcon from '@mui/icons-material/PlaylistAddCheck';
@@ -28,7 +26,7 @@ import FileUploadIcon from '@mui/icons-material/FileUpload';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import StorageIcon from '@mui/icons-material/Storage';
 
-// Components chức năng
+// Components
 import ChotSoLieu from '../ChotSoLieu';
 import SoLieuNgay from '../SoLieuNgay';
 import DieuChinhSuatAn from '../DieuChinhSuatAn';
@@ -41,21 +39,33 @@ import LapDanhSach from '../LapDanhSach';
 import TaiDanhSach from '../TaiDanhSach';
 import Banner from './Banner';
 
-
 export default function QuanLy() {
-  const loginRole = localStorage.getItem('loginRole');
+  const navigate = useNavigate();
+  const location = useLocation();
+  const loginRole = localStorage.getItem('loginRole')?.toUpperCase();
+  const tabFromLogin = location.state?.tab || '';
 
-  // Gán tab mặc định dựa vào loginRole
+  useEffect(() => {
+    const isLoggedIn = localStorage.getItem('loggedIn');
+    const user = localStorage.getItem('loginRole');
+    if (!isLoggedIn || !user) {
+      navigate('/');
+    }
+  }, [navigate]);
+
   const defaultTabIndex =
-    loginRole === 'yte' ? 0 :
-    loginRole === 'ketoan' ? 1 : 2;
+    tabFromLogin === 'dulieu' ? 0 :
+    tabFromLogin === 'thongke' ? 1 :
+    tabFromLogin === 'danhsach' ? 2 :
+    loginRole === 'YTE' ? 0 :
+    loginRole === 'KETOAN' ? 1 :
+    2;
 
   const [tabIndex, setTabIndex] = useState(defaultTabIndex);
   const [selectedFunction, setSelectedFunction] = useState('');
-  const navigate = useNavigate();
 
   const handleChange = (event, newValue) => {
-    const isQuanTriTab = loginRole === 'admin' && newValue === tabs.length - 1;
+    const isQuanTriTab = loginRole === 'ADMIN' && newValue === tabs.length - 1;
     if (isQuanTriTab) {
       navigate('/admin');
     } else {
@@ -115,7 +125,7 @@ export default function QuanLy() {
     },
   ];
 
-  if (loginRole === 'admin') {
+  if (loginRole === 'ADMIN') {
     tabs.push({
       label: 'QUẢN TRỊ',
       functions: [
@@ -144,7 +154,7 @@ export default function QuanLy() {
                 {tabs.map((tab, index) => (
                   <Tab
                     key={index}
-                    icon={index === 0 ? <StorageIcon fontSize="large" /> : tabs[index].functions[0].icon}
+                    icon={index === 0 ? <StorageIcon fontSize="large" /> : tab.functions[0].icon}
                     iconPosition="top"
                     label={
                       <Typography fontWeight={600} sx={{ fontSize: '14px' }}>

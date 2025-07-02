@@ -11,7 +11,7 @@ import { MySort } from './utils/MySort';
 
 export default function LapDanhSach({ onBack }) {
   const [allStudents, setAllStudents] = useState([]);
-  const [selectedClass, setSelectedClass] = useState('');
+  const [selectedClass, setSelectedClass] = useState('1.1');
   const [filteredStudents, setFilteredStudents] = useState([]);
   const [classList, setClassList] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -60,16 +60,14 @@ export default function LapDanhSach({ onBack }) {
         const classes = [...new Set(studentData.map(s => s.lop))].sort();
         setClassList(classes);
 
-        if (classes.length > 0) {
-          const firstClass = classes[0];
-          setSelectedClass(firstClass);
-
+        if (classes.includes('1.1')) {
           const filtered = MySort(
-            studentData.filter(s => s.lop === firstClass)
+            studentData.filter(s => s.lop === '1.1')
           ).map((s, idx) => ({ ...s, stt: idx + 1 }));
 
           setFilteredStudents(filtered);
         }
+
       } catch (err) {
         console.error('❌ Lỗi khi tải dữ liệu từ Firebase:', err);
         setAlertInfo({

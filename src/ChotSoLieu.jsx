@@ -206,13 +206,13 @@ export default function ChotSoLieu({ onBack }) {
           await Promise.all(hocSinhData.map(async (hs) => {
             const studentRef = doc(db, `BANTRU_${namHocValue}`, hs.id);
             await setDoc(studentRef, {
-              hoVaTen: hs.hoVaTen,
-              lop: hs.lop,
-              stt: hs.stt,
-              maDinhDanh: hs.maDinhDanh,
+              hoVaTen: hs.hoVaTen ?? "",
+              lop: hs.lop ?? "",
+              stt: hs.stt ?? "",
+              maDinhDanh: hs.maDinhDanh ?? "",
               data: {
-                ...hs.data,
-                [formattedDate]: hs.huyDangKy
+                ...(hs.data || {}),
+                [formattedDate]: hs.huyDangKy ?? ""
               }
             }, { merge: true });
           }));
