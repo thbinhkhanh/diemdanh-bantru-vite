@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+
 import {
   Box, Table, TableBody, TableCell, TableContainer, TableHead,
   TableRow, Paper, Checkbox, FormControl, InputLabel,
@@ -10,11 +11,11 @@ import { useLocation } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 
-import { fetchStudentsFromFirestore } from '../pages/ThanhPhan/fetchStudents';
-import { enrichStudents } from '../pages/ThanhPhan/enrichStudents';
-import { saveRegistrationChanges } from '../pages/ThanhPhan/saveRegistration';
-import { saveMultipleDiemDanh } from '../pages/ThanhPhan/saveDiemDanh';
-import { saveSingleDiemDanh } from '../pages/ThanhPhan/saveSingleDiemDanh';
+import { fetchStudentsFromFirestore } from './ThanhPhan/fetchStudents';
+import { enrichStudents } from './ThanhPhan/enrichStudents';
+import { saveRegistrationChanges } from './ThanhPhan/saveRegistration';
+import { saveMultipleDiemDanh } from './ThanhPhan/saveDiemDanh';
+import { saveSingleDiemDanh } from './ThanhPhan/saveSingleDiemDanh';
 import { MySort } from '../utils/MySort';
 
 export default function Lop5() {
@@ -23,8 +24,6 @@ export default function Lop5() {
 
   const [students, setStudents] = useState([]);
   const [originalRegistered, setOriginalRegistered] = useState({});
-  const [selectedClass, setSelectedClass] = useState('');
-  const [classList, setClassList] = useState([]);
   const [namHoc, setNamHoc] = useState(null);
   
   const [isLoading, setIsLoading] = useState(false);
@@ -37,12 +36,14 @@ export default function Lop5() {
   const [saveStatus, setSaveStatus] = useState(null);
   const [showSavedAlert, setShowSavedAlert] = useState(false);
   const [lastSavedTime, setLastSavedTime] = useState(null);
-
   const today = new Date().toISOString().split('T')[0];
-
   const [checkAllDiemDanh, setCheckAllDiemDanh] = useState(true);
   const [checkAllBanTru, setCheckAllBanTru] = useState(true);
+  const account = JSON.parse(localStorage.getItem("account") || "{}");
+  const userClass = account.username || '';
+  const fetchedRef = useRef(false); // 🔒 Chặn fetch lại nhiều lần
 
+  
   useEffect(() => {
     setExpandedRowId(null);
   }, [viewMode]);
@@ -85,50 +86,36 @@ export default function Lop5() {
     fetchNamHoc();
   }, []);
 
+  
   useEffect(() => {
-    const fetchClassList = async () => {
-      if (!namHoc) return;
+    const fetchData = async () => {
+      const account = localStorage.getItem("account");
+      if (!namHoc || !account || fetchedRef.current) return;
+
+      setIsLoading(true);
       try {
-        const docRef = doc(db, `DANHSACH_${namHoc}`, 'K5');
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          const list = data.list || [];
-          setClassList(list);
-          if (list.length > 0) setSelectedClass(list[0]);
-        }
+        const col = `BANTRU_${namHoc}`;
+
+        const raw = await fetchStudentsFromFirestore(col, account, useNewVersion);
+        const enriched = enrichStudents(raw, today, account, useNewVersion);
+        const sorted = MySort(enriched);
+
+        setStudents(sorted);
+
+        const initMap = {};
+        sorted.forEach((s) => (initMap[s.id] = s.registered));
+        setOriginalRegistered(initMap);
+
+        fetchedRef.current = true; // ✅ Đánh dấu đã fetch xong
       } catch (err) {
-        console.error('Lỗi khi tải danh sách lớp:', err.message);
+        console.error("Lỗi khi tải học sinh:", err.message);
+      } finally {
+        setIsLoading(false);
       }
     };
-    fetchClassList();
+
+    fetchData();
   }, [namHoc]);
-
-  useEffect(() => {
-  const fetchData = async () => {
-    if (!namHoc || !selectedClass) return;
-    setIsLoading(true);
-    try {
-      const col = `BANTRU_${namHoc}`;
-      const raw = await fetchStudentsFromFirestore(col, selectedClass, useNewVersion);
-      const enriched = enrichStudents(raw, today, selectedClass, useNewVersion);
-
-      const sorted = MySort(enriched); // ✅ SẮP XẾP SAU KHI enrich
-
-      setStudents(sorted);
-
-      const initMap = {};
-      sorted.forEach(s => (initMap[s.id] = s.registered));
-      setOriginalRegistered(initMap);
-    } catch (err) {
-      console.error('Lỗi khi tải học sinh:', err.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  fetchData();
-}, [namHoc, selectedClass]);
-
 
   const handleSave = async () => {
     if (!namHoc) return;
@@ -245,19 +232,8 @@ export default function Lop5() {
         color="primary"
         sx={{ mb: 4, borderBottom: '3px solid #1976d2', pb: 1 }}
       >
-        DANH SÁCH HỌC SINH
+        DANH SÁCH LỚP {account || ""}
       </Typography>
-
-      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 1 }}>
-        <FormControl size="small" sx={{ width: 120 }}>
-          <InputLabel>Lớp</InputLabel>
-          <Select value={selectedClass} label="Lớp" onChange={handleClassChange}>
-            {classList.map(cls => (
-              <MenuItem key={cls} value={cls}>{cls}</MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-      </Box>
 
       <Stack direction="row" spacing={2} justifyContent="center" sx={{ mt: 1, mb: 2 }}>
         <FormControlLabel

@@ -20,17 +20,17 @@ import {
 import { getDoc, setDoc, doc } from 'firebase/firestore';
 import { db } from './firebase';
 
-import Home from './pages/Home';
+import Home from './pages/Home_Temp';
 import Lop1 from './pages/Lop1';
 import Lop2 from './pages/Lop2';
 import Lop3 from './pages/Lop3';
 import Lop4 from './pages/Lop4';
-import Lop5 from './pages/Lop5';
+import Lop5 from './pages/Lop5_Temp';
 import QuanLy from './pages/QuanLy';
 import About from './pages/About';
 import Footer from './pages/Footer';
 import HuongDan from './pages/HuongDan';
-import Login from './Login';
+import Login from './Login_Temp';
 
 const Admin = lazy(() => import('./Admin'));
 
@@ -45,7 +45,8 @@ function App() {
       <Navigation />
       <div style={{ paddingTop: 0 }}>
         <Routes>
-          <Route path="/" element={<Home />} />
+          
+          <Route path="/" element={<Navigate to="/login" replace />} />
 
           <Route path="/login" element={<Login />} />
 
@@ -118,14 +119,19 @@ function Navigation() {
     navigate('/login'); // ✅ Luôn đi đến trang login
   };
 
-  const navItems = [
-    { path: '/home', name: 'Trang chủ' },
-    { path: '/lop1', name: 'Lớp 1' },
-    { path: '/lop2', name: 'Lớp 2' },
-    { path: '/lop3', name: 'Lớp 3' },
-    { path: '/lop4', name: 'Lớp 4' },
-    { path: '/lop5', name: 'Lớp 5' },
-  ];
+  const account = localStorage.getItem("account") || "";
+  let navItems = [{ path: "/home", name: "Trang chủ" }];
+  // Nếu không phải tài khoản lớp (VD: admin, yte, ketoan, bgh) thì hiện các lớp
+  if (!/^[1-5]\.[1-6]$/.test(account)) {
+    navItems = [
+      ...navItems,
+      { path: "/lop1", name: "Lớp 1" },
+      { path: "/lop2", name: "Lớp 2" },
+      { path: "/lop3", name: "Lớp 3" },
+      { path: "/lop4", name: "Lớp 4" },
+      { path: "/lop5", name: "Lớp 5" },
+    ];
+  }
 
   return (
     <nav

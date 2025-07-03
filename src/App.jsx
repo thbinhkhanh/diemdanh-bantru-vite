@@ -45,8 +45,7 @@ function App() {
       <Navigation />
       <div style={{ paddingTop: 0 }}>
         <Routes>
-          
-          <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="/" element={<Home />} />
 
           <Route path="/login" element={<Login />} />
 
@@ -119,19 +118,14 @@ function Navigation() {
     navigate('/login'); // ✅ Luôn đi đến trang login
   };
 
-  const account = localStorage.getItem("account") || "";
-  let navItems = [{ path: "/home", name: "Trang chủ" }];
-  // Nếu không phải tài khoản lớp (VD: admin, yte, ketoan, bgh) thì hiện các lớp
-  if (!/^[1-5]\.[1-6]$/.test(account)) {
-    navItems = [
-      ...navItems,
-      { path: "/lop1", name: "Lớp 1" },
-      { path: "/lop2", name: "Lớp 2" },
-      { path: "/lop3", name: "Lớp 3" },
-      { path: "/lop4", name: "Lớp 4" },
-      { path: "/lop5", name: "Lớp 5" },
-    ];
-  }
+  const navItems = [
+    { path: '/home', name: 'Trang chủ' },
+    { path: '/lop1', name: 'Lớp 1' },
+    { path: '/lop2', name: 'Lớp 2' },
+    { path: '/lop3', name: 'Lớp 3' },
+    { path: '/lop4', name: 'Lớp 4' },
+    { path: '/lop5', name: 'Lớp 5' },
+  ];
 
   return (
     <nav
