@@ -1,96 +1,107 @@
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 
-export function formatExcel(dataList, columnDates, year, selectedClass) {
+export async function exportFormattedExcel(dataList, columnDates, month, year, selectedClass) {
   if (!dataList || dataList.length === 0) return;
 
-  const headerRow = [
-    "stt",
-    "id",
-    "maDinhDanh",
-    "hoVaTen",
-    "lop",
-    "huyDangKy",
-    ...columnDates,
-  ];
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet('Bán trú');
 
-  const dataRows = dataList.map((item, index) => {
-    const row = [
-      index + 1,
-      item.id || "",
-      item.maDinhDanh || "",
-      item.hoVaTen || "",
-      item.lop || "",
-      item.huyDangKy || "",
-    ];
+  // Tiêu đề
+  sheet.mergeCells('A1:AF1');
+  sheet.getCell('A1').value = 'TRƯỜNG TIỂU HỌC BÌNH KHÁNH';
+  sheet.getCell('A1').alignment = { horizontal: 'left' };
+  sheet.getCell('A1').font = { italic: true };
 
-    columnDates.forEach((dateStr) => {
-      row.push(item.banTruNgay?.[dateStr] || "");
-    });
+  sheet.mergeCells('M2:W2');
+  sheet.getCell('M2').value = `THỐNG KÊ BÁN TRÚ THÁNG ${month} NĂM ${year}`;
+  sheet.getCell('M2').font = { bold: true, size: 14, color: { argb: '1F4E78' } };
+  sheet.getCell('M2').alignment = { horizontal: 'center' };
 
-    return row;
+  sheet.mergeCells('M3:N3');
+  sheet.getCell('M3').value = `LỚP: ${selectedClass}`;
+  sheet.getCell('M3').font = { bold: true };
+  sheet.getCell('M3').alignment = { horizontal: 'center' };
+
+  // Header
+  const headerRow = ['STT', 'HỌ VÀ TÊN', ...columnDates.map(d => d.toString()), 'TỔNG CỘNG'];
+  sheet.addRow(headerRow);
+
+  const header = sheet.getRow(4);
+  header.font = { bold: true };
+  header.fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'D9E1F2' },
+  };
+  header.alignment = { horizontal: 'center', vertical: 'middle' };
+  header.eachCell((cell) => {
+    cell.border = {
+      top: { style: 'thin' },
+      left: { style: 'thin' },
+      bottom: { style: 'thin' },
+      right: { style: 'thin' },
+    };
   });
 
-  const finalData = [headerRow, ...dataRows];
-  const ws = XLSX.utils.aoa_to_sheet(finalData);
+  // Tổng cộng theo cột
+  const totalPerColumn = Array(columnDates.length).fill(0);
 
-  // Đặt độ rộng cột
-  ws["!cols"] = [
-    { wch: 5 },   // stt
-    { wch: 15 },  // id
-    { wch: 20 },  // maDinhDanh
-    { wch: 30 },  // hoVaTen
-    { wch: 8 },   // lop
-    { wch: 12 },  // huyDangKy
-    ...columnDates.map(() => ({ wch: 12 })),  // các ngày
+  // Dữ liệu
+  dataList.forEach((item, index) => {
+    const rowData = [
+      index + 1,
+      item.hoVaTen,
+      ...columnDates.map((date, i) => {
+        const mark = item.banTruNgay?.[date] === true || item.banTruNgay?.[date] === '✓' ? '✓' : '';
+        if (mark === '✓') totalPerColumn[i]++;
+        return mark;
+      }),
+    ];
+
+    // Tổng cộng theo hàng
+    const rowTotal = rowData.slice(2).filter(cell => cell === '✓').length;
+    rowData.push(rowTotal);
+    sheet.addRow(rowData);
+  });
+
+  // Dòng tổng cộng dưới cùng
+  const finalRow = ['TỔNG CỘNG', '', ...totalPerColumn, totalPerColumn.reduce((a, b) => a + b, 0)];
+  sheet.addRow(finalRow);
+
+  // Styling toàn bộ bảng
+  sheet.eachRow((row, rowNumber) => {
+    row.eachCell((cell, colNumber) => {
+      cell.alignment = {
+        horizontal: colNumber === 2 ? 'left' : 'center',
+        vertical: 'middle',
+      };
+      cell.border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' },
+      };
+      if (rowNumber === sheet.rowCount || rowNumber === 4) {
+        cell.font = { bold: true };
+      }
+    });
+  });
+
+  // Cột rộng
+  const colWidths = [
+    5, // STT
+    30, // Họ tên
+    ...columnDates.map(() => 5),
+    10, // Tổng cộng
   ];
+  colWidths.forEach((w, i) => {
+    sheet.getColumn(i + 1).width = w;
+  });
 
-  // Styling cho từng ô
-  const range = XLSX.utils.decode_range(ws["!ref"]);
-  for (let R = 0; R <= range.e.r; ++R) {
-    for (let C = 0; C <= range.e.c; ++C) {
-      const cellRef = XLSX.utils.encode_cell({ r: R, c: C });
-      const cell = ws[cellRef];
-      if (!cell) continue;
-
-      cell.s = R === 0
-        ? {
-            font: { bold: true },
-            fill: { fgColor: { rgb: "EAF1FB" } },
-            border: {
-              top: { style: "thin", color: { rgb: "000000" } },
-              bottom: { style: "thin", color: { rgb: "000000" } },
-              left: { style: "thin", color: { rgb: "000000" } },
-              right: { style: "thin", color: { rgb: "000000" } },
-            },
-            alignment: { horizontal: "center", vertical: "center" },
-          }
-        : {
-            border: {
-              top: { style: "thin", color: { rgb: "999999" } },
-              bottom: { style: "thin", color: { rgb: "999999" } },
-              left: { style: "thin", color: { rgb: "999999" } },
-              right: { style: "thin", color: { rgb: "999999" } },
-            },
-            alignment: {
-              horizontal: C === 3 ? "left" : "center",
-              vertical: "center",
-            },
-          };
-    }
-  }
-
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Backup");
-
-  // Tạo tên file theo chuẩn với timestamp
+  // Xuất file
   const now = new Date();
-  const day = String(now.getDate()).padStart(2, "0");
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const yearNow = now.getFullYear();
-  const hours = String(now.getHours()).padStart(2, "0");
-  const minutes = String(now.getMinutes()).padStart(2, "0");
-
-  const filename = `Backup Firestore_${year} (${day}_${month}_${yearNow} ${hours}_${minutes}).xlsx`;
-
-  XLSX.writeFile(wb, filename);
+  const filename = `Thong_ke_ban_tru_${selectedClass}_${month}_${year}_${now.getHours()}h${now.getMinutes()}.xlsx`;
+  const buffer = await workbook.xlsx.writeBuffer();
+  saveAs(new Blob([buffer]), filename);
 }
