@@ -1,4 +1,4 @@
-import * as XLSX from "xlsx";
+import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 
 export async function exportFormattedExcel(dataList, columnDates, month, year, selectedClass) {
