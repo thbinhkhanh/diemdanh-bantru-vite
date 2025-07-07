@@ -43,17 +43,12 @@ export default function NhatKyDiemDanh({ onBack }) {
       const maxDays = new Date(filterNam, filterThang, 0).getDate();
       const safeDay = Math.min(currentDay, maxDays);
       const newDate = new Date(filterNam, filterThang - 1, safeDay);
-
-      if (selectedDate.getTime() !== newDate.getTime()) {
-        setSelectedDate(newDate);
-      }
+      setSelectedDate(newDate);
     }
   }, [filterThang, filterNam, filterMode]);
 
-
   const fetchData = async () => {
     setIsLoading(true);
-    setDataList([]); // 👉 Quan trọng: reset dữ liệu cũ
     try {
       const namHocDoc = await getDoc(doc(db, "YEAR", "NAMHOC"));
       const namHocValue = namHocDoc.exists() ? namHocDoc.data().value : null;
@@ -104,23 +99,17 @@ export default function NhatKyDiemDanh({ onBack }) {
 
         const results = await Promise.all(promises);
 
-        for (const { snapshot, ngayKey } of results) {
+        for (const { snapshot } of results) {
           if (snapshot.exists()) {
             const rawData = snapshot.data();
             combinedData = combinedData.concat(
-              Object.entries(rawData).map(([id, value]) => ({
-                id,
-                ...value,
-                ngay: ngayKey, // ✅ Thêm ngày vào từng bản ghi
-              }))
+              Object.entries(rawData).map(([id, value]) => ({ id, ...value }))
             );
           }
         }
-
       }
 
-      const cleanedData = combinedData.filter((item) => item.lop && item.hoTen);
-      setDataList(cleanedData);
+      setDataList(combinedData);
 
     } catch (err) {
       console.error("❌ Lỗi khi tải dữ liệu:", err);
@@ -132,16 +121,7 @@ export default function NhatKyDiemDanh({ onBack }) {
 
   useEffect(() => {
     fetchData();
-  }, [filterMode, selectedDate, filterThang, filterNam, filterKhoi]);
-
-  useEffect(() => {
-    if (filterMode === "ngay") {
-      setDataList((prev) => {
-        const ngaySelected = format(selectedDate, "yyyy-MM-dd");
-        return prev.filter((item) => item.ngay === ngaySelected || !item.ngay);
-      });
-    }
-  }, [filterKhoi]);
+  }, [filterMode, selectedDate, filterThang, filterNam]);
 
   const handleSort = (property) => {
     const isAsc = orderBy === property && order === "asc";
@@ -170,19 +150,10 @@ export default function NhatKyDiemDanh({ onBack }) {
       : hoB?.localeCompare(hoA, "vi", { sensitivity: "base" }) || 0;
   };
 
-  // Hàm tách số khối từ tên lớp (ví dụ "1A" → "1")
-  const getKhoiFromLop = (lop) => {
-    if (!lop) return "";
-    const match = lop.trim().match(/^(\d+)/); // lấy chữ số đầu tiên
-    return match ? match[1] : "";
-  };
-
-  // Lọc danh sách theo khối
   const filteredData = dataList.filter((item) => {
-    if (filterKhoi === "Tất cả") return true;
-    const khoi = getKhoiFromLop(item.lop);
-    const selectedKhoi = filterKhoi.replace("Khối ", "");
-    return khoi === selectedKhoi;
+    const lop = item.lop || "";
+    const matchKhoi = filterKhoi === "Tất cả" || lop.startsWith(filterKhoi.split(" ")[1]);
+    return matchKhoi;
   });
 
   const sortedData = [...filteredData].sort((a, b) => {
@@ -200,7 +171,7 @@ export default function NhatKyDiemDanh({ onBack }) {
 
 
   const handleKhoiChange = (value) => {
-    setFilterKhoi(value); // Không cần xóa dataList thủ công nữa
+    setFilterKhoi(value);
   };
 
   // ⚠️ Chỉ thay đổi ở đây: gọi hàm exportNhatKyToExcel(sortedData)
