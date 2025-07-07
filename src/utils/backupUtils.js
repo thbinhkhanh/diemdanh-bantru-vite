@@ -8,7 +8,8 @@ import {
   getDoc,
 } from "firebase/firestore";
 import { db } from "../firebase";
-import { formatExcel } from "./formatExcel.js";
+import { exportFormattedExcel } from "./formatExcel.js";
+
 import * as XLSX from "xlsx";
 
 /** 🎯 Sao lưu toàn bộ Firestore sang JSON theo năm học */
