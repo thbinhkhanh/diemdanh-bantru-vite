@@ -15,7 +15,12 @@ import { enrichStudents } from '../pages/ThanhPhan/enrichStudents';
 import { saveRegistrationChanges } from '../pages/ThanhPhan/saveRegistration';
 import { saveMultipleDiemDanh } from '../pages/ThanhPhan/saveDiemDanh';
 import { saveSingleDiemDanh } from '../pages/ThanhPhan/saveSingleDiemDanh';
+
 import { MySort } from '../utils/MySort';
+import { useNavigate } from 'react-router-dom';
+import NhatKyGV from '../NhatKyGV';
+
+import { useClassData } from '../context/ClassDataContext';
 
 export default function Lop3() {
   const location = useLocation();
@@ -42,6 +47,24 @@ export default function Lop3() {
 
   const [checkAllDiemDanh, setCheckAllDiemDanh] = useState(true);
   const [checkAllBanTru, setCheckAllBanTru] = useState(true);
+  const navigate = useNavigate();
+  const [radioValue, setRadioValue] = useState("DiemDanh");
+
+  const {
+    classDataMap: classData,
+    getClassData,
+    updateClassData,
+    setClassData
+  } = useClassData();
+
+  const [fetchedClasses, setFetchedClasses] = useState({});
+
+  useEffect(() => {
+    const lopFromState = location.state?.lop;
+    if (lopFromState) {
+      setSelectedClass(lopFromState); // ⬅️ cập nhật lớp dựa trên state khi quay lại
+    }
+  }, [location.state, setSelectedClass]);
 
   useEffect(() => {
     setExpandedRowId(null);
@@ -88,64 +111,101 @@ export default function Lop3() {
   useEffect(() => {
     const fetchClassList = async () => {
       if (!namHoc) return;
+
       try {
         const docRef = doc(db, `DANHSACH_${namHoc}`, 'K3');
         const docSnap = await getDoc(docRef);
+
         if (docSnap.exists()) {
           const data = docSnap.data();
           const list = data.list || [];
+
           setClassList(list);
-          if (list.length > 0) setSelectedClass(list[0]);
+
+          const lopFromState = location.state?.lop;
+          if (lopFromState && list.includes(lopFromState)) {
+            setSelectedClass(lopFromState); // ✅ Ưu tiên lớp được truyền về
+          } else if (list.length > 0) {
+            setSelectedClass(list[0]); // hoặc giữ lớp hiện tại nếu muốn
+          }
         }
       } catch (err) {
         console.error('Lỗi khi tải danh sách lớp:', err.message);
       }
     };
+
     fetchClassList();
   }, [namHoc]);
 
+
   useEffect(() => {
-  const fetchData = async () => {
-    if (!namHoc || !selectedClass) return;
-    setIsLoading(true);
-    try {
-      const col = `BANTRU_${namHoc}`;
-      const raw = await fetchStudentsFromFirestore(col, selectedClass, useNewVersion);
-      const enriched = enrichStudents(raw, today, selectedClass, useNewVersion);
+    const contextData = classData[selectedClass];
 
-      const sorted = MySort(enriched); // ✅ SẮP XẾP SAU KHI enrich
-
-      setStudents(sorted);
+    if (Array.isArray(contextData) && contextData.length > 0) {
+      //console.log(`✅ Dùng lại dữ liệu lớp ${selectedClass} từ context`);
+      setStudents(contextData);
 
       const initMap = {};
-      sorted.forEach(s => (initMap[s.id] = s.registered));
+      contextData.forEach(s => (initMap[s.id] = s.registered));
       setOriginalRegistered(initMap);
-    } catch (err) {
-      console.error('Lỗi khi tải học sinh:', err.message);
-    } finally {
-      setIsLoading(false);
+    } else {
+      //console.log(`ℹ️ Không có dữ liệu lớp ${selectedClass} trong context`);
     }
-  };
-  fetchData();
-}, [namHoc, selectedClass]);
+  }, [classData, selectedClass]);
 
+  useEffect(() => {
+    const contextData = classData[selectedClass];
+    const alreadyFetched = fetchedClasses[selectedClass];
+    const shouldFetch = !Array.isArray(contextData) || contextData.length === 0;
+
+    if (!shouldFetch || alreadyFetched || !namHoc || !selectedClass) return;
+
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        //console.log(`🟡 Fetch Firestore lớp ${selectedClass}`);
+        const col = `BANTRU_${namHoc}`;
+        const raw = await fetchStudentsFromFirestore(col, selectedClass, useNewVersion);
+        const enriched = enrichStudents(raw, today, selectedClass, useNewVersion);
+        const sorted = MySort(enriched);
+
+        setStudents(sorted);
+        setClassData(selectedClass, sorted);
+
+        const initMap = {};
+        sorted.forEach(s => (initMap[s.id] = s.registered));
+        setOriginalRegistered(initMap);
+
+        setFetchedClasses(prev => ({ ...prev, [selectedClass]: true })); // ✅ Đánh dấu đã fetch
+      } catch (err) {
+        console.error("🔥 Lỗi fetch học sinh:", err.message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [selectedClass, namHoc, today, useNewVersion]);
 
   const handleSave = async () => {
     if (!namHoc) return;
     setIsSaving(true);
-
     const changed = students.filter(s => s.registered !== originalRegistered[s.id]);
     const absent = students.filter(s => !s.diemDanh);
-
+    // 👉 Không có gì thay đổi thì thoát sớm
+    if (changed.length === 0 && absent.length === 0) {
+      setIsSaving(false); // Đảm bảo không kẹt ở trạng thái "Đang lưu..."
+      return;
+    }
     try {
-      await saveRegistrationChanges(changed, namHoc);
-      await saveMultipleDiemDanh(absent, namHoc, today);
-
+      //await saveRegistrationChanges(changed, namHoc);
+      await saveRegistrationChanges(changed, namHoc, selectedClass, setClassData, classData);
+      //await saveMultipleDiemDanh(absent, namHoc, today);
+      await saveMultipleDiemDanh(absent, namHoc, today, selectedClass, classData, setClassData);
       const updatedMap = { ...originalRegistered };
       changed.forEach(s => (updatedMap[s.id] = s.registered));
       setOriginalRegistered(updatedMap);
-
-      setLastSaved(new Date()); // 👈 THÊM DÒNG NÀY
+      setLastSaved(new Date()); // ✅ Gọi chính xác khi thực sự có lưu
     } catch (err) {
       console.error('Lỗi khi lưu:', err.message);
     } finally {
@@ -167,7 +227,14 @@ export default function Lop3() {
       setExpandedRowId(updated[index].id);
 
       // ✅ GỌI LƯU BÁN TRÚ NGAY LÚC ĐÓ
-      await saveRegistrationChanges([updated[index]], namHoc);
+      //await saveRegistrationChanges([updated[index]], namHoc);
+      await saveRegistrationChanges(
+        [updated[index]],
+        namHoc,
+        selectedClass,
+        setClassData,
+        classData // 💡 rất quan trọng để tránh mất dòng khác
+      );
 
       // ✅ CẬP NHẬT BẢN SAO CỦA originalRegistered CHỈ VỚI HỌC SINH ĐÓ
       setOriginalRegistered(prev => ({
@@ -179,7 +246,8 @@ export default function Lop3() {
     setStudents(updated);
 
     // ✅ Điểm danh luôn lưu như cũ
-    await saveSingleDiemDanh(updated[index], namHoc);
+    //await saveSingleDiemDanh(updated[index], namHoc);
+    await saveSingleDiemDanh(updated[index], namHoc, selectedClass, classData, setClassData);
   };
 
   const toggleRegister = (index) => {
@@ -190,11 +258,16 @@ export default function Lop3() {
     saveTimeout.current = setTimeout(handleSave, 2000);
   };
 
-  const handleClassChange = async (event) => {
+   const handleClassChange = async (event) => {
     clearTimeout(saveTimeout.current);
-    await handleSave();
-    setSelectedClass(event.target.value);
+    const newClass = event.target.value;
+    setSelectedClass(newClass);
+    // Đợi cập nhật lớp xong rồi mới lưu
+    //setTimeout(() => {
+      //handleSave(); // handleSave đã có kiểm tra thay đổi, nên an toàn
+    //}, 0);
   };
+
 
   const handleVangCoPhepChange = (index, value) => {
     const updated = [...students];
@@ -202,7 +275,8 @@ export default function Lop3() {
     setStudents(updated);
     clearTimeout(saveTimeout.current);
     saveTimeout.current = setTimeout(() => {
-      saveSingleDiemDanh(updated[index], namHoc);
+      //saveSingleDiemDanh(updated[index], namHoc);
+      saveSingleDiemDanh(updated[index], namHoc, selectedClass, classData, setClassData);
     }, 1000);
   };
 
@@ -214,7 +288,8 @@ export default function Lop3() {
     // Gọi lưu sau khi cập nhật lý do
     clearTimeout(saveTimeout.current);
     saveTimeout.current = setTimeout(() => {
-      saveSingleDiemDanh(updated[index], namHoc);
+      //saveSingleDiemDanh(updated[index], namHoc);
+      saveSingleDiemDanh(updated[index], namHoc, selectedClass, classData, setClassData);
     }, 500); // debounce tránh lưu quá nhanh khi người dùng đang gõ
   };
 
@@ -224,9 +299,10 @@ export default function Lop3() {
   };
 
   return (
-  <Box sx={{ display: 'flex', justifyContent: 'center', mt: 12 }}>
-    <Card
-      sx={{
+   <Box sx={{ display: 'flex', justifyContent: 'center', mt: 8, backgroundColor: '#e3f2fd' }}>
+      <Card
+        sx={{
+        mt:4,
         p: { xs: 2, sm: 3, md: 4 },
         maxWidth: 470,
         width: '100%',
@@ -388,7 +464,8 @@ export default function Lop3() {
                           // 💾 Gọi lưu nếu có thay đổi
                           if (changed.length > 0) {
                             try {
-                              await saveRegistrationChanges(changed, namHoc);
+                              //await saveRegistrationChanges(changed, namHoc);
+                              await saveRegistrationChanges(changed, namHoc, selectedClass, setClassData, classData);
 
                               // Cập nhật lại originalRegistered
                               const updatedMap = { ...originalRegistered };
@@ -555,6 +632,38 @@ export default function Lop3() {
             </Table>
           </TableContainer>
 
+        )}
+
+        {viewMode !== "bantru" && (
+          <Button
+            variant="contained"
+            size="small"
+            onClick={() => {
+              if (!selectedClass) {
+                alert('Vui lòng chọn lớp trước khi vào nhật ký!');
+                return;
+              }
+
+              navigate('/nhatky', { state: { lop: selectedClass } });
+            }}
+            sx={{
+              textTransform: 'none',
+              backgroundColor: '#1976d2', // Màu xanh (có thể dùng theme palette nếu thích)
+              color: '#fff',              // Chữ trắng
+              fontSize: '0.9rem',         // Cỡ chữ lớn hơn
+              px: 3,                      // Padding ngang lớn hơn
+              py: 0.6,                    // Padding dọc
+              mt: 3,
+              mb: 3,
+              mx: 'auto',                 // Căn giữa theo chiều ngang
+              display: 'block',           // Phải dùng display: block để mx: auto hoạt động
+              '&:hover': {
+                backgroundColor: '#1565c0' // Màu xanh đậm hơn khi hover
+              }
+            }}
+          >
+            Nhật ký điểm danh
+          </Button>
         )}
 
         {/* Thông báo lưu */}
