@@ -10,9 +10,11 @@ import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import vi from "date-fns/locale/vi";
 import { getDoc, getDocs, doc, collection, query, where } from "firebase/firestore";
+import { format } from "date-fns";
 import { db } from "./firebase";
 import { MySort } from './utils/MySort';
 import { exportThongKeThangToExcel } from './utils/exportThongKeThang';
+import { useClassList } from "./context/ClassListContext";
 
 export default function ThongKeThang({ onBack }) {
   const [selectedDate, setSelectedDate] = useState(() => {
@@ -27,29 +29,49 @@ export default function ThongKeThang({ onBack }) {
   const [showDays, setShowDays] = useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const { getClassList, setClassListForKhoi } = useClassList();
 
   useEffect(() => {
     const fetchClassList = async () => {
       try {
+        // Lấy năm học từ Firestore
         const namHocDoc = await getDoc(doc(db, "YEAR", "NAMHOC"));
         const namHocValue = namHocDoc.exists() ? namHocDoc.data().value : null;
+
         if (!namHocValue) {
           setIsLoading(false);
           console.error("❌ Không tìm thấy năm học hợp lệ trong hệ thống!");
           return;
         }
 
-        const docRef = doc(db, `DANHSACH_${namHocValue}`, "TRUONG");
+        // 🧠 Kiểm tra context trước
+        const cachedList = getClassList("TRUONG");
+        if (cachedList.length > 0) {
+          //console.log("📦 LẤY DANH SÁCH LỚP TỪ CONTEXT:", cachedList);
+          setClassList(cachedList);
+          setSelectedClass(cachedList[0]);
+          return;
+        }
+
+        // 📥 Nếu chưa có trong context → tải từ Firestore
+        const docRef = doc(db, `CLASSLIST_${namHocValue}`, "TRUONG");
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           const list = docSnap.data().list || [];
+          //console.log("🗂️ LẤY DANH SÁCH LỚP TỪ FIRESTORE:", list);
           setClassList(list);
-          if (list.length > 0) setSelectedClass(list[0]);
+          setSelectedClass(list[0] || "");
+
+          // 🔁 Lưu vào context để các component khác dùng
+          setClassListForKhoi("TRUONG", list);
+        } else {
+          console.warn("⚠️ Không tìm thấy CLASSLIST_${namHocValue}/TRUONG");
         }
       } catch (err) {
         console.error("❌ Lỗi khi tải danh sách lớp:", err);
       }
     };
+
     fetchClassList();
   }, []);
 
@@ -63,40 +85,60 @@ export default function ThongKeThang({ onBack }) {
         const namHocValue = namHocDoc.exists() ? namHocDoc.data().value : null;
         if (!namHocValue) {
           setIsLoading(false);
-          console.error("❌ Không tìm thấy năm học hợp lệ trong hệ thống!");
+          console.error("❌ Không tìm thấy năm học!");
           return;
         }
 
-        const q = query(collection(db, `BANTRU_${namHocValue}`), where("lop", "==", selectedClass));
-        const snapshot = await getDocs(q);
-        const students = snapshot.docs.map((docSnap, index) => {
-          const d = docSnap.data();
-          const data = d.data || {};
-          const huyDangKy = d.huyDangKy || "";
+        // 🎯 Lấy học sinh từ DANHSACH_... của lớp đã chọn
+        const danhSachSnap = await getDocs(query(
+          collection(db, `DANHSACH_${namHocValue}`),
+          where("lop", "==", selectedClass)
+        ));
+
+        const danhSachData = danhSachSnap.docs.map(d => d.data()).filter(hs => {
+          const huy = (hs.huyDangKy || "").toUpperCase();
+          return huy === "" || huy === "T";
+        });
+
+        // 🍱 Lấy bản ghi ăn bán trú từ BANTRU_... (không lọc lớp)
+        const banTruSnap = await getDocs(collection(db, `BANTRU_${namHocValue}`));
+        const banTruData = banTruSnap.docs.map(doc => doc.data());
+
+        const monthStr = format(selectedDate, "yyyy-MM");
+
+        const students = danhSachData.map((hs, index) => {
+          const { maDinhDanh, hoVaTen, huyDangKy } = hs;
           const daySummary = {};
           let total = 0;
 
-          Object.entries(data).forEach(([dateStr, val]) => {
-            const date = new Date(dateStr);
-            if (!isNaN(date)
-                && date.getMonth() === selectedDate.getMonth()
-                && date.getFullYear() === selectedDate.getFullYear()) {
-              const day = date.getDate();
-              daySummary[day] = val === "T" ? "✓" : "";
-              if (val === "T") total += 1;
+          // 🔍 Lọc các bản ghi bán trú của học sinh trong tháng và đúng lớp
+          banTruData.forEach(record => {
+            if (
+              record.maDinhDanh === maDinhDanh &&
+              record.lop === selectedClass &&
+              record.thang === monthStr &&
+              record.ngay
+            ) {
+              const dateObj = new Date(record.ngay);
+              if (!isNaN(dateObj)) {
+                const day = dateObj.getDate();
+                daySummary[day] = "✓";
+                total += 1;
+              }
             }
           });
 
           return {
-            id: docSnap.id,
-            hoVaTen: d.hoVaTen,
-            stt: index + 1,
+            id: maDinhDanh || `${index}`,
+            hoVaTen,
+            huyDangKy,
             daySummary,
             total,
-            huyDangKy,
+            stt: index + 1,
           };
         });
 
+        // 🗓️ Tạo danh sách ngày trong tháng
         const year = selectedDate.getFullYear();
         const month = selectedDate.getMonth();
         const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -106,7 +148,7 @@ export default function ThongKeThang({ onBack }) {
         const sorted = MySort(students).map((s, idx) => ({ ...s, stt: idx + 1 }));
         setDataList(sorted);
       } catch (err) {
-        console.error("❌ Lỗi khi tải học sinh lớp:", err);
+        console.error("❌ Lỗi khi tải dữ liệu:", err);
       } finally {
         setIsLoading(false);
       }

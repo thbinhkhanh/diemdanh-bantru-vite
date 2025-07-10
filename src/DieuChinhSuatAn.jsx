@@ -9,9 +9,10 @@ import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import vi from "date-fns/locale/vi";
-import { getDocs, getDoc, collection, query, where, doc, updateDoc } from "firebase/firestore";
+import { getDocs, getDoc, collection, query, where, doc, updateDoc, writeBatch } from "firebase/firestore";
 import { db } from "./firebase";
 import { MySort } from './utils/MySort';
+import { useClassList } from "./context/ClassListContext";
 
 export default function DieuChinhSuatAn({ onBack }) {
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -23,6 +24,8 @@ export default function DieuChinhSuatAn({ onBack }) {
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(null);
   const [namHocValue, setNamHocValue] = useState(null);
+  const { getClassList, setClassListForKhoi } = useClassList();
+
 
   useEffect(() => {
     if (saveSuccess !== null) {
@@ -45,53 +48,88 @@ export default function DieuChinhSuatAn({ onBack }) {
 
         setNamHocValue(namHoc);
 
-        const danhSachDoc = await getDoc(doc(db, `DANHSACH_${namHoc}`, "TRUONG"));
-        if (danhSachDoc.exists()) {
-          const data = danhSachDoc.data();
-          setClassList(data.list || []);
-          if (data.list.length > 0) {
-            setSelectedClass(data.list[0]);
-            await fetchStudents(data.list[0], namHoc);
+        // 🧠 Kiểm tra trước trong context
+        const cachedList = getClassList("TRUONG");
+        if (cachedList.length > 0) {
+          //console.log("📦 Danh sách lớp lấy từ CONTEXT:", cachedList);
+          setClassList(cachedList);
+          setSelectedClass(cachedList[0]);
+          await fetchStudents(cachedList[0], namHoc);
+          return;
+        }
+
+        // 📥 Nếu chưa có → tải từ Firestore
+        const classListDoc = await getDoc(doc(db, `CLASSLIST_${namHoc}`, "TRUONG"));
+        if (classListDoc.exists()) {
+          const data = classListDoc.data();
+          const list = data.list || [];
+
+          //console.log("🗂️ Danh sách lớp lấy từ FIRESTORE:", list);
+          setClassList(list);
+          setSelectedClass(list[0] || "");
+
+          setClassListForKhoi("TRUONG", list); // 🔁 Lưu vào context
+
+          if (list.length > 0) {
+            await fetchStudents(list[0], namHoc);
           }
+        } else {
+          console.warn("⚠️ Không tìm thấy CLASSLIST trong Firestore");
         }
       } catch (err) {
         console.error("❌ Lỗi khi tải dữ liệu:", err);
         setIsLoading(false);
       }
     };
+
     fetchNamHocAndClassList();
   }, []);
+
 
   const fetchStudents = async (className, nhValue = namHocValue) => {
     if (!nhValue) return;
 
     setIsLoading(true);
     try {
-      const q = query(collection(db, `BANTRU_${nhValue}`), where("lop", "==", className));
-      const snapshot = await getDocs(q);
-
       const selected = new Date(selectedDate);
       selected.setHours(0, 0, 0, 0);
       const adjustedDate = new Date(selected.getTime() + 7 * 60 * 60 * 1000);
-      const selectedDateStr = adjustedDate.toISOString().split("T")[0];
+      const selectedDateStr = adjustedDate.toISOString().split("T")[0]; // '2025-07-09'
+
+      // Query BANTRU với lớp và ngày cụ thể
+      const qBanTru = query(
+        collection(db, `BANTRU_${nhValue}`),
+        where("lop", "==", className),
+        where("ngay", "==", selectedDateStr)
+      );
+      const banTruSnapshot = await getDocs(qBanTru);
+
+      const banTruSet = new Set();
+      banTruSnapshot.docs.forEach(doc => {
+        banTruSet.add(doc.data().maDinhDanh);
+      });
+
+      // Query DANHSACH theo lớp
+      const q = query(collection(db, `DANHSACH_${nhValue}`), where("lop", "==", className));
+      const snapshot = await getDocs(q);
 
       const students = [];
       const checkedMap = {};
 
       snapshot.docs.forEach((docSnap, index) => {
         const d = docSnap.data();
-        const registeredData = d.data?.[selectedDateStr];
         const ma = d.maDinhDanh;
+        const registered = banTruSet.has(ma);
         const student = {
           id: docSnap.id,
           maDinhDanh: ma,
           hoVaTen: d.hoVaTen,
-          registered: registeredData === "T",
-          disabled: registeredData == null,
+          registered,
+          disabled: false,
           stt: index + 1,
         };
         students.push(student);
-        checkedMap[ma] = student.registered;
+        checkedMap[ma] = registered;
       });
 
       setDataList(MySort(students).map((s, i) => ({ ...s, stt: i + 1 })));
@@ -110,22 +148,6 @@ export default function DieuChinhSuatAn({ onBack }) {
   const saveData = async () => {
     if (isSaving || !namHocValue) return;
 
-    const loginRole = localStorage.getItem("loginRole");
-    const now = new Date();
-    const sm = selectedDate.getMonth(), sy = selectedDate.getFullYear();
-    const cm = now.getMonth(), cy = now.getFullYear();
-
-    if (
-      loginRole !== "admin" &&
-      (
-        loginRole !== "yte" ||
-        (sy < cy || (sy === cy && sm < cm))
-      )
-    ) {
-      setSaveSuccess("unauthorized");
-      return;
-    }
-
     const changed = dataList.filter(s => s.registered !== originalChecked[s.maDinhDanh]);
     if (changed.length === 0) {
       setSaveSuccess(null);
@@ -135,22 +157,65 @@ export default function DieuChinhSuatAn({ onBack }) {
     setIsSaving(true);
     setSaveSuccess(null);
     try {
-      const selectedDateStr = new Date(selectedDate.getTime() + 7 * 60 * 60 * 1000)
-        .toISOString()
-        .split("T")[0];
+      const adjustedDate = new Date(selectedDate.getTime() + 7 * 60 * 60 * 1000);
+      const selectedDateStr = adjustedDate.toISOString().split("T")[0];
 
-      await Promise.all(changed.map(s =>
-        updateDoc(doc(db, `BANTRU_${namHocValue}`, s.id), {
-          [`data.${selectedDateStr}`]: s.registered ? "T" : ""
-        })
-      ));
+      // 🔍 Kiểm tra các doc đã có trong BANTRU ngày đang chọn
+      const banTruRef = collection(db, `BANTRU_${namHocValue}`);
+      const existingSnap = await getDocs(banTruRef);
+
+      const existingDocsMap = {};
+      existingSnap.forEach(docSnap => {
+        const data = docSnap.data();
+        if (data.ngay === selectedDateStr) {
+          existingDocsMap[docSnap.id] = true;
+          //console.log("📋 Doc tồn tại:", docSnap.id);
+        }
+      });
+
+      const batch = writeBatch(db);
+
+      changed.forEach(s => {
+        const docId = `${s.maDinhDanh}-${selectedDateStr}`; // ✅ Dấu gạch ngang
+        const docRef = doc(db, `BANTRU_${namHocValue}`, docId);
+        const data = {
+          maDinhDanh: s.maDinhDanh,
+          hoVaTen: s.hoVaTen,
+          lop: selectedClass,
+          khoi: selectedClass?.split(".")[0] || "",
+          ngay: selectedDateStr,
+          thang: selectedDateStr.slice(0, 7),
+          nam: selectedDateStr.slice(0, 4),
+        };
+
+        //console.log("🔎 Đang xử lý:", docId, "| Registered:", s.registered);
+
+        if (s.registered) {
+          if (!existingDocsMap[docId]) {
+            //console.log("📥 Ghi mới:", s.maDinhDanh, "-", s.hoVaTen);
+            batch.set(docRef, data);
+          } else {
+            //console.log("✅ Bỏ qua, đã có rồi:", s.maDinhDanh, "-", s.hoVaTen);
+          }
+        } else {
+          if (existingDocsMap[docId]) {
+            //console.log("🗑️ Xoá:", s.maDinhDanh, "-", s.hoVaTen);
+            batch.delete(docRef);
+          } else {
+            //console.log("⚠️ Không xoá vì chưa tồn tại:", docId);
+          }
+        }
+      });
+
+      await batch.commit();
+      //console.log("✅ Đã cập nhật xong BANTRU cho ngày:", selectedDateStr);
 
       const updated = { ...originalChecked };
       changed.forEach(s => updated[s.maDinhDanh] = s.registered);
       setOriginalChecked(updated);
       setSaveSuccess(true);
     } catch (err) {
-      console.error("❌ Lỗi khi lưu:", err);
+      console.error("❌ Lỗi khi ghi BANTRU:", err);
       setSaveSuccess(false);
     } finally {
       setIsSaving(false);

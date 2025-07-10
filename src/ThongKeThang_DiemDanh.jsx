@@ -13,6 +13,7 @@ import { getDoc, getDocs, doc, collection, query, where } from "firebase/firesto
 import { db } from "./firebase";
 import { MySort } from './utils/MySort';
 import { exportThongKeThangToExcel } from './utils/exportThongKeThang';
+import { useClassList } from "./context/ClassListContext";
 
 export default function ThongKeThang_DiemDanh({ onBack }) {
   const [selectedDate, setSelectedDate] = useState(() => {
@@ -27,38 +28,59 @@ export default function ThongKeThang_DiemDanh({ onBack }) {
   const [showDays, setShowDays] = useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const { getClassList, setClassListForKhoi } = useClassList();
 
   useEffect(() => {
     const fetchClassList = async () => {
       try {
+        // 🗓️ Lấy năm học hiện tại từ Firestore
         const namHocDoc = await getDoc(doc(db, "YEAR", "NAMHOC"));
         const namHocValue = namHocDoc.exists() ? namHocDoc.data().value : null;
+
         if (!namHocValue) {
           setIsLoading(false);
           console.error("❌ Không tìm thấy năm học hợp lệ trong hệ thống!");
           return;
         }
 
-        const docRef = doc(db, `DANHSACH_${namHocValue}`, "TRUONG");
+        // 🧠 Kiểm tra xem context đã có dữ liệu chưa
+        const cachedList = getClassList("TRUONG");
+        if (cachedList.length > 0) {
+          // ✅ Dữ liệu đã có sẵn → sử dụng luôn
+          setClassList(cachedList);
+          setSelectedClass(cachedList[0] || "");
+          return;
+        }
+
+        // 📥 Nếu chưa có trong context → tải từ Firestore
+        const docRef = doc(db, `CLASSLIST_${namHocValue}`, "TRUONG");
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           const list = docSnap.data().list || [];
+
           setClassList(list);
-          if (list.length > 0) setSelectedClass(list[0]);
+          setSelectedClass(list[0] || "");
+
+          // 🔁 Cập nhật context cho các component khác dùng chung
+          setClassListForKhoi("TRUONG", list);
+        } else {
+          console.warn(`⚠️ Không tìm thấy CLASSLIST_${namHocValue}/TRUONG`);
         }
       } catch (err) {
         console.error("❌ Lỗi khi tải danh sách lớp:", err);
       }
     };
+
     fetchClassList();
   }, []);
 
   useEffect(() => {
     if (!selectedClass || !selectedDate) return;
 
-    const fetchStudents = async () => {
+    const fetchData = async () => {
       setIsLoading(true);
       try {
+        // 1. Lấy năm học hiện tại
         const namHocDoc = await getDoc(doc(db, "YEAR", "NAMHOC"));
         const namHocValue = namHocDoc.exists() ? namHocDoc.data().value : null;
         if (!namHocValue) {
@@ -67,61 +89,78 @@ export default function ThongKeThang_DiemDanh({ onBack }) {
           return;
         }
 
-        const q = query(collection(db, `BANTRU_${namHocValue}`), where("lop", "==", selectedClass));
-        const snapshot = await getDocs(q);
-        const students = snapshot.docs.map((docSnap, index) => {
-          const d = docSnap.data();
-          const diemdanh = d.Diemdanh || {};
-          const huyDangKy = d.huyDangKy || "";
-          const daySummary = {};
-          let total = 0;
+        // 2. Lấy danh sách học sinh theo lớp (truy vấn từng document trong DANHSACH_...)
+        const studentQuery = query(
+          collection(db, `DANHSACH_${namHocValue}`),
+          where("lop", "==", selectedClass)
+        );
+        const querySnapshot = await getDocs(studentQuery);
+        const studentsList = querySnapshot.docs.map(doc => doc.data());
 
-          Object.entries(diemdanh).forEach(([dateStr, val]) => {
-            const date = new Date(dateStr);
-            if (!isNaN(date)
-                && date.getMonth() === selectedDate.getMonth()
-                && date.getFullYear() === selectedDate.getFullYear()) {
-              const day = date.getDate();
-              let loai = (val?.loai ?? "").trim();
-              const lydo = val?.lydo ?? "";
 
-              // Nếu loai rỗng thì gán là "K"
-              if (!loai) loai = "K";
-              daySummary[day] = { loai, lydo };
 
-              if (["P", "K", ""].includes(loai)) {
-                total += 1;
-              }
-            }
-          });
-
-          return {
-            id: docSnap.id,
-            hoVaTen: d.hoVaTen,
+        // 3. Tạo bản đồ học sinh theo mã định danh
+        const studentMap = {};
+        studentsList.forEach((s, index) => {
+          studentMap[s.maDinhDanh] = {
+            ...s,
+            id: s.maDinhDanh,
             stt: index + 1,
-            daySummary,
-            total,
-            huyDangKy,
+            daySummary: {},
+            total: 0,
+            huyDangKy: s.huyDangKy || "",
           };
         });
 
+        // 4. Lấy điểm danh từ bộ sưu tập DIEMDANH_...
+        const monthStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, "0")}`;
+        const q = query(
+          collection(db, `DIEMDANH_${namHocValue}`),
+          where("lop", "==", selectedClass),
+          where("thang", "==", monthStr)
+        );
+        const snapshot = await getDocs(q);
+
+        // 5. Ghép dữ liệu điểm danh vào từng học sinh
+        snapshot.forEach(docSnap => {
+          const d = docSnap.data();
+          const ma = d.maDinhDanh;
+          const ngay = new Date(d.ngay);
+          const day = ngay.getDate();
+
+          if (!studentMap[ma]) return;
+
+          const loai = d.phep ? "P" : "K";
+          const lydo = d.lyDo || "";
+
+          studentMap[ma].daySummary[day] = { loai, lydo };
+
+          if (["P", "K", ""].includes(loai)) {
+            studentMap[ma].total += 1;
+          }
+        });
+
+        // 6. Chuẩn bị hiển thị
         const year = selectedDate.getFullYear();
         const month = selectedDate.getMonth();
         const daysInMonth = new Date(year, month + 1, 0).getDate();
         const fullDays = Array.from({ length: daysInMonth }, (_, i) => i + 1);
         setDaySet(fullDays);
 
-        const sorted = MySort(students).map((s, idx) => ({ ...s, stt: idx + 1 }));
+        const finalList = Object.values(studentMap);
+        const sorted = MySort(finalList).map((s, idx) => ({ ...s, stt: idx + 1 }));
         setDataList(sorted);
       } catch (err) {
-        console.error("❌ Lỗi khi tải học sinh lớp:", err);
+        console.error("❌ Lỗi khi tải dữ liệu điểm danh:", err);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchStudents();
+    fetchData();
   }, [selectedClass, selectedDate]);
+
+
 
   const headCellStyle = {
     fontWeight: "bold",

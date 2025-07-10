@@ -12,6 +12,7 @@ import { getDoc, getDocs, doc, collection, query, where } from "firebase/firesto
 import { db } from "./firebase";
 import { MySort } from "./utils/MySort";
 import { exportThongKeNamDiemDanh } from './utils/exportThongKeNamDiemDanh';
+import { useClassList } from "./context/ClassListContext";
 
 export default function ThongKeNam_DiemDanh({ onBack }) {
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -24,6 +25,7 @@ export default function ThongKeNam_DiemDanh({ onBack }) {
   const [namHocValue, setNamHocValue] = useState(null);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const { getClassList, setClassListForKhoi } = useClassList();
 
   useEffect(() => {
     const fetchNamHoc = async () => {
@@ -35,22 +37,50 @@ export default function ThongKeNam_DiemDanh({ onBack }) {
   }, []);
 
   useEffect(() => {
-    if (!namHocValue) return;
     const fetchClassList = async () => {
       try {
-        const docRef = doc(db, `DANHSACH_${namHocValue}`, "TRUONG");
+        // 🗓️ Lấy năm học hiện tại từ Firestore
+        const namHocDoc = await getDoc(doc(db, "YEAR", "NAMHOC"));
+        const namHoc = namHocDoc.exists() ? namHocDoc.data().value : null;
+
+        if (!namHoc) {
+          console.error("❌ Không tìm thấy năm học hợp lệ!");
+          return;
+        }
+
+        setNamHocValue(namHoc); // ⬅️ Lưu lại vào state (nếu cần dùng tiếp)
+
+        // ✅ Kiểm tra context có dữ liệu chưa
+        const cachedList = getClassList("TRUONG");
+        if (cachedList.length > 0) {
+          setClassList(cachedList);
+          setSelectedClass(cachedList[0] || "");
+          return;
+        }
+
+        // 📥 Tải danh sách lớp từ Firestore nếu chưa có trong context
+        const docRef = doc(db, `CLASSLIST_${namHoc}`, "TRUONG");
         const docSnap = await getDoc(docRef);
+
         if (docSnap.exists()) {
           const list = docSnap.data().list || [];
+
           setClassList(list);
-          if (list.length > 0) setSelectedClass(list[0]);
+          setSelectedClass(list[0] || "");
+
+          // 🔁 Cập nhật context để các nơi khác dùng chung
+          setClassListForKhoi("TRUONG", list);
+        } else {
+          console.warn(`⚠️ Không tìm thấy CLASSLIST_${namHoc}/TRUONG`);
         }
       } catch (err) {
         console.error("❌ Lỗi khi tải danh sách lớp:", err);
       }
     };
+
     fetchClassList();
-  }, [namHocValue]);
+  }, []);
+
 
   useEffect(() => {
     if (!selectedClass || !selectedDate || !namHocValue) return;
@@ -58,60 +88,77 @@ export default function ThongKeNam_DiemDanh({ onBack }) {
     const fetchStudents = async () => {
       setIsLoading(true);
       try {
-        const q = query(
-          collection(db, `BANTRU_${namHocValue}`),
+        // 1. Lấy danh sách học sinh theo lớp từ DANHSACH_{namHocValue}
+        const studentQuery = query(
+          collection(db, `DANHSACH_${namHocValue}`),
           where("lop", "==", selectedClass)
         );
-        const snapshot = await getDocs(q);
+        const studentSnapshot = await getDocs(studentQuery);
+        const studentsList = studentSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
 
-        const students = snapshot.docs.map((docSnap, index) => {
+        // 2. Lấy điểm danh từ DIEMDANH_{namHocValue}
+        const diemDanhQuery = query(
+          collection(db, `DIEMDANH_${namHocValue}`),
+          where("lop", "==", selectedClass)
+        );
+        const diemDanhSnapshot = await getDocs(diemDanhQuery);
+
+        // 3. Gom nhóm theo mã định danh học sinh
+        const diemDanhByStudent = {};
+
+        diemDanhSnapshot.forEach(docSnap => {
           const d = docSnap.data();
-          const diemdanh = d.Diemdanh || {};
-          const monthSummary = {};
+          const maDinhDanh = d.maDinhDanh;
+          const date = d.ngay;
+          const phep = d.phep;
+          const nam = Number(d.nam);
+          const thang = Number((d.thang || "").split("-")[1]);
+
+          if (nam !== selectedDate.getFullYear()) return;
+
+          if (!diemDanhByStudent[maDinhDanh]) {
+            diemDanhByStudent[maDinhDanh] = {};
+          }
+
+          const type = phep ? "P" : "K";
+
+          if (!diemDanhByStudent[maDinhDanh][thang]) {
+            diemDanhByStudent[maDinhDanh][thang] = { P: 0, K: 0 };
+          }
+
+          diemDanhByStudent[maDinhDanh][thang][type]++;
+        });
+
+        // 4. Gộp dữ liệu học sinh + thống kê điểm danh
+        const students = studentsList.map((s, index) => {
+          const monthSummary = diemDanhByStudent[s.id] || {};
           let total = 0;
 
-          Object.entries(diemdanh).forEach(([dateStr, val]) => {
-            const [yyyy, mm] = dateStr.split("-");
-            const year = parseInt(yyyy);
-            const month = parseInt(mm);
-
-            if (year === selectedDate.getFullYear()) {
-              const type = (val?.loai ?? "").trim();
-
-              let countedType = null;
-              if (type === "P") {
-                countedType = "P";
-              } else {
-                countedType = "K"; // bao gồm "K", "" và các giá trị không hợp lệ
-              }
-
-              if (!monthSummary[month]) {
-                monthSummary[month] = { P: 0, K: 0 };
-              }
-              monthSummary[month][countedType] += 1;
-              total += 1;
-            }
+          Object.values(monthSummary).forEach(month => {
+            total += (month.P || 0) + (month.K || 0);
           });
 
           return {
-            id: docSnap.id,
-            hoVaTen: d.hoVaTen,
+            id: s.id,
+            hoVaTen: s.hoVaTen || s.hoTen,
             stt: index + 1,
             monthSummary,
             total,
           };
         });
 
-
-
+        // 5. Đảm bảo đầy đủ 12 tháng
         const months = Array.from({ length: 12 }, (_, i) => i + 1);
         setMonthSet(months);
 
-        // 🔽 Sắp xếp bằng MySort và cập nhật lại số thứ tự
+        // 6. Sắp xếp và set state
         const sorted = MySort(students).map((s, idx) => ({ ...s, stt: idx + 1 }));
         setDataList(sorted);
       } catch (err) {
-        console.error("❌ Lỗi khi tải học sinh lớp:", err);
+        console.error("❌ Lỗi khi tải dữ liệu điểm danh từ DIEMDANH:", err);
       } finally {
         setIsLoading(false);
       }
@@ -119,6 +166,9 @@ export default function ThongKeNam_DiemDanh({ onBack }) {
 
     fetchStudents();
   }, [selectedClass, selectedDate, namHocValue]);
+
+
+
 
   const headCellStyle = {
     fontWeight: "bold",

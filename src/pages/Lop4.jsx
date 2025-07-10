@@ -130,7 +130,7 @@ export default function Lop4() {
       }
 
       try {
-        const docRef = doc(db, `DANHSACH_${namHoc}`, khoi);
+        const docRef = doc(db, `CLASSLIST_${namHoc}`, khoi);
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
@@ -183,7 +183,7 @@ export default function Lop4() {
       setIsLoading(true);
       try {
         //console.log(`🟡 Fetch Firestore lớp ${selectedClass}`);
-        const col = `BANTRU_${namHoc}`;
+        const col = `DANHSACH_${namHoc}`;
         const raw = await fetchStudentsFromFirestore(col, selectedClass, useNewVersion);
         const enriched = enrichStudents(raw, today, selectedClass, useNewVersion);
         const sorted = MySort(enriched);
