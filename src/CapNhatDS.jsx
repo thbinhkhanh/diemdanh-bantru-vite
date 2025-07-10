@@ -8,6 +8,8 @@ import { collection, getDocs, doc, getDoc, updateDoc, setDoc } from "firebase/fi
 import { db } from "./firebase";
 import { MySort } from './utils/MySort';
 import { customAlphabet } from 'nanoid';
+import { useClassList } from "./context/ClassListContext";
+import { useClassData } from "./context/ClassDataContext";
 
 export default function CapNhatDS({ onBack }) {
   const [classList, setClassList] = useState([]);
@@ -17,16 +19,17 @@ export default function CapNhatDS({ onBack }) {
   const [selectedStudentId, setSelectedStudentId] = useState("");
   const [selectedStudentData, setSelectedStudentData] = useState(null);
   const [dangKy, setDangKy] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [nhapTuDanhSach, setNhapTuDanhSach] = useState("danhSach");
   const [namHocValue, setNamHocValue] = useState(null);
 
   const [customHoTen, setCustomHoTen] = useState("");
   const [customMaDinhDanh, setCustomMaDinhDanh] = useState("");
+  const { getClassList, setClassListForKhoi } = useClassList();
+  const { getClassData, setClassData } = useClassData();
 
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
-
   const dangKyOptions = ["Đăng ký mới", "Hủy đăng ký", "Đăng ký lại"];
   const nanoid = customAlphabet('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', 6);
 
@@ -34,36 +37,96 @@ export default function CapNhatDS({ onBack }) {
     setSnackbar({ open: true, message, severity });
   };
 
+  const fetchStudents = async (selectedClass, namHoc) => {
+    try {
+      //console.log("🚀 Bắt đầu fetchStudents cho lớp:", selectedClass, "| Năm học:", namHoc);
+
+      let allData = getClassData(namHoc);
+
+      if (!allData || allData.length === 0) {
+        //console.log("🔥 [STUDENT LIST] Lấy từ Firestore");
+        const snapshot = await getDocs(collection(db, `DANHSACH_${namHoc}`));
+        allData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        //console.log(`✅ Lấy được ${allData.length} học sinh từ Firestore`);
+        setClassData(namHoc, allData); // lưu vào context
+      } else {
+        //console.log("📦 [STUDENT LIST] Lấy từ context:", allData.length, "học sinh");
+      }
+
+      const filtered = allData.filter((s) => s.lop === selectedClass);
+      //console.log(`🔍 Lọc được ${filtered.length} học sinh cho lớp ${selectedClass}`);
+
+      setAllStudents(allData);
+      setFilteredStudents(MySort(filtered));
+      setLoading(false);
+    } catch (error) {
+      console.error("❌ Lỗi khi tải danh sách học sinh:", error);
+      setLoading(false);
+    }
+  };
+
+
+
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
+    const fetchClassListAndStudents = async () => {
       try {
+        //console.log("🚀 useEffect chạy - bắt đầu lấy dữ liệu");
+
         const namHocDoc = await getDoc(doc(db, "YEAR", "NAMHOC"));
         const namHoc = namHocDoc.exists() ? namHocDoc.data().value : null;
+
         if (!namHoc) {
+          console.error("❌ Không tìm thấy năm học hợp lệ trong hệ thống!");
           setLoading(false);
-          showSnackbar("❌ Không tìm thấy năm học hợp lệ trong hệ thống!", "error");
           return;
         }
+
+        //console.log("📅 Năm học hiện tại:", namHoc);
         setNamHocValue(namHoc);
 
-        const snapshot = await getDocs(collection(db, `BANTRU_${namHoc}`));
-        const studentsData = snapshot.docs.map((docSnap) => ({
-          id: docSnap.id,
-          ...docSnap.data(),
-        }));
-        setAllStudents(studentsData);
-        const classes = Array.from(new Set(studentsData.map((s) => s.lop))).sort();
-        setClassList(classes);
+        // === LẤY DANH SÁCH LỚP ===
+        let cachedClassList = getClassList("TRUONG");
+        if (!cachedClassList || cachedClassList.length === 0) {
+          //console.log("🔥 [CLASSLIST] Lấy từ Firestore");
+          const classDoc = await getDoc(doc(db, `CLASSLIST_${namHoc}`, "TRUONG"));
+          cachedClassList = classDoc.exists() ? classDoc.data().list || [] : [];
+
+          if (cachedClassList.length > 0) {
+            //console.log("✅ Lấy thành công danh sách lớp từ Firestore:", cachedClassList);
+            setClassListForKhoi("TRUONG", cachedClassList);
+          } else {
+            console.warn(`⚠️ Không tìm thấy CLASSLIST_${namHoc}/TRUONG hoặc không có dữ liệu`);
+          }
+        } else {
+          //console.log("📦 [CLASSLIST] Lấy từ context:", cachedClassList);
+        }
+
+        setClassList(cachedClassList);
+
+        if (cachedClassList.length > 0) {
+          const firstClass = cachedClassList[0];
+          //console.log("🎯 Chọn lớp đầu tiên:", firstClass);
+          setSelectedClass(firstClass);
+          await fetchStudents(firstClass, namHoc);
+        } else {
+          console.warn("⚠️ Không có lớp nào để chọn");
+          setLoading(false);
+        }
       } catch (error) {
-        console.error("Lỗi tải dữ liệu:", error);
-        showSnackbar("Lỗi tải dữ liệu học sinh!", "error");
-      } finally {
+        console.error("❌ Lỗi khi tải danh sách lớp và học sinh:", error);
         setLoading(false);
       }
     };
-    fetchData();
+
+    fetchClassListAndStudents();
   }, []);
+
+
+  const fetchStudentsForClass = async (lop) => {
+    if (!namHocValue || !lop) return;
+    setLoading(true);
+    await fetchStudents(lop, namHocValue);
+  };
 
   useEffect(() => {
     if (!selectedClass) {
@@ -74,8 +137,6 @@ export default function CapNhatDS({ onBack }) {
       if (snackbar.open) setSnackbar({ ...snackbar, open: false });
       return;
     }
-    const filtered = MySort(allStudents.filter((s) => s.lop === selectedClass));
-    setFilteredStudents(filtered);
     setSelectedStudentId("");
     setSelectedStudentData(null);
     setDangKy("");
@@ -182,25 +243,10 @@ export default function CapNhatDS({ onBack }) {
     }
   };
 
-
-
-
   return (
-    <Box
-      sx={{
-        minHeight: "100vh",
-        backgroundColor: "transparent", // 👈 Màu nền trong suốt
-        pt: 1,
-        px: 1,
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "flex-start",
-      }}
-    >
-
+    <Box sx={{ minHeight: "100vh", backgroundColor: "transparent", pt: 1, px: 1, display: "flex", justifyContent: "center", alignItems: "flex-start" }}>
       <Box maxWidth={420} width="100%">
         <Card elevation={10} sx={{ p: 4, mt: 1, borderRadius: 4, backgroundColor: "white" }}>
-          {/* Tiêu đề và đường gạch xanh với khoảng cách giống các component khác */}
           <Box sx={{ mb: 5 }}>
             <Typography variant="h5" align="center" fontWeight="bold" color="primary" gutterBottom>
               CẬP NHẬT DANH SÁCH
@@ -230,7 +276,12 @@ export default function CapNhatDS({ onBack }) {
                   labelId="label-lop"
                   value={selectedClass}
                   label="Lớp"
-                  onChange={(e) => { setSelectedClass(e.target.value); if (snackbar.open) setSnackbar({ ...snackbar, open: false }); }}
+                  onChange={(e) => {
+                    const newClass = e.target.value;
+                    setSelectedClass(newClass);
+                    fetchStudentsForClass(newClass);
+                    if (snackbar.open) setSnackbar({ ...snackbar, open: false });
+                  }}
                 >
                   <MenuItem value=""><em>Chọn lớp</em></MenuItem>
                   {classList.map((cls) => (
@@ -240,31 +291,24 @@ export default function CapNhatDS({ onBack }) {
               </FormControl>
 
               {nhapTuDanhSach === "danhSach" ? (
-                <>
-                  <FormControl fullWidth size="small" sx={{ mb: 2 }}>
-                    <InputLabel>Học sinh</InputLabel>
-                    <Select
-                      value={selectedStudentId}
-                      label="Học sinh"
-                      onChange={(e) => { setSelectedStudentId(e.target.value); if (snackbar.open) setSnackbar({ ...snackbar, open: false }); }}
-                      disabled={!selectedClass}
-                    >
-                      <MenuItem value=""><em>Chọn học sinh</em></MenuItem>
-                      {filteredStudents.map((s) => (
-                        <MenuItem key={s.id} value={s.id}>
-                          <Typography sx={{ color: s.huyDangKy !== 'x' ? '#1976d2' : 'inherit' }}>
-                            {s.hoVaTen}
-                          </Typography>
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-
-                </>
+                <FormControl fullWidth size="small" sx={{ mb: 2 }}>
+                  <InputLabel>Học sinh</InputLabel>
+                  <Select
+                    value={selectedStudentId}
+                    label="Học sinh"
+                    onChange={(e) => { setSelectedStudentId(e.target.value); if (snackbar.open) setSnackbar({ ...snackbar, open: false }); }}
+                    disabled={!selectedClass}
+                  >
+                    <MenuItem value=""><em>Chọn học sinh</em></MenuItem>
+                    {filteredStudents.map((s) => (
+                      <MenuItem key={s.id} value={s.id}>
+                        <Typography sx={{ color: s.huyDangKy !== 'x' ? '#1976d2' : 'inherit' }}>{s.hoVaTen}</Typography>
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
               ) : (
-                <>
-                  <TextField label="Họ và tên" size="small" fullWidth value={customHoTen} onChange={(e) => { setCustomHoTen(e.target.value); if (snackbar.open) setSnackbar({ ...snackbar, open: false }); }} sx={{ mb: 2 }} />              
-                </>
+                <TextField label="Họ và tên" size="small" fullWidth value={customHoTen} onChange={(e) => { setCustomHoTen(e.target.value); if (snackbar.open) setSnackbar({ ...snackbar, open: false }); }} sx={{ mb: 2 }} />
               )}
 
               <FormControl fullWidth size="small" sx={{ mb: 3 }}>
@@ -283,26 +327,12 @@ export default function CapNhatDS({ onBack }) {
               </FormControl>
 
               <Stack spacing={2} alignItems="center">
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={handleUpdate}
-                  disabled={saving}
-                  sx={{ width: 160, fontWeight: 600, py: 1 }}
-                >
+                <Button variant="contained" color="primary" onClick={handleUpdate} disabled={saving} sx={{ width: 160, fontWeight: 600, py: 1 }}>
                   {saving ? "🔄 Cập nhật" : "Cập nhật"}
                 </Button>
 
                 {snackbar.open && (
-                  <Alert
-                    severity={snackbar.severity}
-                    sx={{
-                      width: '92%',
-                      fontWeight: 500,
-                      borderRadius: 2,
-                      mt: 2
-                    }}
-                  >
+                  <Alert severity={snackbar.severity} sx={{ width: '92%', fontWeight: 500, borderRadius: 2, mt: 2 }}>
                     {snackbar.message}
                   </Alert>
                 )}

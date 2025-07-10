@@ -13,6 +13,8 @@ import { getDocs, getDoc, collection, query, where, doc, updateDoc, writeBatch }
 import { db } from "./firebase";
 import { MySort } from './utils/MySort';
 import { useClassList } from "./context/ClassListContext";
+import { useClassData } from "./context/ClassDataContext";
+
 
 export default function DieuChinhSuatAn({ onBack }) {
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -25,6 +27,8 @@ export default function DieuChinhSuatAn({ onBack }) {
   const [saveSuccess, setSaveSuccess] = useState(null);
   const [namHocValue, setNamHocValue] = useState(null);
   const { getClassList, setClassListForKhoi } = useClassList();
+  const { getClassData, setClassData } = useClassData();
+
 
 
   useEffect(() => {
@@ -91,25 +95,34 @@ export default function DieuChinhSuatAn({ onBack }) {
 
     setIsLoading(true);
     try {
+      // ✅ 1. Kiểm tra context
+      const cached = getClassData(className);
+      if (cached && cached.length > 0) {
+        //console.log(`📦 Danh sách học sinh lớp "${className}" lấy từ CONTEXT`, cached);
+        const checkedMap = {};
+        cached.forEach(s => checkedMap[s.maDinhDanh] = s.registered);
+        setDataList(cached);
+        setOriginalChecked(checkedMap);
+        return;
+      }
+
+      // 🗂️ 2. Tải từ Firestore
+      //console.log(`🔁 Đang tải danh sách học sinh lớp "${className}" từ Firestore...`);
+
       const selected = new Date(selectedDate);
       selected.setHours(0, 0, 0, 0);
       const adjustedDate = new Date(selected.getTime() + 7 * 60 * 60 * 1000);
-      const selectedDateStr = adjustedDate.toISOString().split("T")[0]; // '2025-07-09'
+      const selectedDateStr = adjustedDate.toISOString().split("T")[0];
 
-      // Query BANTRU với lớp và ngày cụ thể
       const qBanTru = query(
         collection(db, `BANTRU_${nhValue}`),
         where("lop", "==", className),
         where("ngay", "==", selectedDateStr)
       );
       const banTruSnapshot = await getDocs(qBanTru);
-
       const banTruSet = new Set();
-      banTruSnapshot.docs.forEach(doc => {
-        banTruSet.add(doc.data().maDinhDanh);
-      });
+      banTruSnapshot.docs.forEach(doc => banTruSet.add(doc.data().maDinhDanh));
 
-      // Query DANHSACH theo lớp
       const q = query(collection(db, `DANHSACH_${nhValue}`), where("lop", "==", className));
       const snapshot = await getDocs(q);
 
@@ -127,19 +140,29 @@ export default function DieuChinhSuatAn({ onBack }) {
           registered,
           disabled: false,
           stt: index + 1,
+          lop: className,
+          ...d,
         };
         students.push(student);
         checkedMap[ma] = registered;
       });
 
-      setDataList(MySort(students).map((s, i) => ({ ...s, stt: i + 1 })));
+      const sortedStudents = MySort(students).map((s, i) => ({ ...s, stt: i + 1 }));
+      setDataList(sortedStudents);
       setOriginalChecked(checkedMap);
+
+      // ✅ 3. Lưu vào context
+      //console.log(`🧠 Lưu danh sách học sinh lớp "${className}" vào CONTEXT`, sortedStudents);
+      setClassData(className, sortedStudents);
+
     } catch (err) {
       console.error("❌ Lỗi khi tải học sinh:", err);
     } finally {
       setIsLoading(false);
     }
   };
+
+
 
   useEffect(() => {
     if (selectedClass && namHocValue) fetchStudents(selectedClass);
@@ -232,7 +255,14 @@ export default function DieuChinhSuatAn({ onBack }) {
     if (nv instanceof Date && !isNaN(nv)) setSelectedDate(nv);
   };
 
-  const toggleRegister = idx => setDataList(prev => prev.map((s, i) => i === idx ? { ...s, registered: !s.registered } : s));
+  const toggleRegister = idx => {
+    setDataList(prev => {
+      // Đổi trạng thái registered
+      const newList = prev.map((s, i) => i === idx ? { ...s, registered: !s.registered } : s);
+      // Cập nhật lại stt theo vị trí mới
+      return newList.map((s, i) => ({ ...s, stt: i + 1 }));
+    });
+  };
 
   return (
     <Box sx={{ display: "flex", justifyContent: "center", mt: 0 }}>

@@ -14,6 +14,7 @@ import { db } from "./firebase";
 import { MySort } from './utils/MySort';
 import { exportThongKeThangToExcel } from './utils/exportThongKeThang';
 import { useClassList } from "./context/ClassListContext";
+import { useClassData } from "./context/ClassDataContext"; // ✅
 
 export default function ThongKeThang_DiemDanh({ onBack }) {
   const [selectedDate, setSelectedDate] = useState(() => {
@@ -29,6 +30,7 @@ export default function ThongKeThang_DiemDanh({ onBack }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { getClassList, setClassListForKhoi } = useClassList();
+  const { getClassData, setClassData } = useClassData(); 
 
   useEffect(() => {
     const fetchClassList = async () => {
@@ -79,17 +81,27 @@ export default function ThongKeThang_DiemDanh({ onBack }) {
 
     const fetchData = async () => {
       setIsLoading(true);
+
       try {
-        // 1. Lấy năm học hiện tại
-        const namHocDoc = await getDoc(doc(db, "YEAR", "NAMHOC"));
-        const namHocValue = namHocDoc.exists() ? namHocDoc.data().value : null;
-        if (!namHocValue) {
-          setIsLoading(false);
-          console.error("❌ Không tìm thấy năm học hợp lệ trong hệ thống!");
+        // ✅ 1. Kiểm tra context
+        const cachedData = getClassData(selectedClass);
+        if (cachedData && Array.isArray(cachedData) && cachedData.length > 0) {
+          //console.log(`📦 Lấy dữ liệu từ context lớp ${selectedClass}, SL: ${cachedData.length}`);
+          setDataList(cachedData);
+
+          const daysInMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0).getDate();
+          setDaySet(Array.from({ length: daysInMonth }, (_, i) => i + 1));
           return;
         }
 
-        // 2. Lấy danh sách học sinh theo lớp (truy vấn từng document trong DANHSACH_...)
+        //console.log(`📡 Không có dữ liệu lớp ${selectedClass} trong context → tải từ Firestore`);
+
+        // ✅ 2. Lấy năm học hiện tại
+        const namHocDoc = await getDoc(doc(db, "YEAR", "NAMHOC"));
+        const namHocValue = namHocDoc.exists() ? namHocDoc.data().value : null;
+        if (!namHocValue) throw new Error("Không tìm thấy năm học");
+
+        // ✅ 3. Lấy danh sách học sinh
         const studentQuery = query(
           collection(db, `DANHSACH_${namHocValue}`),
           where("lop", "==", selectedClass)
@@ -97,9 +109,6 @@ export default function ThongKeThang_DiemDanh({ onBack }) {
         const querySnapshot = await getDocs(studentQuery);
         const studentsList = querySnapshot.docs.map(doc => doc.data());
 
-
-
-        // 3. Tạo bản đồ học sinh theo mã định danh
         const studentMap = {};
         studentsList.forEach((s, index) => {
           studentMap[s.maDinhDanh] = {
@@ -112,7 +121,7 @@ export default function ThongKeThang_DiemDanh({ onBack }) {
           };
         });
 
-        // 4. Lấy điểm danh từ bộ sưu tập DIEMDANH_...
+        // ✅ 4. Lấy điểm danh tháng
         const monthStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, "0")}`;
         const q = query(
           collection(db, `DIEMDANH_${namHocValue}`),
@@ -120,8 +129,8 @@ export default function ThongKeThang_DiemDanh({ onBack }) {
           where("thang", "==", monthStr)
         );
         const snapshot = await getDocs(q);
+        //console.log(`📊 Đã tải ${snapshot.size} bản ghi điểm danh`);
 
-        // 5. Ghép dữ liệu điểm danh vào từng học sinh
         snapshot.forEach(docSnap => {
           const d = docSnap.data();
           const ma = d.maDinhDanh;
@@ -134,24 +143,21 @@ export default function ThongKeThang_DiemDanh({ onBack }) {
           const lydo = d.lyDo || "";
 
           studentMap[ma].daySummary[day] = { loai, lydo };
-
           if (["P", "K", ""].includes(loai)) {
             studentMap[ma].total += 1;
           }
         });
 
-        // 6. Chuẩn bị hiển thị
-        const year = selectedDate.getFullYear();
-        const month = selectedDate.getMonth();
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
-        const fullDays = Array.from({ length: daysInMonth }, (_, i) => i + 1);
-        setDaySet(fullDays);
+        // ✅ 5. Cập nhật UI và context
+        const daysInMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0).getDate();
+        setDaySet(Array.from({ length: daysInMonth }, (_, i) => i + 1));
 
-        const finalList = Object.values(studentMap);
-        const sorted = MySort(finalList).map((s, idx) => ({ ...s, stt: idx + 1 }));
+        const sorted = MySort(Object.values(studentMap)).map((s, idx) => ({ ...s, stt: idx + 1 }));
         setDataList(sorted);
+        setClassData(selectedClass, sorted);
+        //console.log(`✅ Đã lưu dữ liệu vào context lớp ${selectedClass}`);
       } catch (err) {
-        console.error("❌ Lỗi khi tải dữ liệu điểm danh:", err);
+        console.error("❌ Lỗi khi tải dữ liệu:", err);
       } finally {
         setIsLoading(false);
       }
@@ -159,8 +165,6 @@ export default function ThongKeThang_DiemDanh({ onBack }) {
 
     fetchData();
   }, [selectedClass, selectedDate]);
-
-
 
   const headCellStyle = {
     fontWeight: "bold",

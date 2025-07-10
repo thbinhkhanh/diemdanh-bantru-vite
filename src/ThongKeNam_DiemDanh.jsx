@@ -13,6 +13,7 @@ import { db } from "./firebase";
 import { MySort } from "./utils/MySort";
 import { exportThongKeNamDiemDanh } from './utils/exportThongKeNamDiemDanh';
 import { useClassList } from "./context/ClassListContext";
+import { useClassData } from "./context/ClassDataContext"; // ✅
 
 export default function ThongKeNam_DiemDanh({ onBack }) {
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -26,6 +27,7 @@ export default function ThongKeNam_DiemDanh({ onBack }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { getClassList, setClassListForKhoi } = useClassList();
+  const { getClassData, setClassData } = useClassData(); 
 
   useEffect(() => {
     const fetchNamHoc = async () => {
@@ -88,25 +90,45 @@ export default function ThongKeNam_DiemDanh({ onBack }) {
     const fetchStudents = async () => {
       setIsLoading(true);
       try {
-        // 1. Lấy danh sách học sinh theo lớp từ DANHSACH_{namHocValue}
-        const studentQuery = query(
-          collection(db, `DANHSACH_${namHocValue}`),
-          where("lop", "==", selectedClass)
-        );
-        const studentSnapshot = await getDocs(studentQuery);
-        const studentsList = studentSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+        // ======= STEP 1: Lấy danh sách học sinh từ CONTEXT nếu có =======
+        let studentsList = getClassData?.(selectedClass);
 
-        // 2. Lấy điểm danh từ DIEMDANH_{namHocValue}
+        const isValidArray = Array.isArray(studentsList) && studentsList.length > 0;
+
+        if (isValidArray) {
+          //console.log("📦 Danh sách học sinh lấy từ CONTEXT:", studentsList);
+        } else {
+          //console.log("🔥 Đang lấy danh sách học sinh từ Firestore...");
+
+          const studentQuery = query(
+            collection(db, `DANHSACH_${namHocValue}`),
+            where("lop", "==", selectedClass)
+          );
+          const studentSnapshot = await getDocs(studentQuery);
+          studentsList = studentSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+
+          // Lưu vào context nếu có hàm
+          if (setClassData) {
+            setClassData(selectedClass, studentsList);
+          }
+        }
+
+        if (!Array.isArray(studentsList)) {
+          console.warn("⚠️ studentsList không hợp lệ:", studentsList);
+          setDataList([]);
+          return;
+        }
+
+        // ======= STEP 2: Lấy điểm danh từ Firestore =======
         const diemDanhQuery = query(
           collection(db, `DIEMDANH_${namHocValue}`),
           where("lop", "==", selectedClass)
         );
         const diemDanhSnapshot = await getDocs(diemDanhQuery);
 
-        // 3. Gom nhóm theo mã định danh học sinh
         const diemDanhByStudent = {};
 
         diemDanhSnapshot.forEach(docSnap => {
@@ -132,7 +154,7 @@ export default function ThongKeNam_DiemDanh({ onBack }) {
           diemDanhByStudent[maDinhDanh][thang][type]++;
         });
 
-        // 4. Gộp dữ liệu học sinh + thống kê điểm danh
+        // ======= STEP 3: Gộp học sinh + thống kê điểm danh =======
         const students = studentsList.map((s, index) => {
           const monthSummary = diemDanhByStudent[s.id] || {};
           let total = 0;
@@ -150,15 +172,17 @@ export default function ThongKeNam_DiemDanh({ onBack }) {
           };
         });
 
-        // 5. Đảm bảo đầy đủ 12 tháng
+        // ======= STEP 4: Chuẩn hóa dữ liệu đầu ra =======
         const months = Array.from({ length: 12 }, (_, i) => i + 1);
         setMonthSet(months);
 
-        // 6. Sắp xếp và set state
-        const sorted = MySort(students).map((s, idx) => ({ ...s, stt: idx + 1 }));
+        const sorted = MySort(students).map((s, idx) => ({
+          ...s,
+          stt: idx + 1
+        }));
         setDataList(sorted);
       } catch (err) {
-        console.error("❌ Lỗi khi tải dữ liệu điểm danh từ DIEMDANH:", err);
+        console.error("❌ Lỗi khi tải dữ liệu điểm danh:", err);
       } finally {
         setIsLoading(false);
       }
@@ -166,8 +190,6 @@ export default function ThongKeNam_DiemDanh({ onBack }) {
 
     fetchStudents();
   }, [selectedClass, selectedDate, namHocValue]);
-
-
 
 
   const headCellStyle = {

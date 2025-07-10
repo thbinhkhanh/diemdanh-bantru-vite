@@ -8,71 +8,63 @@ import {
 import { getDocs, getDoc, collection, doc, updateDoc } from 'firebase/firestore';
 import { db } from './firebase';
 import { MySort } from './utils/MySort';
+import { useClassList } from './context/ClassListContext';
+import { useClassData } from './context/ClassDataContext';
 
 export default function LapDanhSach({ onBack }) {
-  const [allStudents, setAllStudents] = useState([]);
-  const [selectedClass, setSelectedClass] = useState('1.1');
+  const { getClassList, setClassListForKhoi } = useClassList();
+  const { getClassData, setClassData } = useClassData();
+
+  const [allStudents, setAllStudents] = useState([]); // lưu học sinh của lớp đang chọn
+  const [selectedClass, setSelectedClass] = useState('');
   const [filteredStudents, setFilteredStudents] = useState([]);
   const [classList, setClassList] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [alertInfo, setAlertInfo] = useState({
     open: false,
     message: '',
     severity: 'success',
   });
+  const [namHocValue, setNamHocValue] = useState(null);
 
+  // Lần đầu tải danh sách lớp và năm học
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchClassListAndYear = async () => {
       setIsLoading(true);
       try {
-        // 🔄 Lấy giá trị năm học hiện tại
         const namHocDoc = await getDoc(doc(db, "YEAR", "NAMHOC"));
-        const namHocValue = namHocDoc.exists() ? namHocDoc.data().value : null;
+        const namHoc = namHocDoc.exists() ? namHocDoc.data().value : null;
+        setNamHocValue(namHoc);
 
-        if (!namHocValue) {
-          setIsLoading(false);
+        if (!namHoc) {
           setAlertInfo({
             open: true,
             message: "❌ Không tìm thấy năm học hợp lệ trong hệ thống!",
             severity: "error",
           });
+          setIsLoading(false);
           return;
         }
 
-        // ✅ Dùng collection động BANTRU_{namHocValue}
-        const snapshot = await getDocs(collection(db, `BANTRU_${namHocValue}`));
-        const studentData = snapshot.docs.map(docSnap => {
-          const data = docSnap.data();
-          const huyDangKy = data.huyDangKy || '';
-          const editable = huyDangKy === 'x';
-          return {
-            id: docSnap.id,
-            ...data,
-            registered: !editable,
-            originalRegistered: !editable,
-            editable,
-          };
-        });
-
-        setAllStudents(studentData);
-
-        const classes = [...new Set(studentData.map(s => s.lop))].sort();
-        setClassList(classes);
-
-        if (classes.includes('1.1')) {
-          const filtered = MySort(
-            studentData.filter(s => s.lop === '1.1')
-          ).map((s, idx) => ({ ...s, stt: idx + 1 }));
-
-          setFilteredStudents(filtered);
+        let cachedClassList = getClassList("TRUONG");
+        if (!cachedClassList || cachedClassList.length === 0) {
+          const classDoc = await getDoc(doc(db, `CLASSLIST_${namHoc}`, "TRUONG"));
+          cachedClassList = classDoc.exists() ? classDoc.data().list || [] : [];
+          if (cachedClassList.length > 0) {
+            setClassListForKhoi("TRUONG", cachedClassList);
+          } else {
+            console.warn(`⚠️ Không tìm thấy CLASSLIST_${namHoc}/TRUONG`);
+          }
         }
-
+        setClassList(cachedClassList);
+        const initialClass = cachedClassList[0] || '';
+        setSelectedClass(initialClass);
       } catch (err) {
-        console.error('❌ Lỗi khi tải dữ liệu từ Firebase:', err);
+        console.error('❌ Lỗi khi tải dữ liệu năm học hoặc danh sách lớp:', err);
         setAlertInfo({
           open: true,
-          message: '❌ Lỗi khi tải dữ liệu từ Firebase.',
+          message: '❌ Lỗi khi tải dữ liệu năm học hoặc danh sách lớp.',
           severity: 'error'
         });
       } finally {
@@ -80,17 +72,69 @@ export default function LapDanhSach({ onBack }) {
       }
     };
 
-    fetchData();
-  }, []);
+    fetchClassListAndYear();
+  }, [getClassList, setClassListForKhoi]);
 
+  // Khi lớp được chọn thay đổi, tải dữ liệu học sinh cho lớp đó nếu chưa có
+  useEffect(() => {
+    if (!selectedClass || !namHocValue) return;
+
+    const fetchStudentsForClass = async () => {
+      setIsLoading(true);
+      try {
+        // Kiểm tra xem data lớp này đã có trong context chưa
+        let cachedData = getClassData(namHocValue);
+        // Lọc dữ liệu lớp đã cache
+        let studentsForClass = cachedData
+          ? cachedData.filter(s => s.lop === selectedClass)
+          : [];
+
+        if (!cachedData || studentsForClass.length === 0) {
+          // Nếu chưa có hoặc chưa có học sinh lớp đó, fetch riêng lớp đó
+          const snapshot = await getDocs(collection(db, `BANTRU_${namHocValue}`));
+          const allStudentsData = snapshot.docs.map(docSnap => {
+            const data = docSnap.data();
+            const huyDangKy = data.huyDangKy || '';
+            const editable = huyDangKy === 'x';
+            return {
+              id: docSnap.id,
+              ...data,
+              registered: !editable,
+              originalRegistered: !editable,
+              editable,
+            };
+          });
+
+          // Cập nhật toàn bộ data vào context để lần sau không phải fetch lại
+          setClassData(namHocValue, allStudentsData);
+
+          // Lọc lại học sinh lớp được chọn
+          studentsForClass = allStudentsData.filter(s => s.lop === selectedClass);
+        }
+
+        // Sắp xếp và thêm chỉ số stt
+        const filtered = MySort(studentsForClass).map((s, idx) => ({ ...s, stt: idx + 1 }));
+        setFilteredStudents(filtered);
+        setAllStudents(studentsForClass);
+      } catch (err) {
+        console.error('❌ Lỗi khi tải dữ liệu học sinh lớp:', err);
+        setAlertInfo({
+          open: true,
+          message: '❌ Lỗi khi tải dữ liệu học sinh lớp.',
+          severity: 'error'
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchStudentsForClass();
+
+  }, [selectedClass, namHocValue, getClassData, setClassData]);
 
   const handleClassChange = (event) => {
     const selected = event.target.value;
     setSelectedClass(selected);
-    const filtered = MySort(
-      allStudents.filter(s => s.lop === selected)
-    ).map((s, idx) => ({ ...s, stt: idx + 1 }));
-    setFilteredStudents(filtered);
     setAlertInfo({ open: false, message: '', severity: 'success' });
   };
 
@@ -98,6 +142,7 @@ export default function LapDanhSach({ onBack }) {
     const updated = [...filteredStudents];
     updated[index].registered = !updated[index].registered;
     setFilteredStudents(updated);
+
     setAllStudents(prev =>
       prev.map(student =>
         student.id === updated[index].id
@@ -111,7 +156,6 @@ export default function LapDanhSach({ onBack }) {
   const handleSave = async () => {
     const loginRole = localStorage.getItem("loginRole");
 
-    // ❌ Không có quyền thì báo lỗi
     if (loginRole !== "admin" && loginRole !== "bgh") {
       setAlertInfo({
         open: true,
@@ -129,11 +173,10 @@ export default function LapDanhSach({ onBack }) {
         s => s.registered !== s.originalRegistered
       );
 
+      if (!namHocValue) throw new Error("Không có năm học hợp lệ");
+
       for (let student of changedStudents) {
         const huyDangKy = student.registered ? 'T' : '';
-        const namHocDoc = await getDoc(doc(db, "YEAR", "NAMHOC"));
-        const namHocValue = namHocDoc.exists() ? namHocDoc.data().value : null;
-        if (!namHocValue) throw new Error("Không tìm thấy năm học hợp lệ");
         await updateDoc(doc(db, `BANTRU_${namHocValue}`, student.id), { huyDangKy });
       }
 
@@ -145,12 +188,14 @@ export default function LapDanhSach({ onBack }) {
         severity: 'success'
       });
 
+      // Cập nhật lại originalRegistered sau khi lưu
       setFilteredStudents(prev =>
         prev.map(student => ({
           ...student,
           originalRegistered: student.registered
         }))
       );
+
     } catch (err) {
       console.error('❌ Lỗi khi lưu dữ liệu:', err);
       setAlertInfo({
