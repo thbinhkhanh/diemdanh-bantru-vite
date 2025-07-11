@@ -16,7 +16,7 @@ import { MySort } from './utils/MySort';
 import { exportThongKeThangToExcel } from './utils/exportThongKeThang';
 import { useClassList } from "./context/ClassListContext";
 import { useClassData } from "./context/ClassDataContext";
-
+import { enrichStudents } from "./pages/ThanhPhan/enrichStudents";
 
 export default function ThongKeThang({ onBack }) {
   const [selectedDate, setSelectedDate] = useState(() => {
@@ -73,18 +73,23 @@ export default function ThongKeThang({ onBack }) {
   }, []);
 
   // Hàm xử lý dữ liệu học sinh + thống kê bán trú, rồi set dataList
-  const processStudentData = (rawData, banTruData, selectedClass, selectedDate) => {
-    const monthStr = format(selectedDate, "yyyy-MM");
-    const students = rawData.map((hs, index) => {
-      const { maDinhDanh, hoVaTen, huyDangKy } = hs;
+  const processStudentData = (rawStudents, banTruData, className, selectedDate) => {
+    const selectedDateStr = format(selectedDate, "yyyy-MM");
+
+    // ✅ enrich từ dữ liệu gốc
+    const enriched = enrichStudents(rawStudents, selectedDateStr, className, true);
+
+    // ✅ gắn trạng thái registered
+    const enrichedWithRegister = enriched.map((s, index) => {
+      const ma = s.maDinhDanh;
       const daySummary = {};
       let total = 0;
 
       banTruData.forEach(record => {
         if (
-          record.maDinhDanh === maDinhDanh &&
-          record.lop === selectedClass &&
-          record.thang === monthStr &&
+          record.maDinhDanh === ma &&
+          record.lop === className &&
+          record.thang === selectedDateStr &&
           record.ngay
         ) {
           const dateObj = new Date(record.ngay);
@@ -97,18 +102,22 @@ export default function ThongKeThang({ onBack }) {
       });
 
       return {
-        id: maDinhDanh || `${index}`,
-        hoVaTen,
-        huyDangKy,
-        daySummary,
-        total,
+        ...s,
         stt: index + 1,
+        daySummary,
+        total
       };
     });
 
-    const sorted = MySort(students).map((s, idx) => ({ ...s, stt: idx + 1 }));
+    const sorted = MySort(enrichedWithRegister).map((s, idx) => ({
+      ...s,
+      stt: idx + 1
+    }));
+
     setDataList(sorted);
   };
+
+
 
   // Load học sinh khi selectedClass hoặc selectedDate thay đổi
   useEffect(() => {
@@ -138,8 +147,15 @@ export default function ThongKeThang({ onBack }) {
             return huy === "" || huy === "T";
           });
 
-          setClassData(selectedClass, danhSachData);
-          rawData = danhSachData;
+          // ✅ enrich dữ liệu
+          const selectedDateStr = format(selectedDate, "yyyy-MM-dd");
+          const enriched = enrichStudents(danhSachData, selectedDateStr, selectedClass, true);
+
+          // ✅ lưu enriched vào context
+          setClassData(selectedClass, enriched);
+
+          // ✅ sử dụng enriched
+          rawData = enriched;
         }
 
         // Lấy dữ liệu bán trú

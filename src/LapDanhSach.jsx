@@ -10,6 +10,8 @@ import { db } from './firebase';
 import { MySort } from './utils/MySort';
 import { useClassList } from './context/ClassListContext';
 import { useClassData } from './context/ClassDataContext';
+import { query, where } from "firebase/firestore";
+import { enrichStudents } from "./pages/ThanhPhan/enrichStudents";
 
 export default function LapDanhSach({ onBack }) {
   const { getClassList, setClassListForKhoi } = useClassList();
@@ -82,46 +84,45 @@ export default function LapDanhSach({ onBack }) {
     const fetchStudentsForClass = async () => {
       setIsLoading(true);
       try {
-        // Kiểm tra xem data lớp này đã có trong context chưa
-        let cachedData = getClassData(namHocValue);
-        // Lọc dữ liệu lớp đã cache
-        let studentsForClass = cachedData
-          ? cachedData.filter(s => s.lop === selectedClass)
-          : [];
-
-        if (!cachedData || studentsForClass.length === 0) {
-          // Nếu chưa có hoặc chưa có học sinh lớp đó, fetch riêng lớp đó
-          const snapshot = await getDocs(collection(db, `BANTRU_${namHocValue}`));
-          const allStudentsData = snapshot.docs.map(docSnap => {
-            const data = docSnap.data();
-            const huyDangKy = data.huyDangKy || '';
-            const editable = huyDangKy === 'x';
-            return {
-              id: docSnap.id,
-              ...data,
-              registered: !editable,
-              originalRegistered: !editable,
-              editable,
-            };
-          });
-
-          // Cập nhật toàn bộ data vào context để lần sau không phải fetch lại
-          setClassData(namHocValue, allStudentsData);
-
-          // Lọc lại học sinh lớp được chọn
-          studentsForClass = allStudentsData.filter(s => s.lop === selectedClass);
+        // ✅ Dùng lại từ context nếu có
+        const cached = getClassData(selectedClass);
+        if (cached && cached.length > 0) {
+          //console.log(`✅ Dùng lại dữ liệu lớp ${selectedClass} từ context`);
+          setFilteredStudents(cached);
+          setAllStudents(cached);
+          return;
         }
 
-        // Sắp xếp và thêm chỉ số stt
-        const filtered = MySort(studentsForClass).map((s, idx) => ({ ...s, stt: idx + 1 }));
-        setFilteredStudents(filtered);
-        setAllStudents(studentsForClass);
+        //console.log(`🚀 Fetch học sinh DANHSACH_${namHocValue} cho lớp ${selectedClass}`);
+
+        // ✅ Lấy toàn bộ học sinh từ DANHSACH
+        const snapshot = await getDocs(collection(db, `DANHSACH_${namHocValue}`));
+        const rawStudents = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+
+        // ✅ enrich dữ liệu (KHÔNG truyền ngày)
+        const enriched = enrichStudents(rawStudents, null, selectedClass, true);
+
+        // ✅ Gắn chỉ số STT
+        const enrichedStudents = enriched.map((s, index) => ({
+          ...s,
+          stt: index + 1,
+        }));
+
+        // ✅ Lưu vào context với key là lớp (1.1, 1.2, ...)
+        setClassData(selectedClass, enrichedStudents);
+
+        // ✅ Hiển thị
+        setFilteredStudents(enrichedStudents);
+        setAllStudents(enrichedStudents);
       } catch (err) {
-        console.error('❌ Lỗi khi tải dữ liệu học sinh lớp:', err);
+        console.error('❌ Lỗi khi fetch học sinh:', err);
         setAlertInfo({
           open: true,
-          message: '❌ Lỗi khi tải dữ liệu học sinh lớp.',
-          severity: 'error'
+          message: '❌ Không thể tải dữ liệu học sinh.',
+          severity: 'error',
         });
       } finally {
         setIsLoading(false);
@@ -129,10 +130,9 @@ export default function LapDanhSach({ onBack }) {
     };
 
     fetchStudentsForClass();
-
   }, [selectedClass, namHocValue, getClassData, setClassData]);
 
-  const handleClassChange = (event) => {
+const handleClassChange = (event) => {
     const selected = event.target.value;
     setSelectedClass(selected);
     setAlertInfo({ open: false, message: '', severity: 'success' });

@@ -14,6 +14,7 @@ import { db } from "./firebase";
 import { MySort } from './utils/MySort';
 import { useClassList } from "./context/ClassListContext";
 import { useClassData } from "./context/ClassDataContext";
+import { enrichStudents } from "./pages/ThanhPhan/enrichStudents";
 
 
 export default function DieuChinhSuatAn({ onBack }) {
@@ -95,10 +96,9 @@ export default function DieuChinhSuatAn({ onBack }) {
 
     setIsLoading(true);
     try {
-      // ✅ 1. Kiểm tra context
       const cached = getClassData(className);
       if (cached && cached.length > 0) {
-        //console.log(`📦 Danh sách học sinh lớp "${className}" lấy từ CONTEXT`, cached);
+        // ✅ Dùng từ context nếu có
         const checkedMap = {};
         cached.forEach(s => checkedMap[s.maDinhDanh] = s.registered);
         setDataList(cached);
@@ -106,9 +106,7 @@ export default function DieuChinhSuatAn({ onBack }) {
         return;
       }
 
-      // 🗂️ 2. Tải từ Firestore
-      //console.log(`🔁 Đang tải danh sách học sinh lớp "${className}" từ Firestore...`);
-
+      // 📥 Nếu chưa có trong context → tải từ Firestore
       const selected = new Date(selectedDate);
       selected.setHours(0, 0, 0, 0);
       const adjustedDate = new Date(selected.getTime() + 7 * 60 * 60 * 1000);
@@ -126,33 +124,33 @@ export default function DieuChinhSuatAn({ onBack }) {
       const q = query(collection(db, `DANHSACH_${nhValue}`), where("lop", "==", className));
       const snapshot = await getDocs(q);
 
-      const students = [];
-      const checkedMap = {};
+      const rawStudents = snapshot.docs.map(docSnap => ({
+        id: docSnap.id,
+        ...docSnap.data(),
+      }));
 
-      snapshot.docs.forEach((docSnap, index) => {
-        const d = docSnap.data();
-        const ma = d.maDinhDanh;
-        const registered = banTruSet.has(ma);
-        const student = {
-          id: docSnap.id,
-          maDinhDanh: ma,
-          hoVaTen: d.hoVaTen,
-          registered,
-          disabled: false,
-          stt: index + 1,
-          lop: className,
-          ...d,
+      // ✅ enrich dữ liệu
+      const enriched = enrichStudents(rawStudents, selectedDateStr, className, true);
+
+      // ✅ Gắn trạng thái registered từ dữ liệu BANTRU
+      const enrichedWithRegister = enriched.map((s, index) => {
+        const ma = s.maDinhDanh;
+        return {
+          ...s,
+          stt: index + 1
         };
-        students.push(student);
-        checkedMap[ma] = registered;
       });
 
-      const sortedStudents = MySort(students).map((s, i) => ({ ...s, stt: i + 1 }));
+      const sortedStudents = MySort(enrichedWithRegister).map((s, i) => ({ ...s, stt: i + 1 }));
+
+      // ✅ Cập nhật state và context
+      const checkedMap = {};
+      sortedStudents.forEach(s => checkedMap[s.maDinhDanh] = s.registered);
+
       setDataList(sortedStudents);
       setOriginalChecked(checkedMap);
 
-      // ✅ 3. Lưu vào context
-      //console.log(`🧠 Lưu danh sách học sinh lớp "${className}" vào CONTEXT`, sortedStudents);
+      // ✅ Lưu vào context
       setClassData(className, sortedStudents);
 
     } catch (err) {
@@ -161,8 +159,6 @@ export default function DieuChinhSuatAn({ onBack }) {
       setIsLoading(false);
     }
   };
-
-
 
   useEffect(() => {
     if (selectedClass && namHocValue) fetchStudents(selectedClass);

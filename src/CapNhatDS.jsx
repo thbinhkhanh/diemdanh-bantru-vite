@@ -10,6 +10,8 @@ import { MySort } from './utils/MySort';
 import { customAlphabet } from 'nanoid';
 import { useClassList } from "./context/ClassListContext";
 import { useClassData } from "./context/ClassDataContext";
+import { query, where } from "firebase/firestore";
+import { enrichStudents } from "./pages/ThanhPhan/enrichStudents";
 
 export default function CapNhatDS({ onBack }) {
   const [classList, setClassList] = useState([]);
@@ -41,31 +43,42 @@ export default function CapNhatDS({ onBack }) {
     try {
       //console.log("🚀 Bắt đầu fetchStudents cho lớp:", selectedClass, "| Năm học:", namHoc);
 
-      let allData = getClassData(namHoc);
+      const cacheKey = selectedClass; 
+      let cachedData = getClassData(cacheKey);
 
-      if (!allData || allData.length === 0) {
-        //console.log("🔥 [STUDENT LIST] Lấy từ Firestore");
-        const snapshot = await getDocs(collection(db, `DANHSACH_${namHoc}`));
-        allData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-        //console.log(`✅ Lấy được ${allData.length} học sinh từ Firestore`);
-        setClassData(namHoc, allData); // lưu vào context
+      if (!cachedData || cachedData.length === 0) {
+        //console.log("🔥 [STUDENT LIST] Không có cache, tải từ Firestore");
+        const q = query(collection(db, `DANHSACH_${namHoc}`), where("lop", "==", selectedClass));
+        const snapshot = await getDocs(q);
+        const rawStudents = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+
+        //console.log(`✅ Lấy được ${rawStudents.length} học sinh từ Firestore cho lớp ${selectedClass}`);
+
+        // ✅ enrich dữ liệu (giả sử enrichStudents tồn tại)
+        const selectedDateStr = new Date().toISOString().split("T")[0]; // hoặc truyền ngày cụ thể bạn cần
+        const enriched = enrichStudents(rawStudents, selectedDateStr, selectedClass, true);
+
+        // ✅ Gắn stt
+        const enrichedWithRegister = enriched.map((s, index) => ({
+          ...s,
+          stt: index + 1
+        }));
+
+        setClassData(cacheKey, enrichedWithRegister); // ✅ Lưu vào context
+        setAllStudents(enrichedWithRegister);
+        setFilteredStudents(MySort(enrichedWithRegister));
       } else {
-        //console.log("📦 [STUDENT LIST] Lấy từ context:", allData.length, "học sinh");
+        //console.log("📦 [STUDENT LIST] Lấy từ context:", cachedData.length, "học sinh");
+        setAllStudents(cachedData);
+        setFilteredStudents(MySort(cachedData));
       }
 
-      const filtered = allData.filter((s) => s.lop === selectedClass);
-      //console.log(`🔍 Lọc được ${filtered.length} học sinh cho lớp ${selectedClass}`);
-
-      setAllStudents(allData);
-      setFilteredStudents(MySort(filtered));
       setLoading(false);
     } catch (error) {
       console.error("❌ Lỗi khi tải danh sách học sinh:", error);
       setLoading(false);
     }
   };
-
-
 
   useEffect(() => {
     const fetchClassListAndStudents = async () => {

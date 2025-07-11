@@ -14,6 +14,7 @@ import { MySort } from "./utils/MySort";
 import { exportThongKeNamToExcel } from "./utils/exportThongKeNamToExcel";
 import { useClassList } from "./context/ClassListContext";
 import { useClassData } from "./context/ClassDataContext";
+import { enrichStudents } from "./pages/ThanhPhan/enrichStudents";
 
 export default function ThongKeNam({ onBack }) {
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -80,32 +81,46 @@ export default function ThongKeNam({ onBack }) {
 
     const fetchStudents = async () => {
       setIsLoading(true);
-      const key = `${namHocValue}_${selectedClass}`;
+
+      const key = selectedClass; // ✅ Chỉ dùng tên lớp làm key
 
       try {
-        const cachedData = getClassData(key);
-        if (cachedData && Array.isArray(cachedData)) {
-          //console.log(`[Context] Dữ liệu học sinh lấy từ context với key: ${key}`, cachedData);
-          setDataList(cachedData);
-          setMonthSet(Array.from({ length: 12 }, (_, i) => i + 1));
-          return;
+        let rawData = getClassData(key);
+
+        if (!rawData || rawData.length === 0) {
+          //console.log(`🔥 [FIRESTORE] Chưa có dữ liệu context, tải từ Firestore...`);
+
+          const danhSachSnap = await getDocs(query(
+            collection(db, `DANHSACH_${namHocValue}`),
+            where("lop", "==", selectedClass)
+          ));
+
+          const danhSachData = danhSachSnap.docs
+            .map(d => d.data())
+            .filter(hs => {
+              const huy = (hs.huyDangKy || "").toUpperCase();
+              return huy === "" || huy === "T";
+            });
+
+          const selectedDateStr = selectedDate.toISOString().split("T")[0];
+          const enriched = enrichStudents(danhSachData, selectedDateStr, selectedClass, true);
+
+          //console.log(`✨ [ENRICH] Đã enrich ${enriched.length} học sinh`);
+
+          // ✅ Lưu enriched vào context với key là tên lớp (vd: "1.2")
+          setClassData(key, enriched);
+          rawData = enriched;
+        } else {
+          //console.log(`📦 [CONTEXT] Dữ liệu đã có trong context với key: ${key}`);
         }
 
-        //console.log(`[Firestore] Không có dữ liệu trong context. Lấy từ Firestore với key: ${key}`);
-
-        const danhSachSnap = await getDocs(query(
-          collection(db, `DANHSACH_${namHocValue}`),
+        // ✅ Thống kê bán trú
+        const banTruSnap = await getDocs(query(
+          collection(db, `BANTRU_${namHocValue}`),
           where("lop", "==", selectedClass)
         ));
-        const danhSachData = danhSachSnap.docs
-          .map(d => d.data())
-          .filter(hs => {
-            const huy = (hs.huyDangKy || "").toUpperCase();
-            return huy === "" || huy === "T";
-          });
 
-        const banTruSnap = await getDocs(collection(db, `BANTRU_${namHocValue}`));
-        const banTruData = banTruSnap.docs.map(d => d.data());
+        const banTruData = banTruSnap.docs.map(doc => doc.data());
 
         const studentMap = {};
         banTruData.forEach(record => {
@@ -123,27 +138,22 @@ export default function ThongKeNam({ onBack }) {
           studentMap[maDinhDanh].total += 1;
         });
 
-        const students = danhSachData.map((hs, index) => {
+        const students = rawData.map((hs, index) => {
           const summary = studentMap[hs.maDinhDanh] || {};
           return {
-            id: hs.maDinhDanh || `${index}`,
-            hoVaTen: hs.hoVaTen,
-            huyDangKy: hs.huyDangKy || "",
+            ...hs,
             monthSummary: summary.monthSummary || {},
             total: summary.total || 0,
             stt: index + 1,
           };
         });
 
-        const allMonths = Array.from({ length: 12 }, (_, i) => i + 1);
-        setMonthSet(allMonths);
-
         const sorted = MySort(students).map((s, idx) => ({ ...s, stt: idx + 1 }));
-        //console.log(`[Firestore] Dữ liệu học sinh lấy từ Firestore và được lưu vào context với key: ${key}`, sorted);
+
         setDataList(sorted);
-        setClassData(key, sorted);
+        setMonthSet(Array.from({ length: 12 }, (_, i) => i + 1));
       } catch (err) {
-        console.error("Lỗi khi lấy dữ liệu học sinh:", err);
+        console.error("❌ Lỗi khi lấy dữ liệu học sinh:", err);
       } finally {
         setIsLoading(false);
       }
@@ -151,7 +161,6 @@ export default function ThongKeNam({ onBack }) {
 
     fetchStudents();
   }, [selectedClass, selectedDate, namHocValue, getClassData, setClassData]);
-
 
 
 
@@ -298,10 +307,11 @@ export default function ThongKeNam({ onBack }) {
                     </TableCell>
 
                     {showMonths && monthSet.map((m) => (
-                      <TableCell key={m} align="center" sx={{ minWidth: 30, px: 0.5 }}>
+                      <TableCell key={`${student.id}-${m}`} align="center" sx={{ minWidth: 30, px: 0.5 }}>
                         {student.monthSummary[m] > 0 ? student.monthSummary[m] : ""}
                       </TableCell>
                     ))}
+
                     <TableCell align="center" sx={{ width: 80, px: 1 }}>
                       {student.total > 0 ? student.total : ""}
                     </TableCell>
