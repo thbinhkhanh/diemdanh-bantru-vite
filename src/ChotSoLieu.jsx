@@ -296,38 +296,34 @@ export default function ChotSoLieu({ onBack }) {
           const isEmpty = Object.keys(existingDocsMap).length === 0;
           const batch = writeBatch(db);
 
-          banTruDocs.forEach(item => {
+          banTruDocs.forEach(item => { 
             const { docId, data } = item;
             const huyDangKy = data.huyDangKy || "";
-
             const logInfo = `${data.hoVaTen} | Lớp: ${data.lop} | Ngày: ${data.ngay}`;
 
-            if (isEmpty) {
-              // Ghi toàn bộ nếu chưa có dữ liệu cho ngày đó
-              batch.set(doc(db, `BANTRU_${namHocValue}`, docId), data);
-              //console.log("📥 GHI TOÀN BỘ:", logInfo);
-            } else {
-              if (huyDangKy === "") {
-                if (existingDocsMap[docId]) {
-                  batch.delete(doc(db, `BANTRU_${namHocValue}`, docId));
-                  //console.log("🗑️ XOÁ:", logInfo);
-                } else {
-                  //console.log("⚠️ KHÔNG CÓ ĐỂ XOÁ:", logInfo);
-                }
-              } else if (huyDangKy === "T") {
-                if (!existingDocsMap[docId]) {
-                  batch.set(doc(db, `BANTRU_${namHocValue}`, docId), data);
-                  //console.log("📥 THÊM MỚI:", logInfo);
-                } else {
-                  //console.log("✅ BỎ QUA (đã tồn tại):", logInfo);
-                }
+            // ❌ Nếu huyDangKy là "" hoặc "x" → XÓA nếu có
+            if (huyDangKy === "" || huyDangKy === "x") {
+              if (existingDocsMap[docId]) {
+                batch.delete(doc(db, `BANTRU_${namHocValue}`, docId));
+                // console.log("🗑️ XOÁ:", logInfo, "| huyDangKy:", huyDangKy);
               } else {
-                //console.log("⚠️ BỎ QUA (huyDangKy không hợp lệ):", logInfo, "| huyDangKy:", huyDangKy);
+                // console.log("⚠️ KHÔNG CÓ ĐỂ XOÁ:", logInfo);
+              }
+              return; // 🛑 Dừng xử lý bản ghi này
+            }
+
+            // ✅ Nếu huyDangKy là "T" → THÊM nếu chưa có
+            if (huyDangKy === "T") {
+              if (!existingDocsMap[docId]) {
+                batch.set(doc(db, `BANTRU_${namHocValue}`, docId), data);
+                // console.log("📥 GHI MỚI:", logInfo);
+              } else {
+                // console.log("✅ BỎ QUA (đã tồn tại):", logInfo);
               }
             }
+
+            // 👉 Các giá trị khác của huyDangKy thì bỏ qua không làm gì
           });
-
-
 
           await batch.commit();
           console.log("✅ Ghi dữ liệu nền hoàn tất:", formattedDate);
