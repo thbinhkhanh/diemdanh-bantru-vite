@@ -98,13 +98,44 @@ export default function DieuChinhSuatAn({ onBack }) {
     try {
       const cached = getClassData(className);
       if (cached && cached.length > 0) {
-        // ✅ Dùng từ context nếu có
+        // ✅ Lấy ngày được chọn
+        const selected = new Date(selectedDate);
+        selected.setHours(0, 0, 0, 0);
+        const adjustedDate = new Date(selected.getTime() + 7 * 60 * 60 * 1000);
+        const selectedDateStr = adjustedDate.toISOString().split("T")[0];
+
+        // 📥 Lấy dữ liệu đăng ký bán trú của ngày đang chọn
+        const qBanTru = query(
+          collection(db, `BANTRU_${nhValue}`),
+          where("lop", "==", className),
+          where("ngay", "==", selectedDateStr)
+        );
+        const banTruSnapshot = await getDocs(qBanTru);
+        const banTruSet = new Set();
+        banTruSnapshot.docs.forEach(doc => banTruSet.add(doc.data().maDinhDanh));
+
+        // 🔁 Cập nhật trạng thái registered theo ngày được chọn
+        const updated = cached.map((s, index) => {
+          const huy = s.huyDangKy || "";
+          const isHuyX = huy === "x";
+          return {
+            ...s,
+            registered: isHuyX ? false : banTruSet.has(s.maDinhDanh),
+            disabled: isHuyX,
+            stt: index + 1,
+          };
+        });
+
+        const sorted = MySort(updated).map((s, i) => ({ ...s, stt: i + 1 }));
+
+        // ✅ Update state
         const checkedMap = {};
-        cached.forEach(s => checkedMap[s.maDinhDanh] = s.registered);
-        setDataList(cached);
+        sorted.forEach(s => checkedMap[s.maDinhDanh] = s.registered);
+        setDataList(sorted);
         setOriginalChecked(checkedMap);
         return;
       }
+
 
       // 📥 Nếu chưa có trong context → tải từ Firestore
       const selected = new Date(selectedDate);
@@ -129,15 +160,18 @@ export default function DieuChinhSuatAn({ onBack }) {
         ...docSnap.data(),
       }));
 
-      // ✅ enrich dữ liệu
+      // enrich trước
       const enriched = enrichStudents(rawStudents, selectedDateStr, className, true);
 
-      // ✅ Gắn trạng thái registered từ dữ liệu BANTRU
+      // Gán registered đúng theo ngày được chọn
       const enrichedWithRegister = enriched.map((s, index) => {
-        const ma = s.maDinhDanh;
+        const huy = s.huyDangKy || "";
+        const isHuyX = huy === "x";
         return {
           ...s,
-          stt: index + 1
+          registered: isHuyX ? false : banTruSet.has(s.maDinhDanh),
+          disabled: isHuyX,
+          stt: index + 1,
         };
       });
 

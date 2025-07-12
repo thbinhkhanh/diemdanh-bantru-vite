@@ -226,16 +226,20 @@ export default function ChotSoLieu({ onBack }) {
         }
 
         const isAn = huyDangKy === "T";
+        const isValidSiSo = huyDangKy === "T" || huyDangKy === "";
 
-        lopMap[khoiKey].siSo += 1;
-        lopMap[khoiKey].children[lopKey].siSo += 1;
-        truong.siSo += 1;
+        if (isValidSiSo) {
+          lopMap[khoiKey].siSo += 1;
+          lopMap[khoiKey].children[lopKey].siSo += 1;
+          truong.siSo += 1;
+        }
 
         if (isAn) {
           lopMap[khoiKey].anBanTru += 1;
           lopMap[khoiKey].children[lopKey].anBanTru += 1;
           truong.anBanTru += 1;
         }
+
       });
 
       const summaryData = [];
@@ -296,31 +300,34 @@ export default function ChotSoLieu({ onBack }) {
             const { docId, data } = item;
             const huyDangKy = data.huyDangKy || "";
 
-            console.log("🔎 Đang xử lý:", docId, "| huyDangKy:", huyDangKy);
+            const logInfo = `${data.hoVaTen} | Lớp: ${data.lop} | Ngày: ${data.ngay}`;
 
             if (isEmpty) {
+              // Ghi toàn bộ nếu chưa có dữ liệu cho ngày đó
               batch.set(doc(db, `BANTRU_${namHocValue}`, docId), data);
-              console.log("📥 Ghi toàn bộ:", docId);
+              //console.log("📥 GHI TOÀN BỘ:", logInfo);
             } else {
               if (huyDangKy === "") {
                 if (existingDocsMap[docId]) {
                   batch.delete(doc(db, `BANTRU_${namHocValue}`, docId));
-                  console.log("🗑️ Xoá:", docId);
+                  //console.log("🗑️ XOÁ:", logInfo);
                 } else {
-                  console.log("⚠️ Không xoá vì chưa tồn tại:", docId);
+                  //console.log("⚠️ KHÔNG CÓ ĐỂ XOÁ:", logInfo);
                 }
               } else if (huyDangKy === "T") {
                 if (!existingDocsMap[docId]) {
                   batch.set(doc(db, `BANTRU_${namHocValue}`, docId), data);
-                  console.log("📥 Ghi mới:", docId);
+                  //console.log("📥 THÊM MỚI:", logInfo);
                 } else {
-                  console.log("✅ Bỏ qua, đã có rồi:", docId);
+                  //console.log("✅ BỎ QUA (đã tồn tại):", logInfo);
                 }
               } else {
-                console.log("⚠️ Bỏ qua không hợp lệ:", docId);
+                //console.log("⚠️ BỎ QUA (huyDangKy không hợp lệ):", logInfo, "| huyDangKy:", huyDangKy);
               }
             }
           });
+
+
 
           await batch.commit();
           console.log("✅ Ghi dữ liệu nền hoàn tất:", formattedDate);

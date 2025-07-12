@@ -142,10 +142,12 @@ export default function ThongKeThang({ onBack }) {
             where("lop", "==", selectedClass)
           ));
 
-          const danhSachData = danhSachSnap.docs.map(d => d.data()).filter(hs => {
-            const huy = (hs.huyDangKy || "").toUpperCase();
-            return huy === "" || huy === "T";
-          });
+          //const danhSachData = danhSachSnap.docs.map(d => d.data()).filter(hs => {
+          //  const huy = (hs.huyDangKy || "").toUpperCase();
+          //  return huy === "" || huy === "T";
+          //});
+          const danhSachData = danhSachSnap.docs.map(d => d.data());
+
 
           // ✅ enrich dữ liệu
           const selectedDateStr = format(selectedDate, "yyyy-MM-dd");
@@ -337,12 +339,33 @@ export default function ThongKeThang({ onBack }) {
                     "& td": { border: "1px solid #ccc", py: 1 },
                   }}
                 >
-                  <TableCell align="center" sx={{ width: 48, px: 1, position: "sticky", left: 0, backgroundColor: "#fff", zIndex: 1 }}>
+                  <TableCell
+                    align="center"
+                    sx={{
+                      width: 48,
+                      px: 1,
+                      position: "sticky",
+                      left: 0,
+                      backgroundColor: student.huyDangKy?.toLowerCase() === "x" ? "#f0f0f0" : "#fff",
+                      zIndex: 1,
+                    }}
+                  >
                     {student.stt}
                   </TableCell>
-                  <TableCell sx={{ minWidth: 140, px: 1, position: "sticky", left: 48, backgroundColor: "#fff", zIndex: 1 }}>
+
+                  <TableCell
+                    sx={{
+                      minWidth: 140,
+                      px: 1,
+                      position: "sticky",
+                      left: 48,
+                      backgroundColor: student.huyDangKy?.toLowerCase() === "x" ? "#f0f0f0" : "#fff",
+                      zIndex: 1,
+                    }}
+                  >
                     {student.hoVaTen}
                   </TableCell>
+
                   {showDays &&
                     daySet.map((d) => (
                       <TableCell key={d} align="center" sx={{ color: student.daySummary[d] ? "#1976d2" : "inherit", px: 1 }}>

@@ -95,12 +95,13 @@ export default function ThongKeNam({ onBack }) {
             where("lop", "==", selectedClass)
           ));
 
-          const danhSachData = danhSachSnap.docs
-            .map(d => d.data())
-            .filter(hs => {
-              const huy = (hs.huyDangKy || "").toUpperCase();
-              return huy === "" || huy === "T";
-            });
+          //const danhSachData = danhSachSnap.docs
+          //  .map(d => d.data())
+          //  .filter(hs => {
+          //    const huy = (hs.huyDangKy || "").toUpperCase();
+          //    return huy === "" || huy === "T";
+          //  });
+          const danhSachData = danhSachSnap.docs.map(d => d.data());
 
           const selectedDateStr = selectedDate.toISOString().split("T")[0];
           const enriched = enrichStudents(danhSachData, selectedDateStr, selectedClass, true);
