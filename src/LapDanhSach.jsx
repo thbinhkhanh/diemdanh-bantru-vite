@@ -103,13 +103,17 @@ export default function LapDanhSach({ onBack }) {
         }));
 
         // ✅ enrich dữ liệu (KHÔNG truyền ngày)
-        const enriched = enrichStudents(rawStudents, null, selectedClass, true);
+        const studentsOfClass = rawStudents.filter(s => s.lop === selectedClass);
+        const enriched = enrichStudents(studentsOfClass, null, selectedClass, true);
 
-        // ✅ Gắn chỉ số STT
-        const enrichedStudents = enriched.map((s, index) => ({
+        // ✅ Gắn chỉ số STT và trạng thái đăng ký
+        const enrichedStudents = MySort(enriched).map((s, index) => ({
           ...s,
           stt: index + 1,
+          registered: s.huyDangKy !== 'x',
+          originalRegistered: s.huyDangKy !== 'x', // để kiểm tra thay đổi
         }));
+
 
         // ✅ Lưu vào context với key là lớp (1.1, 1.2, ...)
         setClassData(selectedClass, enrichedStudents);
@@ -141,6 +145,7 @@ const handleClassChange = (event) => {
   const toggleRegister = (index) => {
     const updated = [...filteredStudents];
     updated[index].registered = !updated[index].registered;
+
     setFilteredStudents(updated);
 
     setAllStudents(prev =>
@@ -150,6 +155,7 @@ const handleClassChange = (event) => {
           : student
       )
     );
+
     setAlertInfo({ open: false, message: '', severity: 'success' });
   };
 
@@ -175,27 +181,40 @@ const handleClassChange = (event) => {
 
       if (!namHocValue) throw new Error("Không có năm học hợp lệ");
 
+      if (changedStudents.length === 0) {
+        setAlertInfo({
+          open: true,
+          message: '✅ Không có thay đổi nào để lưu.',
+          severity: 'success'
+        });
+        return;
+      }
+
+      console.log("🔄 Học sinh được cập nhật:", changedStudents.map(s => ({
+        id: s.id,
+        hoVaTen: s.hoVaTen,
+        từ: s.originalRegistered,
+        thành: s.registered
+      })));
+
       for (let student of changedStudents) {
-        const huyDangKy = student.registered ? 'T' : '';
-        await updateDoc(doc(db, `BANTRU_${namHocValue}`, student.id), { huyDangKy });
+        const huyDangKy = student.registered ? 'T' : 'x';
+        await updateDoc(doc(db, `DANHSACH_${namHocValue}`, student.id), { huyDangKy });
       }
 
       setAlertInfo({
         open: true,
-        message: changedStudents.length > 0
-          ? '✅ Lưu thành công!'
-          : '✅ Không có thay đổi nào để lưu.',
+        message: '✅ Lưu thành công!',
         severity: 'success'
       });
 
-      // Cập nhật lại originalRegistered sau khi lưu
+      // Cập nhật lại originalRegistered
       setFilteredStudents(prev =>
         prev.map(student => ({
           ...student,
           originalRegistered: student.registered
         }))
       );
-
     } catch (err) {
       console.error('❌ Lỗi khi lưu dữ liệu:', err);
       setAlertInfo({
@@ -207,6 +226,7 @@ const handleClassChange = (event) => {
       setIsSaving(false);
     }
   };
+
 
   return (
     <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
@@ -296,8 +316,7 @@ const handleClassChange = (event) => {
                     <TableCell align="center">
                       <Checkbox
                         checked={student.registered}
-                        onChange={() => toggleRegister(index)}
-                        disabled={!student.editable}
+                        onChange={() => toggleRegister(index)}                        
                         size="small"
                         color="primary"
                       />
