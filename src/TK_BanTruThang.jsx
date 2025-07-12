@@ -10,13 +10,15 @@ import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import vi from "date-fns/locale/vi";
 import { getDoc, getDocs, doc, collection, query, where } from "firebase/firestore";
+import { format } from "date-fns";
 import { db } from "./firebase";
 import { MySort } from './utils/MySort';
 import { exportThongKeThangToExcel } from './utils/exportThongKeThang';
 import { useClassList } from "./context/ClassListContext";
-import { useClassData } from "./context/ClassDataContext"; // ✅
+import { useClassData } from "./context/ClassDataContext";
+import { enrichStudents } from "./pages/ThanhPhan/enrichStudents";
 
-export default function ThongKeThang_DiemDanh({ onBack }) {
+export default function ThongKeThang({ onBack }) {
   const [selectedDate, setSelectedDate] = useState(() => {
     const today = new Date();
     return new Date(today.getFullYear(), today.getMonth(), 1);
@@ -30,12 +32,12 @@ export default function ThongKeThang_DiemDanh({ onBack }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { getClassList, setClassListForKhoi } = useClassList();
-  const { getClassData, setClassData } = useClassData(); 
+  const { getClassData, setClassData } = useClassData();
 
+  // Load danh sách lớp khi mount
   useEffect(() => {
     const fetchClassList = async () => {
       try {
-        // 🗓️ Lấy năm học hiện tại từ Firestore
         const namHocDoc = await getDoc(doc(db, "YEAR", "NAMHOC"));
         const namHocValue = namHocDoc.exists() ? namHocDoc.data().value : null;
 
@@ -45,25 +47,19 @@ export default function ThongKeThang_DiemDanh({ onBack }) {
           return;
         }
 
-        // 🧠 Kiểm tra xem context đã có dữ liệu chưa
         const cachedList = getClassList("TRUONG");
         if (cachedList.length > 0) {
-          // ✅ Dữ liệu đã có sẵn → sử dụng luôn
           setClassList(cachedList);
-          setSelectedClass(cachedList[0] || "");
+          setSelectedClass(cachedList[0]);
           return;
         }
 
-        // 📥 Nếu chưa có trong context → tải từ Firestore
         const docRef = doc(db, `CLASSLIST_${namHocValue}`, "TRUONG");
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           const list = docSnap.data().list || [];
-
           setClassList(list);
           setSelectedClass(list[0] || "");
-
-          // 🔁 Cập nhật context cho các component khác dùng chung
           setClassListForKhoi("TRUONG", list);
         } else {
           console.warn(`⚠️ Không tìm thấy CLASSLIST_${namHocValue}/TRUONG`);
@@ -76,86 +72,106 @@ export default function ThongKeThang_DiemDanh({ onBack }) {
     fetchClassList();
   }, []);
 
+  // Hàm xử lý dữ liệu học sinh + thống kê bán trú, rồi set dataList
+  const processStudentData = (rawStudents, banTruData, className, selectedDate) => {
+    const selectedDateStr = format(selectedDate, "yyyy-MM");
+
+    // ✅ enrich từ dữ liệu gốc
+    const enriched = enrichStudents(rawStudents, selectedDateStr, className, true);
+
+    // ✅ gắn trạng thái registered
+    const enrichedWithRegister = enriched.map((s, index) => {
+      const ma = s.maDinhDanh;
+      const daySummary = {};
+      let total = 0;
+
+      banTruData.forEach(record => {
+        if (
+          record.maDinhDanh === ma &&
+          record.lop === className &&
+          record.thang === selectedDateStr &&
+          record.ngay
+        ) {
+          const dateObj = new Date(record.ngay);
+          if (!isNaN(dateObj)) {
+            const day = dateObj.getDate();
+            daySummary[day] = "✓";
+            total += 1;
+          }
+        }
+      });
+
+      return {
+        ...s,
+        stt: index + 1,
+        daySummary,
+        total
+      };
+    });
+
+    const sorted = MySort(enrichedWithRegister).map((s, idx) => ({
+      ...s,
+      stt: idx + 1
+    }));
+
+    setDataList(sorted);
+  };
+
+  // Load học sinh khi selectedClass hoặc selectedDate thay đổi
   useEffect(() => {
     if (!selectedClass || !selectedDate) return;
 
-    const fetchData = async () => {
+    const fetchStudents = async () => {
       setIsLoading(true);
-
       try {
-        // ✅ 1. Kiểm tra context
-        const cachedData = getClassData(selectedClass);
-        if (cachedData && Array.isArray(cachedData) && cachedData.length > 0) {
-          //console.log(`📦 Lấy dữ liệu từ context lớp ${selectedClass}, SL: ${cachedData.length}`);
-          setDataList(cachedData);
-
-          const daysInMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0).getDate();
-          setDaySet(Array.from({ length: daysInMonth }, (_, i) => i + 1));
+        const namHocDoc = await getDoc(doc(db, "YEAR", "NAMHOC"));
+        const namHocValue = namHocDoc.exists() ? namHocDoc.data().value : null;
+        if (!namHocValue) {
+          setIsLoading(false);
+          console.error("❌ Không tìm thấy năm học!");
           return;
         }
 
-        //console.log(`📡 Không có dữ liệu lớp ${selectedClass} trong context → tải từ Firestore`);
+        let rawData = getClassData(selectedClass);
+        if (!rawData || rawData.length === 0) {
+          // Nếu chưa có dữ liệu trong context thì tải từ Firestore
+          const danhSachSnap = await getDocs(query(
+            collection(db, `DANHSACH_${namHocValue}`),
+            where("lop", "==", selectedClass)
+          ));
 
-        // ✅ 2. Lấy năm học hiện tại
-        const namHocDoc = await getDoc(doc(db, "YEAR", "NAMHOC"));
-        const namHocValue = namHocDoc.exists() ? namHocDoc.data().value : null;
-        if (!namHocValue) throw new Error("Không tìm thấy năm học");
+          //const danhSachData = danhSachSnap.docs.map(d => d.data()).filter(hs => {
+          //  const huy = (hs.huyDangKy || "").toUpperCase();
+          //  return huy === "" || huy === "T";
+          //});
+          const danhSachData = danhSachSnap.docs.map(d => d.data());
 
-        // ✅ 3. Lấy danh sách học sinh
-        const studentQuery = query(
-          collection(db, `DANHSACH_${namHocValue}`),
-          where("lop", "==", selectedClass)
-        );
-        const querySnapshot = await getDocs(studentQuery);
-        const studentsList = querySnapshot.docs.map(doc => doc.data());
 
-        const studentMap = {};
-        studentsList.forEach((s, index) => {
-          studentMap[s.maDinhDanh] = {
-            ...s,
-            id: s.maDinhDanh,
-            stt: index + 1,
-            daySummary: {},
-            total: 0,
-            huyDangKy: s.huyDangKy || "",
-          };
-        });
+          // ✅ enrich dữ liệu
+          const selectedDateStr = format(selectedDate, "yyyy-MM-dd");
+          const enriched = enrichStudents(danhSachData, selectedDateStr, selectedClass, true);
 
-        // ✅ 4. Lấy điểm danh tháng
-        const monthStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, "0")}`;
-        const q = query(
-          collection(db, `DIEMDANH_${namHocValue}`),
-          where("lop", "==", selectedClass),
-          where("thang", "==", monthStr)
-        );
-        const snapshot = await getDocs(q);
-        //console.log(`📊 Đã tải ${snapshot.size} bản ghi điểm danh`);
+          // ✅ lưu enriched vào context
+          setClassData(selectedClass, enriched);
 
-        snapshot.forEach(docSnap => {
-          const d = docSnap.data();
-          const ma = d.maDinhDanh;
-          const ngay = new Date(d.ngay);
-          const day = ngay.getDate();
+          // ✅ sử dụng enriched
+          rawData = enriched;
+        }
 
-          if (!studentMap[ma]) return;
+        // Lấy dữ liệu bán trú
+        const banTruSnap = await getDocs(collection(db, `BANTRU_${namHocValue}`));
+        const banTruData = banTruSnap.docs.map(doc => doc.data());
 
-          const loai = d.phep ? "P" : "K";
-          const lydo = d.lyDo || "";
+        // Xử lý và set dataList
+        processStudentData(rawData, banTruData, selectedClass, selectedDate);
 
-          studentMap[ma].daySummary[day] = { loai, lydo };
-          if (["P", "K", ""].includes(loai)) {
-            studentMap[ma].total += 1;
-          }
-        });
+        // Tạo danh sách ngày của tháng
+        const year = selectedDate.getFullYear();
+        const month = selectedDate.getMonth();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const fullDays = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+        setDaySet(fullDays);
 
-        // ✅ 5. Cập nhật UI và context
-        const daysInMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0).getDate();
-        setDaySet(Array.from({ length: daysInMonth }, (_, i) => i + 1));
-
-        const sorted = MySort(Object.values(studentMap)).map((s, idx) => ({ ...s, stt: idx + 1 }));
-        setDataList(sorted);
-        setClassData(selectedClass, sorted);
-        //console.log(`✅ Đã lưu dữ liệu vào context lớp ${selectedClass}`);
       } catch (err) {
         console.error("❌ Lỗi khi tải dữ liệu:", err);
       } finally {
@@ -163,8 +179,8 @@ export default function ThongKeThang_DiemDanh({ onBack }) {
       }
     };
 
-    fetchData();
-  }, [selectedClass, selectedDate]);
+    fetchStudents();
+  }, [selectedClass, selectedDate, getClassData, setClassData]);
 
   const headCellStyle = {
     fontWeight: "bold",
@@ -207,7 +223,7 @@ export default function ThongKeThang_DiemDanh({ onBack }) {
       >
         <Box sx={{ mb: 5 }}>
           <Typography variant="h5" fontWeight="bold" color="primary" align="center" sx={{ mb: 1 }}>
-            ĐIỂM DANH THÁNG
+            SỐ LIỆU THÁNG
           </Typography>
           <Box sx={{ height: "2.5px", width: "100%", backgroundColor: "#1976d2", borderRadius: 1, mt: 2, mb: 4 }} />
         </Box>
@@ -232,6 +248,7 @@ export default function ThongKeThang_DiemDanh({ onBack }) {
                   InputProps: {
                     inputComponent: (props) => {
                       const month = selectedDate.getMonth() + 1;
+                      const year = selectedDate.getFullYear();
                       return <input {...props} value={`Tháng ${month}`} readOnly />;
                     },
                   },
@@ -278,7 +295,8 @@ export default function ThongKeThang_DiemDanh({ onBack }) {
                   daySet.map((d) => {
                     const date = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), d);
                     const dayOfWeek = date.getDay();
-                    let bgColor = "#1976d2", textColor = "white";
+                    let bgColor = "#1976d2",
+                      textColor = "white";
                     if (dayOfWeek === 0) {
                       bgColor = "#ffcdd2";
                       textColor = "#c62828";
@@ -303,8 +321,8 @@ export default function ThongKeThang_DiemDanh({ onBack }) {
                       </TableCell>
                     );
                   })}
-                <TableCell align="center" sx={{ ...headCellStyle, minWidth: 50 }}>
-                  TỔNG<br />CỘNG
+                <TableCell align="center" sx={{ ...headCellStyle, minWidth: 70 }}>
+                  TỔNG CỘNG
                 </TableCell>
               </TableRow>
             </TableHead>
@@ -319,30 +337,39 @@ export default function ThongKeThang_DiemDanh({ onBack }) {
                     "& td": { border: "1px solid #ccc", py: 1 },
                   }}
                 >
-                  <TableCell align="center" sx={{ width: 48, px: 1, position: "sticky", left: 0, backgroundColor: "#fff", zIndex: 1 }}>
+                  <TableCell
+                    align="center"
+                    sx={{
+                      width: 48,
+                      px: 1,
+                      position: "sticky",
+                      left: 0,
+                      backgroundColor: student.huyDangKy?.toLowerCase() === "x" ? "#f0f0f0" : "#fff",
+                      zIndex: 1,
+                    }}
+                  >
                     {student.stt}
                   </TableCell>
-                  <TableCell sx={{ minWidth: 140, px: 1, position: "sticky", left: 48, backgroundColor: "#fff", zIndex: 1 }}>
+
+                  <TableCell
+                    sx={{
+                      minWidth: 140,
+                      px: 1,
+                      position: "sticky",
+                      left: 48,
+                      backgroundColor: student.huyDangKy?.toLowerCase() === "x" ? "#f0f0f0" : "#fff",
+                      zIndex: 1,
+                    }}
+                  >
                     {student.hoVaTen}
                   </TableCell>
+
                   {showDays &&
-                    daySet.map((d) => {
-                      const info = student.daySummary[d];
-                      const loai = info?.loai ?? "";
-                        const lydo = info?.lydo ?? "";
-                        const tooltip = lydo?.trim()
-                          ? lydo
-                          : loai === "K"
-                            ? "Không rõ lý do"
-                            : undefined;
-
-                        return (
-                          <TableCell key={d} align="center" sx={{ px: 1 }} title={tooltip}>
-                            {loai}
-                          </TableCell>
-                        );
-
-                    })}
+                    daySet.map((d) => (
+                      <TableCell key={d} align="center" sx={{ color: student.daySummary[d] ? "#1976d2" : "inherit", px: 1 }}>
+                        {student.daySummary[d] || ""}
+                      </TableCell>
+                    ))}
                   <TableCell align="center" sx={{ fontWeight: "bold", px: 1 }}>
                     {student.total > 0 ? student.total : ""}
                   </TableCell>
@@ -381,5 +408,3 @@ export default function ThongKeThang_DiemDanh({ onBack }) {
     </Box>
   );
 }
-
-

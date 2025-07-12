@@ -18,7 +18,7 @@ import { saveSingleDiemDanh } from '../pages/ThanhPhan/saveSingleDiemDanh';
 
 import { MySort } from '../utils/MySort';
 import { useNavigate } from 'react-router-dom';
-import NhatKyGV from '../NhatKyGV';
+import NhatKyDiemDanhGV from '../NhatKyDiemDanhGV';
 
 import { useClassData } from '../context/ClassDataContext';
 import { useClassList } from '../context/ClassListContext';

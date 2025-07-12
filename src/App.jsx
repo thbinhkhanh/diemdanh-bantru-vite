@@ -31,7 +31,7 @@ import About from './pages/About';
 import Footer from './pages/Footer';
 import HuongDan from './pages/HuongDan';
 import Login from './Login';
-import NhatKyGV from "./NhatKyGV";
+import NhatKyDiemDanhGV from "./NhatKyDiemDanhGV";
 import { ClassDataProvider } from './context/ClassDataContext';
 import { NhatKyProvider } from "./context/NhatKyContext";
 import { ClassListProvider } from "./context/ClassListContext";
@@ -64,7 +64,7 @@ function App() {
                 <Route path="/lop4" element={<PrivateRoute><Lop4 /></PrivateRoute>} />
                 <Route path="/lop5" element={<PrivateRoute><Lop5 /></PrivateRoute>} />
                 <Route path="/quanly" element={<PrivateRoute><QuanLy /></PrivateRoute>} />
-                <Route path="/nhatky" element={<PrivateRoute><NhatKyGV /></PrivateRoute>} />
+                <Route path="/nhatky" element={<PrivateRoute><NhatKyDiemDanhGV /></PrivateRoute>} />
 
                 {/* Trang quản lý dùng lazy load */}
                 <Route
