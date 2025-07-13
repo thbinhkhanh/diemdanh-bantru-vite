@@ -32,12 +32,6 @@ export default function Login() {
 
     try {
       const docSnap = await getDoc(docRef);
-
-      // 🔍 Logging for debugging
-      console.log("🔍 Đang login:", username, passwordInput);
-      console.log("📄 Đường dẫn:", docRef.path);
-      console.log("📦 Data:", docSnap.exists(), docSnap.data());
-
       if (!docSnap.exists()) {
         alert("❌ Tài khoản không tồn tại.");
         return;
@@ -93,6 +87,7 @@ export default function Login() {
                 ? "QUẢN TRỊ HỆ THỐNG"
                 : "QUẢN LÝ BÁN TRÚ"}
             </Typography>
+
 
             <FormControl fullWidth>
               <InputLabel id="account-label">Loại tài khoản</InputLabel>

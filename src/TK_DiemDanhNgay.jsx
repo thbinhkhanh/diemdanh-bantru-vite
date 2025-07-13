@@ -21,7 +21,7 @@ function groupDataFromNhatKy(data, danhSachLop) {
   let truongKhongPhep = 0;
 
   // ⚙️ Khởi tạo cấu trúc KHỐI / LỚP từ danhSachLop
-  console.log("📘 Danh sách lớp lấy được từ Firestore:", Object.keys(danhSachLop));
+  //console.log("📘 Danh sách lớp lấy được từ Firestore:", Object.keys(danhSachLop));
   for (const lop of Object.keys(danhSachLop)) {
     const khoi = lop.split(".")[0];
 
@@ -189,7 +189,7 @@ export default function ThongKeNgay_DiemDanh({ onBack }) {
         }
 
         const ngayChon = format(selectedDate, "yyyy-MM-dd");
-        console.log("📅 đang truy vấn điểm danh ngày:", ngayChon);
+        //console.log("📅 đang truy vấn điểm danh ngày:", ngayChon);
 
         // 🔍 Truy vấn điểm danh theo ngày từ DIEMDANH_YYYY-YYYY
         const q = query(
@@ -199,8 +199,8 @@ export default function ThongKeNgay_DiemDanh({ onBack }) {
         const snapshot = await getDocs(q);
         const diemDanhData = snapshot.docs.map(doc => doc.data());
 
-        console.log("📄 Tổng bản ghi truy được:", diemDanhData.length);
-        console.log("📋 Dữ liệu truy vấn:", diemDanhData);
+        //console.log("📄 Tổng bản ghi truy được:", diemDanhData.length);
+        //console.log("📋 Dữ liệu truy vấn:", diemDanhData);
 
         // 🔍 Lấy danh sách lớp từ context (classLists là { K1: [...], K2: [...], ... })
         // 🔍 Lấy danh sách lớp: nếu chưa có thì tải từ Firestore và merge vào context
@@ -233,7 +233,7 @@ export default function ThongKeNgay_DiemDanh({ onBack }) {
 
 
         const summary = groupDataFromNhatKy(diemDanhData, danhSachLop);
-        console.log("📊 Kết quả thống kê:", summary);
+        //console.log("📊 Kết quả thống kê:", summary);
         setDataList(diemDanhData);
         setSummaryData(summary);
       } catch (err) {

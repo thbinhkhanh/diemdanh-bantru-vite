@@ -137,26 +137,32 @@ export default function DiemDanhThang({ onBack }) {
         }
 
         let rawData = getClassData(selectedClass);
-        if (rawData && rawData.length > 0) {
-          console.log(`📦 Lấy dữ liệu học sinh từ context cho lớp ${selectedClass}`, rawData);
+        if (Array.isArray(rawData) && rawData.length > 0) {
+          // ✅ Dữ liệu lấy từ context
         } else {
-          console.log(`🌐 Tải dữ liệu học sinh từ Firestore cho lớp ${selectedClass}...`);
+          // 🌐 Tải dữ liệu học sinh từ Firestore
           const danhSachSnap = await getDocs(query(
             collection(db, `DANHSACH_${namHocValue}`),
             where("lop", "==", selectedClass)
           ));
-
           const danhSachData = danhSachSnap.docs.map(d => d.data());
-          console.log(`📥 Số lượng học sinh tải về từ Firestore: ${danhSachData.length}`);
 
           const selectedDateStr = format(selectedDate, "yyyy-MM-dd");
           const enriched = enrichStudents(danhSachData, selectedDateStr, selectedClass, true);
 
-          console.log(`🧠 Dữ liệu học sinh sau enrich:`, enriched);
+          // ✅ Gán id nếu chưa có
+          const enrichedWithId = enriched.map(hs => ({
+            ...hs,
+            id: hs.maDinhDanh || hs.id || hs.uid || `missing-${Math.random().toString(36).substring(2)}`
+          }));
 
-          setClassData(selectedClass, enriched);
-          console.log(`💾 Dữ liệu enriched đã lưu vào context cho lớp ${selectedClass}`);
-          rawData = enriched;
+          setClassData(selectedClass, enrichedWithId);
+          rawData = enrichedWithId;
+        }
+
+        if (!Array.isArray(rawData)) {
+          console.warn("⚠️ Dữ liệu học sinh không hợp lệ:", rawData);
+          return;
         }
 
         const diemDanhSnap = await getDocs(collection(db, `DIEMDANH_${namHocValue}`));
@@ -179,6 +185,7 @@ export default function DiemDanhThang({ onBack }) {
 
     fetchStudents();
   }, [selectedClass, selectedDate, getClassData, setClassData]);
+
 
 
   const headCellStyle = {

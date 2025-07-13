@@ -91,17 +91,17 @@ export default function ThongKeNam_DiemDanh({ onBack }) {
     const fetchStudents = async () => {
       setIsLoading(true);
       try {
-        console.log("📌 Bắt đầu lấy dữ liệu học sinh cho lớp:", selectedClass);
+        //console.log("📌 Bắt đầu lấy dữ liệu học sinh cho lớp:", selectedClass);
 
         // ======= STEP 1: Lấy dữ liệu enriched từ context nếu có =======
         let rawData = getClassData?.(selectedClass);
         const isValid = Array.isArray(rawData) && rawData.length > 0;
 
         if (isValid) {
-          console.log("✅ Dữ liệu enriched lấy từ context:", rawData);
+          //console.log("✅ Dữ liệu enriched lấy từ context:", rawData);
         } else {
           // ======= STEP 2: Nếu chưa có, lấy từ Firestore và enrich =======
-          console.log("🛜 Không có dữ liệu trong context, đang lấy từ Firestore...");
+          //console.log("🛜 Không có dữ liệu trong context, đang lấy từ Firestore...");
 
           const danhSachQuery = query(
             collection(db, `DANHSACH_${namHocValue}`),
@@ -110,7 +110,7 @@ export default function ThongKeNam_DiemDanh({ onBack }) {
           const danhSachSnap = await getDocs(danhSachQuery);
           const danhSachData = danhSachSnap.docs.map(d => d.data());
 
-          console.log(`📥 Số lượng học sinh tải về từ Firestore: ${danhSachData.length}`);
+          //console.log(`📥 Số lượng học sinh tải về từ Firestore: ${danhSachData.length}`);
 
           const selectedDateStr = format(selectedDate, "yyyy-MM-dd");
           const enriched = enrichStudents(danhSachData, selectedDateStr, selectedClass, true);
@@ -120,11 +120,11 @@ export default function ThongKeNam_DiemDanh({ onBack }) {
             id: hs.maDinhDanh || hs.id || hs.uid || `(missing-${Math.random().toString(36).slice(2)})`
           }));
 
-          console.log("🧠 Dữ liệu học sinh sau enrich:", enrichedWithId);
+          //console.log("🧠 Dữ liệu học sinh sau enrich:", enrichedWithId);
 
           // ======= STEP 3: Lưu enriched vào context =======
           setClassData?.(selectedClass, enrichedWithId);
-          console.log(`💾 Dữ liệu enriched đã lưu vào context cho lớp ${selectedClass}`);
+          //console.log(`💾 Dữ liệu enriched đã lưu vào context cho lớp ${selectedClass}`);
 
           rawData = enrichedWithId;
         }
@@ -136,7 +136,7 @@ export default function ThongKeNam_DiemDanh({ onBack }) {
         }
 
         // ======= STEP 4: Lấy dữ liệu điểm danh =======
-        console.log("📆 Đang lấy dữ liệu điểm danh...");
+        //console.log("📆 Đang lấy dữ liệu điểm danh...");
         const diemDanhQuery = query(
           collection(db, `DIEMDANH_${namHocValue}`),
           where("lop", "==", selectedClass)
@@ -165,7 +165,7 @@ export default function ThongKeNam_DiemDanh({ onBack }) {
           diemDanhByStudent[maDinhDanh][thang][type]++;
         });
 
-        console.log("🔑 Tổng mã học sinh có điểm danh:", Object.keys(diemDanhByStudent));
+        //console.log("🔑 Tổng mã học sinh có điểm danh:", Object.keys(diemDanhByStudent));
 
         // ======= STEP 5: Tổng hợp dữ liệu học sinh + điểm danh =======
         const students = rawData.map((s, index) => {
@@ -182,14 +182,14 @@ export default function ThongKeNam_DiemDanh({ onBack }) {
 
           const total = Object.values(monthSummary).reduce((sum, m) => sum + m.P + m.K, 0);
 
-          console.log(`👤 Học sinh: ${s.hoVaTen || s.ten || "(không rõ tên)"} | Mã: ${maDinhDanh}`);
+          //console.log(`👤 Học sinh: ${s.hoVaTen || s.ten || "(không rõ tên)"} | Mã: ${maDinhDanh}`);
           for (let i = 1; i <= 12; i++) {
             const { P, K } = monthSummary[i];
             if (P > 0 || K > 0) {
-              console.log(`  📅 Tháng ${i}: P=${P}, K=${K}`);
+              //console.log(`  📅 Tháng ${i}: P=${P}, K=${K}`);
             }
           }
-          console.log(`  🔢 Tổng cộng: ${total}`);
+          //console.log(`  🔢 Tổng cộng: ${total}`);
 
           return {
             ...s,
@@ -203,7 +203,7 @@ export default function ThongKeNam_DiemDanh({ onBack }) {
         setMonthSet(Array.from({ length: 12 }, (_, i) => i + 1));
         const sorted = MySort(students).map((s, idx) => ({ ...s, stt: idx + 1 }));
         setDataList(sorted);
-        console.log("✅ Dữ liệu đã sẵn sàng hiển thị.");
+        //console.log("✅ Dữ liệu đã sẵn sàng hiển thị.");
       } catch (err) {
         console.error("❌ Lỗi khi tải dữ liệu:", err);
       } finally {

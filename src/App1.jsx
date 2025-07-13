@@ -6,7 +6,7 @@ import {
   Link,
   useLocation,
   Navigate,
-  useNavigate,
+  useNavigate
 } from 'react-router-dom';
 
 import {
@@ -31,70 +31,32 @@ import About from './pages/About';
 import Footer from './pages/Footer';
 import HuongDan from './pages/HuongDan';
 import Login from './Login';
-import NhatKyDiemDanhGV from './NhatKyDiemDanhGV';
+import NhatKyDiemDanhGV from "./NhatKyDiemDanhGV";
 import { ClassDataProvider } from './context/ClassDataContext';
-import { NhatKyProvider } from './context/NhatKyContext';
-import { ClassListProvider } from './context/ClassListContext';
+import { NhatKyProvider } from "./context/NhatKyContext";
+import { ClassListProvider } from "./context/ClassListContext";
+
 
 const Admin = lazy(() => import('./Admin'));
 
 function PrivateRoute({ children }) {
-  const isLoggedIn = localStorage.getItem('loggedIn') === 'true';
+  const isLoggedIn = localStorage.getItem("loggedIn") === "true";
   return isLoggedIn ? children : <Navigate to="/login" replace />;
 }
 
 function App() {
-  const [selectedFirestore, setSelectedFirestore] = useState('firestore1');
-
-  // Load từ localStorage khi bắt đầu
-  useEffect(() => {
-    const saved = localStorage.getItem('selectedFirestore') || 'firestore1';
-    setSelectedFirestore(saved);
-  }, []);
-
-  const handleFirestoreSelect = (value) => {
-    setSelectedFirestore(value);
-    localStorage.setItem('selectedFirestore', value);
-    window.location.reload(); // Reload để firebase.js nhận config mới
-  };
-
   return (
-    <ClassListProvider>
+    <ClassListProvider> {/* ✅ Bọc 1 lần là đủ */}
       <ClassDataProvider>
         <NhatKyProvider>
           <Router>
-
-            {/* Chọn Firestore trên đầu trang (có thể ẩn hoặc chuyển vào menu) */}
-            <div style={{ padding: 10, background: '#f0f0f0', textAlign: 'center' }}>
-              <strong>Chọn Firestore: </strong>
-              <label style={{ marginLeft: 10 }}>
-                <input
-                  type="radio"
-                  value="firestore1"
-                  checked={selectedFirestore === 'firestore1'}
-                  onChange={(e) => handleFirestoreSelect(e.target.value)}
-                />
-                Firestore 1
-              </label>
-              <label style={{ marginLeft: 20 }}>
-                <input
-                  type="radio"
-                  value="firestore2"
-                  checked={selectedFirestore === 'firestore2'}
-                  onChange={(e) => handleFirestoreSelect(e.target.value)}
-                />
-                Firestore 2
-              </label>
-            </div>
-
             <Navigation />
-
             <div style={{ paddingTop: 0 }}>
               <Routes>
                 <Route path="/" element={<Home />} />
                 <Route path="/login" element={<Login />} />
 
-                {/* Trang yêu cầu đăng nhập */}
+                {/* Các route yêu cầu đăng nhập */}
                 <Route path="/home" element={<PrivateRoute><Home /></PrivateRoute>} />
                 <Route path="/lop1" element={<PrivateRoute><Lop1 /></PrivateRoute>} />
                 <Route path="/lop2" element={<PrivateRoute><Lop2 /></PrivateRoute>} />
@@ -104,6 +66,7 @@ function App() {
                 <Route path="/quanly" element={<PrivateRoute><QuanLy /></PrivateRoute>} />
                 <Route path="/nhatky" element={<PrivateRoute><NhatKyDiemDanhGV /></PrivateRoute>} />
 
+                {/* Trang quản lý dùng lazy load */}
                 <Route
                   path="/admin"
                   element={
@@ -115,12 +78,11 @@ function App() {
                   }
                 />
 
-                {/* Trang không cần đăng nhập */}
+                {/* Các trang không cần đăng nhập */}
                 <Route path="/gioithieu" element={<About />} />
                 <Route path="/huongdan" element={<HuongDan />} />
                 <Route path="/chucnang" element={<About />} />
               </Routes>
-
               <Footer />
             </div>
           </Router>
@@ -129,6 +91,7 @@ function App() {
     </ClassListProvider>
   );
 }
+
 
 function Navigation() {
   const location = useLocation();
@@ -164,7 +127,7 @@ function Navigation() {
   };
 
   const handleClickQuanLy = () => {
-    navigate('/login');
+    navigate('/login'); // ✅ Luôn đi đến trang login
   };
 
   const navItems = [
@@ -230,6 +193,7 @@ function Navigation() {
           </Link>
         ))}
 
+        {/* Nút Quản lý → Luôn đi đến Login */}
         <Button
           onClick={handleClickQuanLy}
           style={{
@@ -246,6 +210,7 @@ function Navigation() {
           Quản lý
         </Button>
 
+        {/* Dropdown Trợ giúp */}
         <Button
           onClick={handleMenuOpen}
           style={{
@@ -269,7 +234,11 @@ function Navigation() {
         >
           Trợ giúp
         </Button>
-        <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
+        <Menu
+          anchorEl={anchorEl}
+          open={Boolean(anchorEl)}
+          onClose={handleMenuClose}
+        >
           <MenuItem component={Link} to="/huongdan" onClick={handleMenuClose}>
             Hướng dẫn sử dụng
           </MenuItem>
@@ -279,9 +248,13 @@ function Navigation() {
         </Menu>
       </div>
 
+      {/* Góc phải hiển thị năm học */}
       <Box
         sx={{
-          display: { xs: 'none', sm: 'flex' },
+          display: {
+            xs: 'none',
+            sm: 'flex',
+          },
           alignItems: 'center',
           gap: 1,
           flexShrink: 0,

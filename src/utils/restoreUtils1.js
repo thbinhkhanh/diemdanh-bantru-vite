@@ -46,7 +46,6 @@ export const restoreFromJSONFile = async (
         continue;
       }
 
-      console.group(`📂 Bắt đầu phục hồi collection: ${collectionName}`);
       for (const [docId, docData] of Object.entries(documents)) {
         const restoredData = {};
         for (const [key, value] of Object.entries(docData)) {
@@ -63,33 +62,65 @@ export const restoreFromJSONFile = async (
         const docRef = doc(db, collectionName, docId);
         const existingSnap = await getDoc(docRef);
 
-        const shouldOverwrite =
-          collectionName.startsWith("DANHSACH"); // luôn ghi đè
-
-        const shouldUpdate =
-          collectionName.startsWith("DIEMDANH") ||
-          collectionName.startsWith("BANTRU"); // chỉ ghi nếu khác biệt
-
-        if (shouldUpdate && existingSnap.exists()) {
+        // 👉 DANHSACH: chỉ update field khác biệt
+        if (collectionName.startsWith("DANHSACH") && existingSnap.exists()) {
           const existingData = existingSnap.data();
-          const isSame = JSON.stringify(existingData) === JSON.stringify(restoredData);
-          if (isSame) {
+          const fieldsToUpdate = {};
+          const allowedFields = [
+            "hoVaTen",
+            "huyDangKy",
+            "khoi",
+            "lop",
+            "maDinhDanh",
+            "stt",
+          ];
+
+          for (const key of allowedFields) {
+            const oldValue = existingData[key];
+            const newValue = restoredData[key];
+
+            if (JSON.stringify(oldValue) !== JSON.stringify(newValue)) {
+              fieldsToUpdate[key] = newValue;
+            }
+          }
+
+          if (Object.keys(fieldsToUpdate).length === 0) {
             console.info(`⚠️ Bỏ qua vì giống hệt: ${collectionName}/${docId}`);
             continue;
           }
+
+          await setDoc(docRef, fieldsToUpdate, { merge: true });
+          processed++;
         }
 
-        console.log(`📥 Đang phục hồi: ${collectionName}/${docId}`);
-        await setDoc(docRef, restoredData, { merge: true });
+        // 👉 DIEMDANH hoặc BANTRU: merge nếu khác
+        else if (
+          (collectionName.startsWith("DIEMDANH") || collectionName.startsWith("BANTRU"))
+        ) {
+          if (existingSnap.exists()) {
+            const existingData = existingSnap.data();
+            const isSame =
+              JSON.stringify(existingData) === JSON.stringify(restoredData);
+            if (isSame) {
+              console.info(`⚠️ Bỏ qua vì giống hệt: ${collectionName}/${docId}`);
+              continue;
+            }
+          }
 
-        processed++;
+          await setDoc(docRef, restoredData, { merge: true });
+          processed++;
+        }
+
+        // 🕓 Chờ để tránh quá tải
         setRestoreProgress(Math.round((processed / totalDocs) * 100));
+        await new Promise((resolve) => setTimeout(resolve, 50));
       }
-      console.groupEnd(); // kết thúc nhóm log cho collection hiện tại
     }
 
     setRestoreProgress(100);
-    setAlertMessage(`✅ Phục hồi ${processed} documents từ 3 collection thành công!`);
+    setAlertMessage(
+      `✅ Phục hồi ${processed} documents từ 3 collection thành công!`
+    );
     setAlertSeverity("success");
   } catch (error) {
     console.error("❌ Lỗi khi phục hồi JSON:", error);

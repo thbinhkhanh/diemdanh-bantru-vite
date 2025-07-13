@@ -9,7 +9,6 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { exportFormattedExcel } from "./formatExcel.js";
-
 import * as XLSX from "xlsx";
 
 /** 🎯 Sao lưu toàn bộ Firestore sang JSON theo năm học */
@@ -24,7 +23,13 @@ export const downloadBackupAsJSON = async () => {
       return;
     }
 
-    const collectionsToBackup = [`BANTRU_${namHocValue}`, `DANHSACH_${namHocValue}`];
+    // ✅ Đã thêm DIEMDANH_${namHocValue}
+    const collectionsToBackup = [
+      `BANTRU_${namHocValue}`,
+      `DANHSACH_${namHocValue}`,
+      `DIEMDANH_${namHocValue}`
+    ];
+
     const backupContent = {};
 
     for (const colName of collectionsToBackup) {
@@ -36,7 +41,9 @@ export const downloadBackupAsJSON = async () => {
         const converted = {};
 
         for (const [key, value] of Object.entries(rawData)) {
-          converted[key] = value instanceof Timestamp ? value.toDate().toISOString() : value;
+          converted[key] = value instanceof Timestamp
+            ? value.toDate().toISOString()
+            : value;
         }
 
         backupContent[colName][docSnap.id] = converted;
@@ -68,6 +75,7 @@ export const downloadBackupAsJSON = async () => {
     alert("❌ Không thể sao lưu dữ liệu.");
   }
 };
+
 
 /** 📥 Sao lưu dữ liệu ra Excel (.xlsx) theo năm học */
 export const downloadBackupAsExcel = async () => {
