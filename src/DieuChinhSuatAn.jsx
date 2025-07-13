@@ -349,25 +349,24 @@ export default function DieuChinhSuatAn({ onBack }) {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {dataList.map((s, i) => (
-                  <TableRow key={s.maDinhDanh} hover>
-                    <TableCell align="center">{i + 1}</TableCell>
-                    <TableCell>{s.hoVaTen}</TableCell>
-                    <TableCell align="center">
-                      {s.huyDangKy === "x" ? (
-                          <></> // hoặc <Box /> nếu bạn muốn giữ ô trống
-                        ) : (
-                          <Checkbox
-                            checked={s.registered}
-                            onChange={() => toggleRegister(i)}
-                            disabled={s.disabled}
-                            size="small"
-                            color="primary"
-                          />
-                        )}
-                    </TableCell>
-                  </TableRow>
+                {dataList
+                  .filter(s => s.huyDangKy !== "x")
+                  .map((s, i) => (
+                    <TableRow key={s.maDinhDanh} hover>
+                      <TableCell align="center">{i + 1}</TableCell>
+                      <TableCell>{s.hoVaTen}</TableCell>
+                      <TableCell align="center">
+                        <Checkbox
+                          checked={s.registered}
+                          onChange={() => toggleRegister(i)}
+                          disabled={s.disabled}
+                          size="small"
+                          color="primary"
+                        />
+                      </TableCell>
+                    </TableRow>
                 ))}
+
               </TableBody>
             </Table>
           </TableContainer>

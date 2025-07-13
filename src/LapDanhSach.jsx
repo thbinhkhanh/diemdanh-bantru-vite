@@ -84,41 +84,37 @@ export default function LapDanhSach({ onBack }) {
     const fetchStudentsForClass = async () => {
       setIsLoading(true);
       try {
-        // ✅ Dùng lại từ context nếu có
         const cached = getClassData(selectedClass);
         if (cached && cached.length > 0) {
-          //console.log(`✅ Dùng lại dữ liệu lớp ${selectedClass} từ context`);
-          setFilteredStudents(cached);
-          setAllStudents(cached);
+          const sortedCached = MySort(cached); // 👉 thêm dòng này để sắp xếp
+          const transformedCached = sortedCached.map((s, index) => ({
+            ...s,
+            stt: index + 1,
+            registered: s.huyDangKy !== 'x',
+            originalRegistered: s.huyDangKy !== 'x',
+          }));
+          setFilteredStudents(transformedCached);
+          setAllStudents(transformedCached);
           return;
         }
 
-        //console.log(`🚀 Fetch học sinh DANHSACH_${namHocValue} cho lớp ${selectedClass}`);
-
-        // ✅ Lấy toàn bộ học sinh từ DANHSACH
         const snapshot = await getDocs(collection(db, `DANHSACH_${namHocValue}`));
         const rawStudents = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data(),
         }));
 
-        // ✅ enrich dữ liệu (KHÔNG truyền ngày)
         const studentsOfClass = rawStudents.filter(s => s.lop === selectedClass);
         const enriched = enrichStudents(studentsOfClass, null, selectedClass, true);
 
-        // ✅ Gắn chỉ số STT và trạng thái đăng ký
         const enrichedStudents = MySort(enriched).map((s, index) => ({
           ...s,
           stt: index + 1,
           registered: s.huyDangKy !== 'x',
-          originalRegistered: s.huyDangKy !== 'x', // để kiểm tra thay đổi
+          originalRegistered: s.huyDangKy !== 'x',
         }));
 
-
-        // ✅ Lưu vào context với key là lớp (1.1, 1.2, ...)
         setClassData(selectedClass, enrichedStudents);
-
-        // ✅ Hiển thị
         setFilteredStudents(enrichedStudents);
         setAllStudents(enrichedStudents);
       } catch (err) {
@@ -135,6 +131,7 @@ export default function LapDanhSach({ onBack }) {
 
     fetchStudentsForClass();
   }, [selectedClass, namHocValue, getClassData, setClassData]);
+
 
 const handleClassChange = (event) => {
     const selected = event.target.value;
@@ -190,12 +187,12 @@ const handleClassChange = (event) => {
         return;
       }
 
-      console.log("🔄 Học sinh được cập nhật:", changedStudents.map(s => ({
-        id: s.id,
-        hoVaTen: s.hoVaTen,
-        từ: s.originalRegistered,
-        thành: s.registered
-      })));
+      //console.log("🔄 Học sinh được cập nhật:", changedStudents.map(s => ({
+      //  id: s.id,
+      //  hoVaTen: s.hoVaTen,
+      //  từ: s.originalRegistered,
+      //  thành: s.registered
+      //})));
 
       for (let student of changedStudents) {
         const huyDangKy = student.registered ? 'T' : 'x';
@@ -208,13 +205,25 @@ const handleClassChange = (event) => {
         severity: 'success'
       });
 
-      // Cập nhật lại originalRegistered
-      setFilteredStudents(prev =>
-        prev.map(student => ({
-          ...student,
-          originalRegistered: student.registered
-        }))
-      );
+      // Cập nhật lại local state và context sau khi lưu
+      const updatedAllStudents = allStudents.map(student => {
+        const changed = changedStudents.find(s => s.id === student.id);
+        if (changed) {
+          const huyDangKy = changed.registered ? 'T' : 'x';
+          return {
+            ...student,
+            registered: changed.registered,
+            originalRegistered: changed.registered,
+            huyDangKy,
+          };
+        }
+        return student;
+      });
+
+      setAllStudents(updatedAllStudents);
+      setFilteredStudents(updatedAllStudents);
+      setClassData(selectedClass, updatedAllStudents);
+
     } catch (err) {
       console.error('❌ Lỗi khi lưu dữ liệu:', err);
       setAlertInfo({

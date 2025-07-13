@@ -161,14 +161,14 @@ export default function Lop1() {
     const contextData = classData[selectedClass];
 
     if (Array.isArray(contextData) && contextData.length > 0) {
-      console.log(`✅ Dùng lại dữ liệu lớp ${selectedClass} từ context`);
+      //console.log(`✅ Dùng lại dữ liệu lớp ${selectedClass} từ context`);
       setStudents(contextData);
 
       const initMap = {};
       contextData.forEach(s => (initMap[s.id] = s.registered));
       setOriginalRegistered(initMap);
     } else {
-      console.log(`ℹ️ Không có dữ liệu lớp ${selectedClass} trong context`);
+      //console.log(`ℹ️ Không có dữ liệu lớp ${selectedClass} trong context`);
     }
   }, [classData, selectedClass]);
 
@@ -182,7 +182,7 @@ export default function Lop1() {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        console.log(`🟡 Fetch Firestore lớp ${selectedClass}`);
+        //console.log(`🟡 Fetch Firestore lớp ${selectedClass}`);
         const col = `DANHSACH_${namHoc}`;
         const raw = await fetchStudentsFromFirestore(col, selectedClass, useNewVersion);
         const enriched = enrichStudents(raw, today, selectedClass, useNewVersion);
@@ -565,13 +565,10 @@ export default function Lop1() {
                       )}
 
                       {viewMode === 'bantru' && (
-                        <TableCell
-                          align="center"
-                          sx={{ px: { xs: 1, sm: 2 }, width: { xs: 50, sm: 'auto' } }}
-                        >
-                          {s.showRegisterCheckbox && (
+                        <TableCell align="center" sx={{ px: { xs: 1, sm: 2 }, width: { xs: 50, sm: 'auto' } }}>
+                          {s.huyDangKy !== "x" && (
                             <Checkbox
-                              checked={s.registered ?? false}
+                              checked={s.huyDangKy === "T"}
                               onChange={() => toggleRegister(index)}
                               size="small"
                               color="primary"

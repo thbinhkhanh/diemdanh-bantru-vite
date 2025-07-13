@@ -147,26 +147,26 @@ export default function CapNhatDS({ onBack }) {
       setSelectedStudentId("");
       setSelectedStudentData(null);
       setDangKy("");
-      if (snackbar.open) setSnackbar({ ...snackbar, open: false });
+      //if (snackbar.open) setSnackbar({ ...snackbar, open: false });
       return;
     }
     setSelectedStudentId("");
     setSelectedStudentData(null);
     setDangKy("");
-    if (snackbar.open) setSnackbar({ ...snackbar, open: false });
+    //if (snackbar.open) setSnackbar({ ...snackbar, open: false });
   }, [selectedClass]);
 
   useEffect(() => {
     if (!selectedStudentId || nhapTuDanhSach !== "danhSach") {
       setSelectedStudentData(null);
       setDangKy("");
-      if (snackbar.open) setSnackbar({ ...snackbar, open: false });
+      //if (snackbar.open) setSnackbar({ ...snackbar, open: false });
       return;
     }
     const student = filteredStudents.find((s) => s.id === selectedStudentId);
     setSelectedStudentData(student || null);
     setDangKy(student?.dangKy || "");
-    if (snackbar.open) setSnackbar({ ...snackbar, open: false });
+    //if (snackbar.open) setSnackbar({ ...snackbar, open: false });
   }, [selectedStudentId, filteredStudents, nhapTuDanhSach]);
 
   const handleUpdate = async () => {
@@ -224,14 +224,25 @@ export default function CapNhatDS({ onBack }) {
           return;
         }
 
-        await updateDoc(doc(db, `BANTRU_${namHocValue}`, selectedStudentData.id), {
+        await updateDoc(doc(db, `DANHSACH_${namHocValue}`, selectedStudentData.id), {
           huyDangKy,
         });
+
+        //console.log("📝 Đã cập nhật học sinh:", selectedStudentData.hoVaTen, "| ID:", selectedStudentData.id, "| huyDangKy:", huyDangKy);
+
+        const updatedStudents = allStudents.map((s) =>
+          s.id === selectedStudentData.id ? { ...s, huyDangKy } : s
+        );
+        setClassData(selectedClass, updatedStudents);
+        setAllStudents(updatedStudents);
+        setFilteredStudents(MySort(updatedStudents));
+
+        //console.log("📦 Context sau cập nhật:", updatedStudents.find(s => s.id === selectedStudentData.id));
 
         showSnackbar("✅ Cập nhật thành công!");
       } else {
         const generatedMaDinhDanh = `${selectedClass}-${nanoid()}`;
-        const docRef = doc(db, `BANTRU_${namHocValue}`, generatedMaDinhDanh);
+        const docRef = doc(db, `DANHSACH_${namHocValue}`, generatedMaDinhDanh);
         const docSnap = await getDoc(docRef);
 
         if (!docSnap.exists()) {
@@ -242,9 +253,40 @@ export default function CapNhatDS({ onBack }) {
             lop: selectedClass,
             huyDangKy,
           });
+
+          const newStudent = {
+            id: generatedMaDinhDanh,
+            stt: newSTT,
+            hoVaTen: customHoTen.trim(),
+            lop: selectedClass,
+            huyDangKy,
+          };
+
+          //console.log("🆕 Thêm học sinh:", newStudent.hoVaTen, "| ID:", newStudent.id, "| huyDangKy:", newStudent.huyDangKy);
+
+          const updated = [...allStudents, newStudent];
+          setClassData(selectedClass, updated);
+          setAllStudents(updated);
+          setFilteredStudents(MySort(updated));
+
+          //console.log("📦 Context sau thêm mới:", updated.find(s => s.id === newStudent.id));
+
           showSnackbar("✅ Thêm học sinh mới thành công!");
         } else {
           await updateDoc(docRef, { huyDangKy });
+
+          const updatedStudents = allStudents.map((s) =>
+            s.id === generatedMaDinhDanh ? { ...s, huyDangKy } : s
+          );
+
+          //console.log("🔁 Học sinh đã tồn tại, cập nhật trạng thái:", generatedMaDinhDanh, "| huyDangKy:", huyDangKy);
+
+          setClassData(selectedClass, updatedStudents);
+          setAllStudents(updatedStudents);
+          setFilteredStudents(MySort(updatedStudents));
+
+          //console.log("📦 Context sau cập nhật lại:", updatedStudents.find(s => s.id === generatedMaDinhDanh));
+
           showSnackbar("✅ Cập nhật học sinh thành công!");
         }
       }
@@ -276,7 +318,7 @@ export default function CapNhatDS({ onBack }) {
             <>
               <FormControl component="fieldset" sx={{ mb: 2 }}>
                 <Box sx={{ display: "flex", justifyContent: "center", width: "100%" }}>
-                  <RadioGroup row value={nhapTuDanhSach} onChange={(e) => { setNhapTuDanhSach(e.target.value); if (snackbar.open) setSnackbar({ ...snackbar, open: false }); }}>
+                  <RadioGroup row value={nhapTuDanhSach} onChange={(e) => { setNhapTuDanhSach(e.target.value); }}>
                     <FormControlLabel value="danhSach" control={<Radio size="small" />} label="Chọn từ danh sách" />
                     <FormControlLabel value="thuCong" control={<Radio size="small" />} label="Nhập thủ công" />
                   </RadioGroup>
@@ -293,7 +335,7 @@ export default function CapNhatDS({ onBack }) {
                     const newClass = e.target.value;
                     setSelectedClass(newClass);
                     fetchStudentsForClass(newClass);
-                    if (snackbar.open) setSnackbar({ ...snackbar, open: false });
+                    //if (snackbar.open) setSnackbar({ ...snackbar, open: false });
                   }}
                 >
                   <MenuItem value=""><em>Chọn lớp</em></MenuItem>
@@ -309,7 +351,7 @@ export default function CapNhatDS({ onBack }) {
                   <Select
                     value={selectedStudentId}
                     label="Học sinh"
-                    onChange={(e) => { setSelectedStudentId(e.target.value); if (snackbar.open) setSnackbar({ ...snackbar, open: false }); }}
+                    onChange={(e) => { setSelectedStudentId(e.target.value);  }}
                     disabled={!selectedClass}
                   >
                     <MenuItem value=""><em>Chọn học sinh</em></MenuItem>
@@ -321,7 +363,7 @@ export default function CapNhatDS({ onBack }) {
                   </Select>
                 </FormControl>
               ) : (
-                <TextField label="Họ và tên" size="small" fullWidth value={customHoTen} onChange={(e) => { setCustomHoTen(e.target.value); if (snackbar.open) setSnackbar({ ...snackbar, open: false }); }} sx={{ mb: 2 }} />
+                <TextField label="Họ và tên" size="small" fullWidth value={customHoTen} onChange={(e) => { setCustomHoTen(e.target.value);  }} sx={{ mb: 2 }} />
               )}
 
               <FormControl fullWidth size="small" sx={{ mb: 3 }}>
@@ -329,7 +371,7 @@ export default function CapNhatDS({ onBack }) {
                 <Select
                   value={dangKy}
                   label="Trạng thái đăng ký"
-                  onChange={(e) => { setDangKy(e.target.value); if (snackbar.open) setSnackbar({ ...snackbar, open: false }); }}
+                  onChange={(e) => { setDangKy(e.target.value); }}
                   disabled={nhapTuDanhSach === "danhSach" ? !selectedStudentData : false}
                 >
                   <MenuItem value=""><em>Chọn trạng thái</em></MenuItem>

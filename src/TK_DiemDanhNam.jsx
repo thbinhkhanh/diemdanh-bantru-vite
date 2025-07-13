@@ -248,7 +248,7 @@ export default function ThongKeNam_DiemDanh({ onBack }) {
       }}>
         <Box sx={{ mb: 5 }}>
           <Typography variant="h5" fontWeight="bold" color="primary" align="center" sx={{ mb: 1 }}>
-            ĐIỂM DANH CẢ NĂM
+            ĐIỂM DANH NĂM {selectedDate.getFullYear()}
           </Typography>
           <Box sx={{ height: "2.5px", width: "100%", backgroundColor: "#1976d2", borderRadius: 1, mt: 2, mb: 4 }} />
         </Box>
@@ -352,7 +352,8 @@ export default function ThongKeNam_DiemDanh({ onBack }) {
                       width: 48,
                       px: 1,
                       ...(isMobile && {
-                        position: "sticky", left: 0, backgroundColor: "#fff", zIndex: 2
+                        //position: "sticky", left: 0, backgroundColor: "#fff", zIndex: 2
+                        position: "sticky", left: 0, zIndex: 2
                       })
                     }}>
                       {student.stt}
@@ -361,7 +362,8 @@ export default function ThongKeNam_DiemDanh({ onBack }) {
                       minWidth: 180,
                       px: 1,
                       ...(isMobile && {
-                        position: "sticky", left: 60, backgroundColor: "#fff", zIndex: 2
+                        //position: "sticky", left: 60, backgroundColor: "#fff", zIndex: 2
+                        position: "sticky", left: 60, zIndex: 2
                       })
                     }}>
                       {student.hoVaTen}

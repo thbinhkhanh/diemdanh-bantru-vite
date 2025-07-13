@@ -565,13 +565,10 @@ export default function Lop4() {
                       )}
 
                       {viewMode === 'bantru' && (
-                        <TableCell
-                          align="center"
-                          sx={{ px: { xs: 1, sm: 2 }, width: { xs: 50, sm: 'auto' } }}
-                        >
-                          {s.showRegisterCheckbox && (
+                        <TableCell align="center" sx={{ px: { xs: 1, sm: 2 }, width: { xs: 50, sm: 'auto' } }}>
+                          {s.huyDangKy !== "x" && (
                             <Checkbox
-                              checked={s.registered ?? false}
+                              checked={s.huyDangKy === "T"}
                               onChange={() => toggleRegister(index)}
                               size="small"
                               color="primary"

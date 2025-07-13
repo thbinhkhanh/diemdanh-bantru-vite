@@ -198,7 +198,7 @@ export default function ThongKeNam({ onBack }) {
       }}>
         <Box sx={{ mb: 5 }}>
           <Typography variant="h5" fontWeight="bold" color="primary" align="center" sx={{ mb: 1 }}>
-            TỔNG HỢP CẢ NĂM
+            BÁN TRÚ NĂM {selectedDate.getFullYear()}
           </Typography>
           <Box sx={{ height: "2.5px", width: "100%", backgroundColor: "#1976d2", borderRadius: 1, mt: 2, mb: 4 }} />
         </Box>
