@@ -14,7 +14,8 @@ export const restoreFromJSONFile = async (
   file,
   setRestoreProgress,
   setAlertMessage,
-  setAlertSeverity
+  setAlertSeverity,
+  selectedDataTypes // 👈 thêm vào
 ) => {
   try {
     if (!file) return alert("⚠️ Chưa chọn file để phục hồi!");
@@ -23,13 +24,20 @@ export const restoreFromJSONFile = async (
     const jsonData = JSON.parse(text);
     const collections = Object.entries(jsonData);
 
+    // 🔍 Xác định loại dữ liệu cần phục hồi theo checkbox
+    const allowedPrefixes = [];
+    if (selectedDataTypes.danhsach) allowedPrefixes.push("DANHSACH");
+    if (selectedDataTypes.bantru) allowedPrefixes.push("BANTRU");
+    if (selectedDataTypes.diemdan) allowedPrefixes.push("DIEMDANH");
+
+    if (allowedPrefixes.length === 0) {
+      alert("⚠️ Bạn chưa chọn loại dữ liệu nào để phục hồi!");
+      return;
+    }
+
     let totalDocs = 0;
     collections.forEach(([collectionName, docs]) => {
-      if (
-        collectionName.startsWith("DANHSACH") ||
-        collectionName.startsWith("DIEMDANH") ||
-        collectionName.startsWith("BANTRU")
-      ) {
+      if (allowedPrefixes.some(prefix => collectionName.startsWith(prefix))) {
         totalDocs += Object.keys(docs).length;
       }
     });
@@ -37,16 +45,13 @@ export const restoreFromJSONFile = async (
     let processed = 0;
 
     for (const [collectionName, documents] of collections) {
-      if (
-        !collectionName.startsWith("DANHSACH") &&
-        !collectionName.startsWith("DIEMDANH") &&
-        !collectionName.startsWith("BANTRU")
-      ) {
-        console.info(`🚫 Bỏ qua collection không được phục hồi: ${collectionName}`);
+      // ❌ Bỏ qua nếu không nằm trong danh sách được chọn
+      if (!allowedPrefixes.some(prefix => collectionName.startsWith(prefix))) {
+        console.info(`🚫 Bỏ qua collection không được chọn: ${collectionName}`);
         continue;
       }
 
-      console.group(`📂 Bắt đầu phục hồi collection: ${collectionName}`);
+      console.group(`📂 Phục hồi collection: ${collectionName}`);
       for (const [docId, docData] of Object.entries(documents)) {
         const restoredData = {};
         for (const [key, value] of Object.entries(docData)) {
@@ -63,33 +68,29 @@ export const restoreFromJSONFile = async (
         const docRef = doc(db, collectionName, docId);
         const existingSnap = await getDoc(docRef);
 
-        const shouldOverwrite =
-          collectionName.startsWith("DANHSACH"); // luôn ghi đè
-
+        const shouldOverwrite = collectionName.startsWith("DANHSACH");
         const shouldUpdate =
           collectionName.startsWith("DIEMDANH") ||
-          collectionName.startsWith("BANTRU"); // chỉ ghi nếu khác biệt
+          collectionName.startsWith("BANTRU");
 
         if (shouldUpdate && existingSnap.exists()) {
           const existingData = existingSnap.data();
           const isSame = JSON.stringify(existingData) === JSON.stringify(restoredData);
           if (isSame) {
-            console.info(`⚠️ Bỏ qua vì giống hệt: ${collectionName}/${docId}`);
+            console.info(`⚠️ Bỏ qua vì giống: ${collectionName}/${docId}`);
             continue;
           }
         }
 
-        console.log(`📥 Đang phục hồi: ${collectionName}/${docId}`);
         await setDoc(docRef, restoredData, { merge: true });
-
         processed++;
         setRestoreProgress(Math.round((processed / totalDocs) * 100));
       }
-      console.groupEnd(); // kết thúc nhóm log cho collection hiện tại
+      console.groupEnd();
     }
 
     setRestoreProgress(100);
-    setAlertMessage(`✅ Phục hồi ${processed} documents từ 3 collection thành công!`);
+    setAlertMessage(`✅ Phục hồi ${processed} documents thành công!`);
     setAlertSeverity("success");
   } catch (error) {
     console.error("❌ Lỗi khi phục hồi JSON:", error);
@@ -105,10 +106,17 @@ export const restoreFromExcelFile = async (
   file,
   setRestoreProgress,
   setAlertMessage,
-  setAlertSeverity
+  setAlertSeverity,
+  selectedDataTypes // 👈 Thêm vào để kiểm tra lựa chọn
 ) => {
   try {
     if (!file) return alert("⚠️ Chưa chọn file để phục hồi!");
+
+    // ⚠️ Kiểm tra nếu không chọn Bán trú
+    if (!selectedDataTypes?.bantru) {
+      alert("⚠️ Bạn chưa chọn phục hồi dữ liệu Bán trú.");
+      return;
+    }
 
     setRestoreProgress(0);
 

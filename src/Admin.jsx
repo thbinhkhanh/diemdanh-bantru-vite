@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Box, Typography, TextField, Button, Stack,
   Card, Divider, Select, MenuItem, FormControl, InputLabel,
-  RadioGroup, Radio, FormControlLabel, LinearProgress, Alert, Tabs, Tab
+  RadioGroup, Radio, FormControlLabel, LinearProgress, Alert, Tabs, Tab, Checkbox, FormGroup
 } from "@mui/material";
 import { doc, setDoc, getDoc, getDocs, collection } from "firebase/firestore";
 import { db } from "./firebase";
@@ -48,11 +48,40 @@ export default function Admin({ onCancel }) {
   const [tabIndex, setTabIndex] = useState(0);
   const [selectedYear, setSelectedYear] = useState("2024-2025");
 
+  const [showBackupOptions, setShowBackupOptions] = useState(false);
+  const [showRestoreOptions, setShowRestoreOptions] = useState(false);
+
+  
+const [restoreTriggered, setRestoreTriggered] = useState(false);
+const inputRef = useRef(null);
+
+  const [selectedDataTypes, setSelectedDataTypes] = useState({
+    danhsach: false,
+    bantru: false,
+    diemdan: false,
+  });
+
+  const [restoreMode, setRestoreMode] = useState("all"); // "all" hoặc "check"
+  
   const navigate = useNavigate();
 
   const yearOptions = [
     "2024-2025", "2025-2026", "2026-2027", "2027-2028", "2028-2029"
   ];
+
+  const handleCheckboxChange = (key) => {
+    setSelectedDataTypes((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
+
+  useEffect(() => {
+    if (restoreTriggered && inputRef.current) {
+      inputRef.current.click();
+      setRestoreTriggered(false);
+    }
+  }, [restoreTriggered]);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -345,50 +374,219 @@ export default function Admin({ onCancel }) {
             <Stack spacing={3} mt={3} sx={{ maxWidth: 300, mx: "auto", width: "100%" }}>
               <Divider><Typography fontWeight="bold">💾 Sao lưu & Phục hồi</Typography></Divider>
 
-              <RadioGroup row value={backupFormat} onChange={(e) => setBackupFormat(e.target.value)}>
-                <Box sx={{ display: "flex", justifyContent: "center", width: "100%" }}>
-                  <FormControlLabel value="json" control={<Radio />} label="JSON" />
-                  <FormControlLabel value="excel" control={<Radio />} label="Excel" />
-                </Box>
-              </RadioGroup>
-
+              {/* Nút bật/tắt sao lưu */}
               <Button
                 variant="contained"
                 color="success"
-                onClick={() =>
-                  backupFormat === "json"
-                    ? downloadBackupAsJSON()
-                    : downloadBackupAsExcel()
-                }
+                onClick={() => {
+                  if (showBackupOptions) {
+                    setShowBackupOptions(false);
+                    setSelectedDataTypes({ danhsach: false, bantru: false, diemdan: false });
+                  } else {
+                    setShowBackupOptions(true);
+                    setShowRestoreOptions(false);
+                    setSelectedDataTypes({ danhsach: false, bantru: false, diemdan: false });
+                  }
+                }}
               >
-                📥 Sao lưu ({backupFormat.toUpperCase()})
+                📥 Sao lưu
               </Button>
 
-              <Button variant="contained" color="secondary" component="label">
-                🔁 Phục hồi ({backupFormat.toUpperCase()})
+              {/* Giao diện sao lưu */}
+              {showBackupOptions && (
+                <>
+                  {/* Chọn loại dữ liệu sao lưu */}
+                  <Stack spacing={0.5}>
+                    <FormControlLabel
+                      control={<Checkbox checked={selectedDataTypes.danhsach} onChange={() => handleCheckboxChange("danhsach")} />}
+                      label="Sao lưu danh sách"
+                    />
+                    <FormControlLabel
+                      control={<Checkbox checked={selectedDataTypes.bantru} onChange={() => handleCheckboxChange("bantru")} />}
+                      label="Sao lưu bán trú"
+                    />
+                    <FormControlLabel
+                      control={<Checkbox checked={selectedDataTypes.diemdan} onChange={() => handleCheckboxChange("diemdan")} />}
+                      label="Sao lưu điểm danh"
+                    />
+                  </Stack>
+
+                  {/* Chọn định dạng */}
+                  <FormControl component="fieldset" sx={{ mt: 2 }}>
+                    <Typography variant="subtitle2" fontWeight="bold">Chọn định dạng:</Typography>
+                    <RadioGroup
+                      row
+                      value={backupFormat}
+                      onChange={(e) => setBackupFormat(e.target.value)}
+                    >
+                      <FormControlLabel value="json" control={<Radio />} label="JSON" />
+                      <FormControlLabel value="excel" control={<Radio />} label="Excel" />
+                    </RadioGroup>
+                  </FormControl>
+
+                  {/* Nút thực hiện sao lưu */}
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    sx={{ mt: 1 }}
+                    onClick={() => {
+                      const isEmpty =
+                        !selectedDataTypes.danhsach &&
+                        !selectedDataTypes.bantru &&
+                        !selectedDataTypes.diemdan;
+
+                      if (isEmpty) {
+                        alert("⚠️ Vui lòng chọn ít nhất một loại dữ liệu để sao lưu.");
+                        return;
+                      }
+
+                      if (backupFormat === "json") {
+                        downloadBackupAsJSON(selectedDataTypes);
+                      } else {
+                        downloadBackupAsExcel(selectedDataTypes);
+                      }
+
+                      setShowBackupOptions(false);
+                    }}
+                  >
+                    ✅ THỰC HIỆN SAO LƯU ({backupFormat.toUpperCase()})
+                  </Button>
+                </>
+              )}
+
+              {/* Nút bật/tắt phục hồi */}
+              <Button
+                variant="contained"
+                color="secondary"
+                onClick={() => {
+                  if (showRestoreOptions) {
+                    setShowRestoreOptions(false);
+                    setSelectedDataTypes({ danhsach: false, bantru: false, diemdan: false });
+                    setRestoreMode("all");
+                  } else {
+                    setShowRestoreOptions(true);
+                    setShowBackupOptions(false);
+                    setSelectedDataTypes({ danhsach: false, bantru: false, diemdan: false });
+                  }
+                }}
+              >
+                🔁 Phục hồi
+              </Button>
+
+              {/* Giao diện phục hồi */}
+              {showRestoreOptions && (
+              <>
+                {/* Các checkbox lựa chọn dữ liệu */}
+                <FormGroup row sx={{ mt: 2 }}>
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={selectedDataTypes.danhsach}
+                        onChange={() => handleCheckboxChange("danhsach")}
+                      />
+                    }
+                    label="Phục hồi danh sách"
+                  />
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={selectedDataTypes.bantru}
+                        onChange={() => handleCheckboxChange("bantru")}
+                      />
+                    }
+                    label="Phục hồi bán trú"
+                  />
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={selectedDataTypes.diemdan}
+                        onChange={() => handleCheckboxChange("diemdan")}
+                      />
+                    }
+                    label="Phục hồi điểm danh"
+                  />
+                </FormGroup>
+
+                {/* Chọn định dạng phục hồi */}
+                <FormControl component="fieldset" sx={{ mt: 2 }}>
+                  <Typography variant="subtitle2" fontWeight="bold">Chọn định dạng:</Typography>
+                  <RadioGroup
+                    row
+                    value={backupFormat}
+                    onChange={(e) => setBackupFormat(e.target.value)}
+                  >
+                    <FormControlLabel value="json" control={<Radio />} label="JSON" />
+                    <FormControlLabel value="excel" control={<Radio />} label="Excel" />
+                  </RadioGroup>
+                </FormControl>
+
+                {/* Chọn chế độ phục hồi */}
+                <FormControl component="fieldset" sx={{ mt: 2 }}>
+                  <Typography variant="subtitle2" fontWeight="bold">Chọn cách phục hồi:</Typography>
+                  <RadioGroup
+                    row
+                    value={restoreMode}
+                    onChange={(e) => setRestoreMode(e.target.value)}
+                  >
+                    <FormControlLabel value="all" control={<Radio />} label="Ghi đè tất cả" />
+                    <FormControlLabel value="check" control={<Radio />} label="Chỉ ghi mới" />
+                  </RadioGroup>
+                </FormControl>
+
+                {/* Nút thực hiện phục hồi */}
+                <Button
+                  variant="contained"
+                  sx={{ mt: 1 }}
+                  onClick={() => {
+                    const isEmpty =
+                      !selectedDataTypes.danhsach &&
+                      !selectedDataTypes.bantru &&
+                      !selectedDataTypes.diemdan;
+
+                    if (isEmpty) {
+                      alert("⚠️ Vui lòng chọn ít nhất một loại dữ liệu để phục hồi.");
+                      return;
+                    }
+
+                    if (inputRef.current) {
+                      inputRef.current.click(); // Mở hộp thoại chọn file
+                    }
+                  }}
+                >
+                  ✅ THỰC HIỆN PHỤC HỒI ({backupFormat.toUpperCase()})
+                </Button>
+
+                {/* Input chọn file ẩn */}
                 <input
                   type="file"
-                  accept={backupFormat === "json" ? ".json" : ".xlsx"}
+                  ref={inputRef}
                   hidden
+                  accept={backupFormat === "json" ? ".json" : ".xlsx"}
                   onChange={(e) => {
                     const file = e.target.files[0];
                     if (!file) return;
-                    if (!window.confirm("⚠️ Phục hồi sẽ ghi đè dữ liệu. Tiếp tục?")) {
-                      e.target.value = "";
-                      return;
+
+                    if (backupFormat === "json") {
+                      restoreFromJSONFile(
+                        file,
+                        setRestoreProgress,
+                        setAlertMessage,
+                        setAlertSeverity,
+                        selectedDataTypes
+                      );
+                    } else {
+                      restoreFromExcelFile(
+                        file,
+                        setRestoreProgress,
+                        setAlertMessage,
+                        setAlertSeverity,
+                        selectedDataTypes
+                      );
                     }
-                    const restore = async () => {
-                      if (backupFormat === "json") {
-                        await restoreFromJSONFile(file, setRestoreProgress, setAlertMessage, setAlertSeverity);
-                      } else {
-                        await restoreFromExcelFile(file, setRestoreProgress, setAlertMessage, setAlertSeverity);
-                      }
-                      e.target.value = "";
-                    };
-                    restore();
                   }}
                 />
-              </Button>
+              </>
+            )}
 
               {(restoreProgress > 0) && (
                 <Box sx={{ mt: 2 }}>
@@ -410,6 +608,7 @@ export default function Admin({ onCancel }) {
               )}
             </Stack>
           )}
+
 
           {tabIndex === 3 && (
             <Stack spacing={3} mt={3} sx={{ maxWidth: 300, mx: "auto", width: "100%" }}>
