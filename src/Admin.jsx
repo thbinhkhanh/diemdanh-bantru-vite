@@ -21,8 +21,14 @@ import { useNavigate } from "react-router-dom";
 
 // ✅ Fix lỗi thiếu icon
 import LockResetIcon from "@mui/icons-material/LockReset";
-import { xoaTatCaDiemDanh } from "./utils/xoaTatCaDiemDanh";
+import { deleteField } from "firebase/firestore"; // 👈 nhớ import ở đầu file
+import { useClassData } from "./context/ClassDataContext";
 
+const ResetProgressText = ({ label, progress }) => (
+  <Typography variant="caption" align="center" display="block" mt={0.5}>
+    {label}... {progress}%
+  </Typography>
+);
 
 export default function Admin({ onCancel }) {
   const [firestoreEnabled, setFirestoreEnabled] = useState(false);
@@ -51,9 +57,14 @@ export default function Admin({ onCancel }) {
   const [showBackupOptions, setShowBackupOptions] = useState(false);
   const [showRestoreOptions, setShowRestoreOptions] = useState(false);
 
-  
-const [restoreTriggered, setRestoreTriggered] = useState(false);
-const inputRef = useRef(null);
+  const [resetProgress, setResetProgress] = useState(0);
+  const [resetMessage, setResetMessage] = useState("");
+  const [resetSeverity, setResetSeverity] = useState("success");
+  const [resetType, setResetType] = useState(""); // "diemdanh" | "dangky"
+
+  const [restoreTriggered, setRestoreTriggered] = useState(false);
+  const inputRef = useRef(null); 
+  const { getClassData, setClassData } = useClassData();
 
   const [selectedDataTypes, setSelectedDataTypes] = useState({
     danhsach: false,
@@ -209,49 +220,127 @@ const inputRef = useRef(null);
     });
   };
 
-  const handleSetDefault = async () => {
-    const confirmed = window.confirm("⚠️ Bạn có chắc muốn reset đăng ký bán trú ngày hôm nay?");
+  const handleResetDangKyBanTru = async () => {
+    const confirmed = window.confirm("⚠️ Bạn có chắc chắn muốn reset đăng ký bán trú?");
     if (!confirmed) return;
 
     try {
-      setSetDefaultProgress(0);
-      setSetDefaultMessage("");
-      setSetDefaultSeverity("info");
+      setResetProgress(0);
+      setResetMessage("");
+      setResetSeverity("info");
+      setResetType("dangky");
 
       const namHocDoc = await getDoc(doc(db, "YEAR", "NAMHOC"));
       const namHocValue = namHocDoc.exists() ? namHocDoc.data().value : null;
       if (!namHocValue) {
-        setSetDefaultMessage("❌ Không tìm thấy năm học hợp lệ trong hệ thống!");
-        setSetDefaultSeverity("error");
+        setResetMessage("❌ Không tìm thấy năm học!");
+        setResetSeverity("error");
         return;
       }
 
-      const collectionName = `BANTRU_${namHocValue}`;
-      const snapshot = await getDocs(collection(db, collectionName));
-      const docs = snapshot.docs;
-      const total = docs.length;
-      let completed = 0;
+      const colName = `DANHSACH_${namHocValue}`;
+      const snapshot = await getDocs(collection(db, colName));
 
-      for (const docSnap of docs) {
+      const total = snapshot.docs.length;
+      let completed = 0;
+      let count = 0;
+
+      for (const docSnap of snapshot.docs) {
         const data = docSnap.data();
-        const newData = {
-          ...data,
-          vang: "",
-          lyDo: "",
-          ...(data.huyDangKy !== "x" && { huyDangKy: "T" })
-        };
-        await setDoc(doc(db, collectionName, docSnap.id), newData);
+        if (data.huyDangKy === "") {
+          await setDoc(doc(db, colName, docSnap.id), {
+            ...data,
+            huyDangKy: "T"
+          });
+          count++;
+        }
         completed++;
-        setSetDefaultProgress(Math.round((completed / total) * 100));
+        setResetProgress(Math.round((completed / total) * 100));
       }
 
-      setSetDefaultMessage("✅ Đã reset điểm danh!");
-      setSetDefaultSeverity("success");
-    } catch {
-      setSetDefaultMessage("❌ Lỗi khi cập nhật huyDangKy.");
-      setSetDefaultSeverity("error");
+      // 🔁 Chỉ cập nhật lại context các lớp có trong classData:
+      const currentClassData = getClassData() || {};
+      const updatedClassData = {};
+
+      Object.entries(currentClassData).forEach(([classId, studentList]) => {
+        updatedClassData[classId] = studentList.map((s) => ({
+          ...s,
+          huyDangKy: s.huyDangKy === "" ? "T" : s.huyDangKy
+        }));
+      });
+
+      setClassData(updatedClassData);
+
+      setResetMessage(`✅ Đã cập nhật ${count} học sinh đăng ký bán trú.`);
+      setResetSeverity("success");
+    } catch (err) {
+      console.error("❌ Lỗi khi reset đăng ký:", err);
+      setResetMessage("❌ Có lỗi xảy ra khi cập nhật.");
+      setResetSeverity("error");
     } finally {
-      setTimeout(() => setSetDefaultProgress(0), 3000);
+      setTimeout(() => setResetProgress(0), 3000);
+    }
+  };
+
+
+
+  const handleResetDiemDanh = async () => {
+    const confirmed = window.confirm("⚠️ Bạn có chắc chắn muốn reset điểm danh?");
+    if (!confirmed) return;
+
+    try {
+      setResetProgress(0);
+      setResetMessage("");
+      setResetSeverity("info");
+      setResetType("diemdanh");
+
+      const namHocDoc = await getDoc(doc(db, "YEAR", "NAMHOC"));
+      const namHocValue = namHocDoc.exists() ? namHocDoc.data().value : null;
+      if (!namHocValue) {
+        setResetMessage("❌ Không tìm thấy năm học!");
+        setResetSeverity("error");
+        return;
+      }
+
+      const colName = `DANHSACH_${namHocValue}`;
+      const snapshot = await getDocs(collection(db, colName));
+
+      const total = snapshot.docs.length;
+      let completed = 0;
+      let count = 0;
+
+      for (const docSnap of snapshot.docs) {
+        const data = docSnap.data();
+
+        const needClear =
+          data.vang !== "" ||
+          data.lyDo !== "" ||
+          typeof data.phep === "boolean" ||
+          data.phep === null; // ✅ thêm điều kiện để xóa luôn phep: null
+
+        if (needClear) {
+          await setDoc(doc(db, colName, docSnap.id), {
+            ...data,
+            vang: "",
+            lyDo: "",
+            phep: deleteField() // ✅ xóa hoàn toàn field phep
+          }, { merge: true });
+
+          count++;
+        }
+
+        completed++;
+        setResetProgress(Math.round((completed / total) * 100));
+      }
+
+      setResetMessage(`✅ Đã reset điểm danh cho ${count} học sinh.`);
+      setResetSeverity("success");
+    } catch (err) {
+      console.error("❌ Lỗi khi reset điểm danh:", err);
+      setResetMessage("❌ Có lỗi xảy ra khi cập nhật.");
+      setResetSeverity("error");
+    } finally {
+      setTimeout(() => setResetProgress(0), 3000);
     }
   };
 
@@ -290,7 +379,6 @@ const inputRef = useRef(null);
             <Tab label="💾 BACKUP & RESTORE" />
             <Tab label="🧹 DELETE & RESET" />
           </Tabs>
-
 
           {/* Tab 0: System */}
           {tabIndex === 0 && (
@@ -477,7 +565,7 @@ const inputRef = useRef(null);
               {showRestoreOptions && (
               <>
                 {/* Các checkbox lựa chọn dữ liệu */}
-                <FormGroup row sx={{ mt: 2 }}>
+                <Stack spacing={0.5} sx={{ mt: 2 }}>
                   <FormControlLabel
                     control={
                       <Checkbox
@@ -505,7 +593,7 @@ const inputRef = useRef(null);
                     }
                     label="Điểm danh"
                   />
-                </FormGroup>
+                </Stack>
 
                 {/* Chọn định dạng phục hồi */}
                 <FormControl component="fieldset" sx={{ mt: 2 }}>
@@ -609,25 +697,26 @@ const inputRef = useRef(null);
             </Stack>
           )}
 
-
           {tabIndex === 3 && (
             <Stack spacing={3} mt={3} sx={{ maxWidth: 300, mx: "auto", width: "100%" }}>
               <Divider>
-                <Typography fontWeight="bold" >🗑️ Xóa & Reset dữ liệu</Typography>
+                <Typography fontWeight="bold">🗑️ Xóa & Reset dữ liệu</Typography>
               </Divider>
 
+              {/* Nút thao tác */}
               <Button variant="contained" color="error" onClick={handleDeleteAll}>
                 🗑️ Xóa dữ liệu bán trú
               </Button>
 
-              <Button variant="contained" color="warning" onClick={handleSetDefault}>
-                ♻️ Reset đăng ký bán trú
+              <Button variant="contained" color="warning" onClick={handleResetDangKyBanTru}>
+                ♻️ Reset bán trú
               </Button>
 
-              <Button variant="contained" color="warning" onClick={xoaTatCaDiemDanh}>
+              <Button variant="contained" color="warning" onClick={handleResetDiemDanh}>
                 ♻️ Reset điểm danh
               </Button>
 
+              {/* ✅ Tiến trình cho hành động xóa & reset legacy */}
               {(deleteProgress > 0 || setDefaultProgress > 0) && (
                 <Box sx={{ mt: 2 }}>
                   <LinearProgress
@@ -637,28 +726,56 @@ const inputRef = useRef(null);
                   />
                   <Typography variant="caption" align="center" display="block" mt={0.5}>
                     {deleteProgress > 0
-                      ? `Đang xóa... ${deleteProgress}%`
-                      : `Đang reset... ${setDefaultProgress}%`}
+                      ? `Đang xóa dữ liệu bán trú... ${deleteProgress}%`
+                      : `Đang reset legacy... ${setDefaultProgress}%`}
                   </Typography>
                 </Box>
               )}
 
+              {/* ✅ Tiến trình cho đăng ký và điểm danh bán trú */}
+              {resetProgress > 0 && (
+                <Box sx={{ mt: 2 }}>
+                  <LinearProgress
+                    variant="determinate"
+                    value={resetProgress}
+                    sx={{ height: 10, borderRadius: 5 }}
+                  />
+                  <ResetProgressText
+                    label={
+                      resetType === "dangky"
+                        ? "Đang reset bán trú"
+                        : "Đang reset điểm danh"
+                    }
+                    progress={resetProgress}
+                  />
+                </Box>
+              )}
+
+              {/* 🔔 Thông báo kết quả */}
               {deleteMessage && (
                 <Alert severity={deleteSeverity} onClose={() => setDeleteMessage("")}>
                   {deleteMessage}
                 </Alert>
               )}
+
               {setDefaultMessage && (
                 <Alert severity={setDefaultSeverity} onClose={() => setSetDefaultMessage("")}>
                   {setDefaultMessage}
                 </Alert>
               )}
+
+              {resetMessage && (
+                <Alert severity={resetSeverity} onClose={() => setResetMessage("")}>
+                  {resetMessage}
+                </Alert>
+              )}
             </Stack>
           )}
-
 
         </Card>
       </Box>
     </Box>
   );
 }
+
+

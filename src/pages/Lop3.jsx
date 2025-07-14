@@ -269,12 +269,29 @@ export default function Lop3() {
     await saveSingleDiemDanh(updated[index], namHoc, selectedClass, classData, setClassData);
   };
 
-  const toggleRegister = (index) => {
-    const updated = [...students];
-    updated[index].registered = !updated[index].registered;
-    setStudents(updated);
-    clearTimeout(saveTimeout.current);
-    saveTimeout.current = setTimeout(handleSave, 2000);
+  const toggleRegister = async (index) => {
+    const updatedStudents = [...students];
+    updatedStudents[index].registered = !updatedStudents[index].registered;
+
+    setStudents(updatedStudents);
+
+    const changed = [updatedStudents[index]].filter(
+      (s) => s.showRegisterCheckbox && s.registered !== originalRegistered[s.id]
+    );
+
+    if (changed.length > 0) {
+      try {
+        await saveRegistrationChanges(changed, namHoc, selectedClass, setClassData, classData);
+        const updatedMap = { ...originalRegistered };
+        changed.forEach((s) => {
+          updatedMap[s.id] = s.registered;
+        });
+        setOriginalRegistered(updatedMap);
+        setLastSaved(new Date());
+      } catch (err) {
+        console.error('Lỗi khi lưu đăng ký bán trú:', err.message);
+      }
+    }
   };
 
    const handleClassChange = async (event) => {
@@ -513,7 +530,10 @@ export default function Lop3() {
             </TableHead>
 
               <TableBody>
-                {students.map((s, index) => (
+                {(viewMode === 'bantru'
+                  ? students.filter(s => s.huyDangKy !== "x")
+                  : students
+                ).map((s, index) => (
                   <React.Fragment key={s.id}>
                     <TableRow>
                       <TableCell
@@ -566,14 +586,17 @@ export default function Lop3() {
 
                       {viewMode === 'bantru' && (
                         <TableCell align="center" sx={{ px: { xs: 1, sm: 2 }, width: { xs: 50, sm: 'auto' } }}>
-                          {s.huyDangKy !== "x" && (
-                            <Checkbox
-                              checked={s.huyDangKy === "T"}
-                              onChange={() => toggleRegister(index)}
-                              size="small"
-                              color="primary"
-                            />
-                          )}
+                          <Checkbox
+                            //checked={s.huyDangKy === "T"}
+                            checked={s.registered}
+                            //onChange={() => toggleRegister(index)}
+                            onChange={() => {
+                              const trueIndex = students.findIndex(x => x.id === s.id);
+                              toggleRegister(trueIndex);
+                            }}
+                            size="small"
+                            color="primary"
+                          />
                         </TableCell>
                       )}
                     </TableRow>
@@ -584,6 +607,7 @@ export default function Lop3() {
                           colSpan={viewMode === 'bantru' ? 4 : 3}
                           sx={{ backgroundColor: '#f9f9f9' }}
                         >
+                          {/* Chi tiết vắng */}
                           <Stack spacing={1} sx={{ pl: 2, py: 1 }}>
                             <Stack direction="row" spacing={4}>
                               <FormControlLabel

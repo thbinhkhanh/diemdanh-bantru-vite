@@ -1,4 +1,4 @@
-import { doc, deleteDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, deleteDoc, setDoc, updateDoc, deleteField } from 'firebase/firestore';
 import { db } from '../../firebase';
 
 /**
@@ -58,7 +58,8 @@ export const saveSingleDiemDanh = async (
         deleteDoc(diemDanhRef),
         updateDoc(danhSachRef, {
           lyDo: '',
-          phep: null,
+          //phep: null,
+          phep: deleteField(), // ✅ xoá hoàn toàn field "phep"
         }),
       ]);
     }
