@@ -399,15 +399,15 @@ const inputRef = useRef(null);
                   <Stack spacing={0.5}>
                     <FormControlLabel
                       control={<Checkbox checked={selectedDataTypes.danhsach} onChange={() => handleCheckboxChange("danhsach")} />}
-                      label="Sao lưu danh sách"
+                      label="Danh sách"
                     />
                     <FormControlLabel
                       control={<Checkbox checked={selectedDataTypes.bantru} onChange={() => handleCheckboxChange("bantru")} />}
-                      label="Sao lưu bán trú"
+                      label="Bán trú"
                     />
                     <FormControlLabel
                       control={<Checkbox checked={selectedDataTypes.diemdan} onChange={() => handleCheckboxChange("diemdan")} />}
-                      label="Sao lưu điểm danh"
+                      label="Điểm danh"
                     />
                   </Stack>
 
@@ -485,7 +485,7 @@ const inputRef = useRef(null);
                         onChange={() => handleCheckboxChange("danhsach")}
                       />
                     }
-                    label="Phục hồi danh sách"
+                    label="Danh sách"
                   />
                   <FormControlLabel
                     control={
@@ -494,7 +494,7 @@ const inputRef = useRef(null);
                         onChange={() => handleCheckboxChange("bantru")}
                       />
                     }
-                    label="Phục hồi bán trú"
+                    label="Bán trú"
                   />
                   <FormControlLabel
                     control={
@@ -503,7 +503,7 @@ const inputRef = useRef(null);
                         onChange={() => handleCheckboxChange("diemdan")}
                       />
                     }
-                    label="Phục hồi điểm danh"
+                    label="Điểm danh"
                   />
                 </FormGroup>
 
