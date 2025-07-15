@@ -21,7 +21,8 @@ import { useNavigate } from "react-router-dom";
 
 // ✅ Fix lỗi thiếu icon
 import LockResetIcon from "@mui/icons-material/LockReset";
- import { deleteField } from "firebase/firestore"; // 👈 nhớ import ở đầu file
+import { deleteField } from "firebase/firestore"; // 👈 nhớ import ở đầu file
+import { useClassData } from "./context/ClassDataContext";
 
 const ResetProgressText = ({ label, progress }) => (
   <Typography variant="caption" align="center" display="block" mt={0.5}>
@@ -62,8 +63,8 @@ export default function Admin({ onCancel }) {
   const [resetType, setResetType] = useState(""); // "diemdanh" | "dangky"
 
   const [restoreTriggered, setRestoreTriggered] = useState(false);
-  const inputRef = useRef(null);
-  
+  const inputRef = useRef(null); 
+  const { getClassData, setClassData } = useClassData();
 
   const [selectedDataTypes, setSelectedDataTypes] = useState({
     danhsach: false,
@@ -257,6 +258,19 @@ export default function Admin({ onCancel }) {
         setResetProgress(Math.round((completed / total) * 100));
       }
 
+      // 🔁 Chỉ cập nhật lại context các lớp có trong classData:
+      const currentClassData = getClassData() || {};
+      const updatedClassData = {};
+
+      Object.entries(currentClassData).forEach(([classId, studentList]) => {
+        updatedClassData[classId] = studentList.map((s) => ({
+          ...s,
+          huyDangKy: s.huyDangKy === "" ? "T" : s.huyDangKy
+        }));
+      });
+
+      setClassData(updatedClassData);
+
       setResetMessage(`✅ Đã cập nhật ${count} học sinh đăng ký bán trú.`);
       setResetSeverity("success");
     } catch (err) {
@@ -264,9 +278,11 @@ export default function Admin({ onCancel }) {
       setResetMessage("❌ Có lỗi xảy ra khi cập nhật.");
       setResetSeverity("error");
     } finally {
-      setTimeout(() => setResetProgress(0), 3000); // tự ẩn sau 3 giây
+      setTimeout(() => setResetProgress(0), 3000);
     }
   };
+
+
 
   const handleResetDiemDanh = async () => {
     const confirmed = window.confirm("⚠️ Bạn có chắc chắn muốn reset điểm danh?");
@@ -295,18 +311,21 @@ export default function Admin({ onCancel }) {
 
       for (const docSnap of snapshot.docs) {
         const data = docSnap.data();
+
         const needClear =
           data.vang !== "" ||
           data.lyDo !== "" ||
-          typeof data.phep === "boolean";
+          typeof data.phep === "boolean" ||
+          data.phep === null; // ✅ thêm điều kiện để xóa luôn phep: null
 
         if (needClear) {
           await setDoc(doc(db, colName, docSnap.id), {
-          ...data,
-          vang: "",
-          lyDo: "",
-          phep: deleteField()
-        }, { merge: true }); // ✅ bắt buộc khi xóa field
+            ...data,
+            vang: "",
+            lyDo: "",
+            phep: deleteField() // ✅ xóa hoàn toàn field phep
+          }, { merge: true });
+
           count++;
         }
 
