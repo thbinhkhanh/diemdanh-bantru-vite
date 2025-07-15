@@ -1,8 +1,8 @@
 import * as XLSX from "xlsx";
 
-export function exportThongKeNamDiemDanh(dataList, selectedYear, selectedClass, monthSet) {
+export function exportDiemDanhNam(dataList, selectedYear, selectedClass, monthSet) {
   const title1 = 'TRƯỜNG TIỂU HỌC BÌNH KHÁNH';
-  const title2 = `THỐNG KÊ BÁN TRÚ NĂM ${selectedYear}`;
+  const title2 = `THỐNG KÊ ĐIỂM DANH NĂM ${selectedYear}`;
   const title3 = `LỚP: ${selectedClass}`;
 
   if (!dataList || dataList.length === 0) return;
@@ -39,7 +39,15 @@ export function exportThongKeNamDiemDanh(dataList, selectedYear, selectedClass, 
     totalRow.push(sumP === 0 ? '' : sumP);
     totalRow.push(sumK === 0 ? '' : sumK);
   });
-  totalRow.push('');
+  const grandTotal = dataList.reduce((acc, cur) => {
+    return acc + monthSet.reduce((sum, month) => {
+      const p = cur.monthSummary?.[month]?.P || 0;
+      const k = cur.monthSummary?.[month]?.K || 0;
+      return sum + p + k;
+    }, 0);
+  }, 0);
+
+  totalRow.push(grandTotal === 0 ? '' : grandTotal);
 
   const finalData = [
     [title1],

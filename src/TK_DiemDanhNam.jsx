@@ -11,7 +11,7 @@ import vi from "date-fns/locale/vi";
 import { getDoc, getDocs, doc, collection, query, where } from "firebase/firestore";
 import { db } from "./firebase";
 import { MySort } from "./utils/MySort";
-import { exportThongKeNamDiemDanh } from './utils/exportThongKeNamDiemDanh';
+import { exportDiemDanhNam } from './utils/exportDiemDanhNam';
 import { useClassList } from "./context/ClassListContext";
 import { useClassData } from "./context/ClassDataContext"; 
 import { enrichStudents } from "./pages/ThanhPhan/enrichStudents";
@@ -226,7 +226,7 @@ export default function ThongKeNam_DiemDanh({ onBack }) {
   };
 
   const handleExport = () => {
-    exportThongKeNamDiemDanh(dataList, selectedDate.getFullYear(), selectedClass, monthSet);
+    exportDiemDanhNam(dataList, selectedDate.getFullYear(), selectedClass, monthSet);
   };
 
   return (

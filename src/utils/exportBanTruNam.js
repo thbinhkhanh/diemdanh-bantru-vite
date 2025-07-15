@@ -1,6 +1,6 @@
-
 import * as XLSX from 'xlsx';
-export function exportThongKeNamToExcel(dataList, selectedYear, selectedClass, monthSet) {
+
+export function exportBanTruNam(dataList, selectedYear, selectedClass, monthSet) {
   const title1 = 'TRƯỜNG TIỂU HỌC BÌNH KHÁNH';
   const title2 = `THỐNG KÊ BÁN TRÚ NĂM ${selectedYear}`;
   const title3 = `LỚP: ${selectedClass}`;
@@ -14,19 +14,24 @@ export function exportThongKeNamToExcel(dataList, selectedYear, selectedClass, m
     let total = 0;
     monthSet.forEach(month => {
       const val = item.monthSummary?.[month] || 0;
-      row.push(val === 0 ? "" : val); // 👈 Bỏ 0
+      row.push(val === 0 ? "" : val);
       total += val;
     });
-    row.push(total === 0 ? "" : total); // 👈 Bỏ tổng 0
+    row.push(total === 0 ? "" : total);
     return row;
   });
 
   const totalRow = ['TỔNG', ''];
+  let totalOfTotals = 0;
+
   monthSet.forEach(month => {
     const sum = dataList.reduce((acc, cur) => acc + (cur.monthSummary?.[month] || 0), 0);
-    totalRow.push(sum === 0 ? "" : sum); // 👈 Bỏ tổng tháng 0
+    totalRow.push(sum === 0 ? "" : sum);
+    totalOfTotals += sum;
   });
-  totalRow.push('');
+
+  // ➕ Thêm tổng của cột "TỔNG"
+  totalRow.push(totalOfTotals === 0 ? "" : totalOfTotals);
 
   const finalData = [
     [title1],
