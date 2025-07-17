@@ -49,10 +49,10 @@ export default function DiemDanhThang({ onBack }) {
 
   const headCellStyle = {
     fontWeight: "bold",
-    backgroundColor: theme.palette.grey[200],
+    backgroundColor: "#1976d2", // Màu nền xanh
+    color: "white",             // Màu chữ trắng
     border: "1px solid #ccc",
   };
-
 
   useEffect(() => {
     const fetchClassList = async () => {

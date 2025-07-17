@@ -531,7 +531,7 @@ export default function Lop3() {
 
               <TableBody>
                 {(viewMode === 'bantru'
-                  ? students.filter(s => s.huyDangKy !== "x")
+                  ? students.filter(s => s.dangKyBanTru === true)
                   : students
                 ).map((s, index) => (
                   <React.Fragment key={s.id}>

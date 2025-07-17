@@ -56,7 +56,7 @@ export default function CapNhatDS({ onBack }) {
 
         // ✅ enrich dữ liệu (giả sử enrichStudents tồn tại)
         const selectedDateStr = new Date().toISOString().split("T")[0]; // hoặc truyền ngày cụ thể bạn cần
-        const enriched = enrichStudents(rawStudents, selectedDateStr, selectedClass, true);
+        const enriched = enrichStudents(rawStudents, selectedDateStr, selectedClass);
 
         // ✅ Gắn stt
         const enrichedWithRegister = enriched.map((s, index) => ({
@@ -67,6 +67,7 @@ export default function CapNhatDS({ onBack }) {
         setClassData(cacheKey, enrichedWithRegister); // ✅ Lưu vào context
         setAllStudents(enrichedWithRegister);
         setFilteredStudents(MySort(enrichedWithRegister));
+
       } else {
         //console.log("📦 [STUDENT LIST] Lấy từ context:", cachedData.length, "học sinh");
         setAllStudents(cachedData);
@@ -210,14 +211,15 @@ export default function CapNhatDS({ onBack }) {
     }
 
     try {
-      const huyDangKy = dangKy === "Hủy đăng ký" ? "x" : "T";
+      const dangKyBanTru = dangKy === "Hủy đăng ký" ? false : true;
+      const diemDanhBanTru = dangKyBanTru;
 
       if (nhapTuDanhSach === "danhSach") {
-        const currentStatus = selectedStudentData.huyDangKy || "";
+        const currentStatus = selectedStudentData.dangKyBanTru;
 
         if (
-          (dangKy === "Hủy đăng ký" && currentStatus === "x") ||
-          (dangKy === "Đăng ký mới" && currentStatus === "T")
+          (dangKy === "Hủy đăng ký" && currentStatus === false) ||
+          (dangKy === "Đăng ký mới" && currentStatus === true)
         ) {
           showSnackbar("⚠️ Trạng thái đăng ký không thay đổi", "info");
           setSaving(false);
@@ -225,19 +227,17 @@ export default function CapNhatDS({ onBack }) {
         }
 
         await updateDoc(doc(db, `DANHSACH_${namHocValue}`, selectedStudentData.id), {
-          huyDangKy,
+          dangKyBanTru,
+          diemDanhBanTru
         });
 
-        //console.log("📝 Đã cập nhật học sinh:", selectedStudentData.hoVaTen, "| ID:", selectedStudentData.id, "| huyDangKy:", huyDangKy);
-
         const updatedStudents = allStudents.map((s) =>
-          s.id === selectedStudentData.id ? { ...s, huyDangKy } : s
+          s.id === selectedStudentData.id ? { ...s, dangKyBanTru, diemDanhBanTru } : s
         );
+
         setClassData(selectedClass, updatedStudents);
         setAllStudents(updatedStudents);
         setFilteredStudents(MySort(updatedStudents));
-
-        //console.log("📦 Context sau cập nhật:", updatedStudents.find(s => s.id === selectedStudentData.id));
 
         showSnackbar("✅ Cập nhật thành công!");
       } else {
@@ -251,7 +251,8 @@ export default function CapNhatDS({ onBack }) {
             stt: newSTT,
             hoVaTen: customHoTen.trim(),
             lop: selectedClass,
-            huyDangKy,
+            dangKyBanTru,
+            diemDanhBanTru,
           });
 
           const newStudent = {
@@ -259,33 +260,29 @@ export default function CapNhatDS({ onBack }) {
             stt: newSTT,
             hoVaTen: customHoTen.trim(),
             lop: selectedClass,
-            huyDangKy,
+            dangKyBanTru,
+            diemDanhBanTru,
           };
-
-          //console.log("🆕 Thêm học sinh:", newStudent.hoVaTen, "| ID:", newStudent.id, "| huyDangKy:", newStudent.huyDangKy);
 
           const updated = [...allStudents, newStudent];
           setClassData(selectedClass, updated);
           setAllStudents(updated);
           setFilteredStudents(MySort(updated));
 
-          //console.log("📦 Context sau thêm mới:", updated.find(s => s.id === newStudent.id));
-
           showSnackbar("✅ Thêm học sinh mới thành công!");
         } else {
-          await updateDoc(docRef, { huyDangKy });
+          await updateDoc(docRef, {
+            dangKyBanTru,
+            diemDanhBanTru
+          });
 
           const updatedStudents = allStudents.map((s) =>
-            s.id === generatedMaDinhDanh ? { ...s, huyDangKy } : s
+            s.id === generatedMaDinhDanh ? { ...s, dangKyBanTru, diemDanhBanTru } : s
           );
-
-          //console.log("🔁 Học sinh đã tồn tại, cập nhật trạng thái:", generatedMaDinhDanh, "| huyDangKy:", huyDangKy);
 
           setClassData(selectedClass, updatedStudents);
           setAllStudents(updatedStudents);
           setFilteredStudents(MySort(updatedStudents));
-
-          //console.log("📦 Context sau cập nhật lại:", updatedStudents.find(s => s.id === generatedMaDinhDanh));
 
           showSnackbar("✅ Cập nhật học sinh thành công!");
         }
@@ -297,6 +294,7 @@ export default function CapNhatDS({ onBack }) {
       setSaving(false);
     }
   };
+
 
   return (
     <Box sx={{ minHeight: "100vh", backgroundColor: "transparent", pt: 1, px: 1, display: "flex", justifyContent: "center", alignItems: "flex-start" }}>
@@ -357,7 +355,8 @@ export default function CapNhatDS({ onBack }) {
                     <MenuItem value=""><em>Chọn học sinh</em></MenuItem>
                     {filteredStudents.map((s) => (
                       <MenuItem key={s.id} value={s.id}>
-                        <Typography sx={{ color: s.huyDangKy !== 'x' ? '#1976d2' : 'inherit' }}>{s.hoVaTen}</Typography>
+                        <Typography sx={{ color: s.dangKyBanTru ? '#1976d2' : 'inherit' }}>
+                        {s.hoVaTen}</Typography>
                       </MenuItem>
                     ))}
                   </Select>
