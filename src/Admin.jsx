@@ -241,8 +241,7 @@ export default function Admin({ onCancel }) {
   };
 
   const handleResetDangKyBanTru = async () => {
-    //setShowDeleteOptions(false); // 👈 đặt ở đây
-    const confirmed = window.confirm("⚠️ Bạn có chắc chắn muốn reset đăng ký bán trú?");
+    const confirmed = window.confirm("⚠️ Bạn có chắc chắn muốn reset điểm danh bán trú?");
     if (!confirmed) return;
 
     try {
@@ -268,35 +267,34 @@ export default function Admin({ onCancel }) {
 
       for (const docSnap of snapshot.docs) {
         const data = docSnap.data();
-        if (data.huyDangKy === "") {
+        if (data.diemDanhBanTru === false) {
           await setDoc(doc(db, colName, docSnap.id), {
             ...data,
-            huyDangKy: "T"
-          });
+            diemDanhBanTru: true
+          }, { merge: true });
           count++;
         }
         completed++;
         setResetProgress(Math.round((completed / total) * 100));
       }
 
-      // 🔁 Chỉ cập nhật lại context các lớp có trong classData:
+      // 🔁 Cập nhật lại dữ liệu context classData nếu có
       const currentClassData = getClassData() || {};
       const updatedClassData = {};
 
       Object.entries(currentClassData).forEach(([classId, studentList]) => {
         updatedClassData[classId] = studentList.map((s) => ({
           ...s,
-          huyDangKy: s.huyDangKy === "" ? "T" : s.huyDangKy
+          diemDanhBanTru: s.diemDanhBanTru === false ? true : s.diemDanhBanTru
         }));
       });
 
       setClassData(updatedClassData);
 
-      //setResetMessage(`✅ Đã cập nhật ${count} học sinh đăng ký bán trú.`);
-      setResetMessage(`✅ Đã reset xong bán trú.`);
+      setResetMessage(`✅ Đã reset xong điểm danh bán trú.`);
       setResetSeverity("success");
     } catch (err) {
-      console.error("❌ Lỗi khi reset bán trú:", err);
+      console.error("❌ Lỗi khi reset điểm danh bán trú:", err);
       setResetMessage("❌ Có lỗi xảy ra khi cập nhật.");
       setResetSeverity("error");
     } finally {
@@ -304,8 +302,8 @@ export default function Admin({ onCancel }) {
     }
   };
 
+
   const handleResetDiemDanh = async () => {
-    //setShowDeleteOptions(false); // 👈 đặt ở đây
     const confirmed = window.confirm("⚠️ Bạn có chắc chắn muốn reset điểm danh?");
     if (!confirmed) return;
 
@@ -332,21 +330,25 @@ export default function Admin({ onCancel }) {
 
       for (const docSnap of snapshot.docs) {
         const data = docSnap.data();
+        const updates = {};
 
-        const needClear =
-          data.vang !== "" ||
-          data.lyDo !== "" ||
+        if (data.vang !== "") {
+          updates.vang = "";
+        }
+
+        if (data.lyDo !== "") {
+          updates.lyDo = "";
+        }
+
+        if (
           typeof data.phep === "boolean" ||
-          data.phep === null; // ✅ thêm điều kiện để xóa luôn phep: null
+          data.phep === null
+        ) {
+          updates.phep = deleteField();
+        }
 
-        if (needClear) {
-          await setDoc(doc(db, colName, docSnap.id), {
-            ...data,
-            vang: "",
-            lyDo: "",
-            phep: deleteField() // ✅ xóa hoàn toàn field phep
-          }, { merge: true });
-
+        if (Object.keys(updates).length > 0) {
+          await setDoc(doc(db, colName, docSnap.id), updates, { merge: true });
           count++;
         }
 
@@ -354,8 +356,7 @@ export default function Admin({ onCancel }) {
         setResetProgress(Math.round((completed / total) * 100));
       }
 
-      //setResetMessage(`✅ Đã reset điểm danh cho ${count} học sinh.`);
-      setResetMessage(`✅ Đã reset xong điểm danh.`);
+      setResetMessage(`✅ Đã reset điểm danh cho ${count} học sinh.`);
       setResetSeverity("success");
     } catch (err) {
       console.error("❌ Lỗi khi reset điểm danh:", err);
@@ -365,6 +366,7 @@ export default function Admin({ onCancel }) {
       setTimeout(() => setResetProgress(0), 3000);
     }
   };
+
 
   const handlePerformDelete = async () => {
     const { danhsach, bantru, diemdan } = deleteCollections;
