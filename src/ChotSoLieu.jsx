@@ -194,8 +194,7 @@ export default function ChotSoLieu({ onBack }) {
           maDinhDanh = "",
           hoVaTen = "",
           lop = "",
-          khoi = "",
-          huyDangKy = "",
+          khoi = "",          
           dangKyBanTru,
           diemDanhBanTru,
         } = hs;
@@ -233,8 +232,7 @@ export default function ChotSoLieu({ onBack }) {
                 khoi: khoiKey,
                 ngay: formattedDate,
                 thang: formattedDate.slice(0, 7),
-                nam: formattedDate.slice(0, 4),
-                huyDangKy,
+                nam: formattedDate.slice(0, 4),                
               },
             });
           }

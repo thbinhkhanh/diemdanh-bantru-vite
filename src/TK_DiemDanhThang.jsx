@@ -331,8 +331,7 @@ export default function DiemDanhThang({ onBack }) {
                   key={student.id}
                   sx={{
                     height: 48,
-                    //backgroundColor: student.huyDangKy?.toLowerCase() === "x" ? "#f0f0f0" : "inherit",
-                    "& td": { border: "1px solid #ccc", py: 1 },
+                    backgroundColor: student.dangKyBanTru === false ? "#f0f0f0" : "inherit", "& td": { border: "1px solid #ccc", py: 1 },
                   }}
                 >
                   <TableCell

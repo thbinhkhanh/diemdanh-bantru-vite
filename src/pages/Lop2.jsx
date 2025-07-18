@@ -586,10 +586,8 @@ export default function Lop2() {
 
                       {viewMode === 'bantru' && (
                         <TableCell align="center" sx={{ px: { xs: 1, sm: 2 }, width: { xs: 50, sm: 'auto' } }}>
-                          <Checkbox
-                            //checked={s.huyDangKy === "T"}
-                            checked={s.registered}
-                            //onChange={() => toggleRegister(index)}
+                          <Checkbox                            
+                            checked={s.registered}                            
                             onChange={() => {
                               const trueIndex = students.findIndex(x => x.id === s.id);
                               toggleRegister(trueIndex);

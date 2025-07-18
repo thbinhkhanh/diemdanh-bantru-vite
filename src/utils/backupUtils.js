@@ -105,7 +105,7 @@ export const downloadBackupAsExcel = async (selectedDataTypes) => {
         hoVaTen: rawData.hoVaTen || "",
         lop: rawData.lop || "",
         maDinhDanh: rawData.maDinhDanh || "",
-        huyDangKy: rawData.huyDangKy || "",
+        dangKyBanTru: rawData.dangKyBanTru === true,
         banTruNgay: {},
       };
 

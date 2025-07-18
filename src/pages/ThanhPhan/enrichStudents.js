@@ -19,7 +19,6 @@ export const enrichStudents = (rawData, today, className, useNewVersion) => {
         ...d,
         stt: idx + 1,
         registered: d?.diemDanhBanTru === true,
-        //showRegisterCheckbox: d?.huyDangKy !== 'x',
         diemDanh: isPresent,
         vangCoPhep,
         lyDo: isPresent ? '' : (d.lyDo || lyDoVang),

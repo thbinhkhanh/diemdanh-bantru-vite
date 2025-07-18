@@ -283,7 +283,7 @@ export default function DieuChinhSuatAn({ onBack }) {
               </TableHead>
               <TableBody>
                 {dataList
-                  .filter(s => s.huyDangKy !== "x")
+                  .filter(s => s.dangKyBanTru === true)
                   .map((s, i) => (
                     <TableRow key={s.maDinhDanh} hover>
                       <TableCell align="center">{i + 1}</TableCell>

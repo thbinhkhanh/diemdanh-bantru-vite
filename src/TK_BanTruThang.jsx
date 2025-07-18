@@ -145,12 +145,7 @@ export default function ThongKeThang({ onBack }) {
             where("lop", "==", selectedClass)
           ));
 
-          //const danhSachData = danhSachSnap.docs.map(d => d.data()).filter(hs => {
-          //  const huy = (hs.huyDangKy || "").toUpperCase();
-          //  return huy === "" || huy === "T";
-          //});
           const danhSachData = danhSachSnap.docs.map(d => d.data());
-
 
           // ✅ enrich dữ liệu
           const selectedDateStr = format(selectedDate, "yyyy-MM-dd");
@@ -344,8 +339,7 @@ export default function ThongKeThang({ onBack }) {
                   key={student.id}
                   sx={{
                     height: 48,
-                    backgroundColor: student.huyDangKy?.toLowerCase() === "x" ? "#f0f0f0" : "inherit",
-                    "& td": { border: "1px solid #ccc", py: 1 },
+                    backgroundColor: student.dangKyBanTru === false ? "#f0f0f0" : "inherit", "& td": { border: "1px solid #ccc", py: 1 },
                   }}
                 >
                   <TableCell
@@ -355,7 +349,7 @@ export default function ThongKeThang({ onBack }) {
                       px: 1,
                       position: "sticky",
                       left: 0,
-                      backgroundColor: student.huyDangKy?.toLowerCase() === "x" ? "#f0f0f0" : "#fff",
+                      backgroundColor: student.dangKyBanTru === false ? "#f0f0f0" : "#fff",
                       zIndex: 1,
                     }}
                   >
@@ -368,7 +362,7 @@ export default function ThongKeThang({ onBack }) {
                       px: 1,
                       position: "sticky",
                       left: 48,
-                      backgroundColor: student.huyDangKy?.toLowerCase() === "x" ? "#f0f0f0" : "#fff",
+                      backgroundColor: student.dangKyBanTru === false ? "#f0f0f0" : "#fff",
                       zIndex: 1,
                     }}
                   >
