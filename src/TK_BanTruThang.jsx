@@ -375,7 +375,7 @@ export default function ThongKeThang({ onBack }) {
                         {student.daySummary[d] || ""}
                       </TableCell>
                     ))}
-                  <TableCell align="center" sx={{ fontWeight: "bold", px: 1 }}>
+                  <TableCell align="center" sx={{px: 1 }}>
                     {student.total > 0 ? student.total : ""}
                   </TableCell>
                 </TableRow>

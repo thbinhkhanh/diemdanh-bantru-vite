@@ -330,8 +330,8 @@ export default function DiemDanhThang({ onBack }) {
                 <TableRow
                   key={student.id}
                   sx={{
-                    height: 48,
-                    backgroundColor: student.dangKyBanTru === false ? "#f0f0f0" : "inherit", "& td": { border: "1px solid #ccc", py: 1 },
+                    height: 48, 
+                    "& td": { border: "1px solid #ccc", py: 1 },
                   }}
                 >
                   <TableCell
@@ -385,14 +385,12 @@ export default function DiemDanhThang({ onBack }) {
                       );
                     })}
 
-
-                  <TableCell align="center" sx={{ fontWeight: "bold", px: 1 }}>
+                  <TableCell align="center" sx={{px: 1 }}>
                     {student.total > 0 ? student.total : ""}
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
-
 
           </Table>
         </TableContainer>
