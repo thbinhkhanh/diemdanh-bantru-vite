@@ -139,7 +139,8 @@ export default function ThongKeNam({ onBack }) {
         });
 
         //console.log("📊 studentMap thống kê:", studentMap);
-        const filteredRawData = rawData.filter(hs => hs.dangKyBanTru === true);
+        //const filteredRawData = rawData.filter(hs => hs.dangKyBanTru === true);
+        const filteredRawData = rawData.filter(hs => 'dangKyBanTru' in hs);
         const students = filteredRawData.map((hs, index) => {
           const ma = hs.maDinhDanh?.trim().replace(`${selectedClass}-`, "");
           const summary = studentMap[ma] || {};

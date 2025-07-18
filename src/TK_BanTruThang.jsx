@@ -77,7 +77,8 @@ export default function ThongKeThang({ onBack }) {
     const selectedMonthStr = format(selectedDate, "yyyy-MM");
 
     // ⚠️ Lọc học sinh đã đăng ký bán trú
-    const filteredStudents = rawStudents.filter(stu => stu.dangKyBanTru === true);
+    //const filteredStudents = rawStudents.filter(stu => stu.dangKyBanTru === true);
+    const filteredStudents = rawStudents.filter(stu => 'dangKyBanTru' in stu);
 
     //console.log("🧑‍🎓 Học sinh đăng ký bán trú:", filteredStudents.length);
 

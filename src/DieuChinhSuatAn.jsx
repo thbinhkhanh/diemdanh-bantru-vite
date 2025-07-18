@@ -123,27 +123,29 @@ export default function DieuChinhSuatAn({ onBack }) {
 
       const banTruSet = new Set(banTruList);
 
-      const filtered = students
-        .filter(s => s.dangKyBanTru === true)
-        .map((s, i) => ({
-          ...s,
-          stt: i + 1,
-          registered: banTruSet.has(s.maDinhDanh),
-          disabled: false,
-        }));
+      // ✅ Không filter — xử lý tất cả học sinh
+      const enriched = students.map((s, i) => ({
+        ...s,
+        stt: i + 1,
+        registered: banTruSet.has(s.maDinhDanh),
+        disabled: false,
+      }));
 
       const checkedMap = {};
-      filtered.forEach(s => checkedMap[s.maDinhDanh] = s.registered);
+      enriched.forEach(s => {
+        checkedMap[s.maDinhDanh] = s.registered;
+      });
 
-      setDataList(filtered);
+      setDataList(enriched); // Có thể dùng filter trong UI nếu muốn
       setOriginalChecked(checkedMap);
-      setClassData(className, filtered);
+      setClassData(className, enriched); // ✅ Lưu cả true và false vào context
     } catch (err) {
       console.error("❌ Lỗi khi tải học sinh:", err);
     } finally {
       setIsLoading(false);
     }
   };
+
 
   useEffect(() => {
     if (selectedClass && namHocValue) fetchStudents(selectedClass);
