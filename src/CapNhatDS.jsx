@@ -32,7 +32,7 @@ export default function CapNhatDS({ onBack }) {
   const { getClassData, setClassData } = useClassData();
 
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
-  const dangKyOptions = ["Đăng ký mới", "Hủy đăng ký", "Đăng ký lại"];
+  const dangKyOptions = ["Đăng ký", "Hủy đăng ký"];
   const nanoid = customAlphabet('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', 6);
 
   const showSnackbar = (message, severity = "success") => {
@@ -140,6 +140,11 @@ export default function CapNhatDS({ onBack }) {
     if (!namHocValue || !lop) return;
     setLoading(true);
     await fetchStudents(lop, namHocValue);
+
+    // ✅ Nếu đang ở chế độ nhập thủ công, set mặc định "Đăng ký"
+    if (nhapTuDanhSach === "thuCong") {
+      //setDangKy("Đăng ký");
+    }
   };
 
   useEffect(() => {
@@ -147,27 +152,32 @@ export default function CapNhatDS({ onBack }) {
       setFilteredStudents([]);
       setSelectedStudentId("");
       setSelectedStudentData(null);
-      setDangKy("");
+      //setDangKy("");
       //if (snackbar.open) setSnackbar({ ...snackbar, open: false });
       return;
     }
     setSelectedStudentId("");
     setSelectedStudentData(null);
-    setDangKy("");
+    //setDangKy("");
     //if (snackbar.open) setSnackbar({ ...snackbar, open: false });
   }, [selectedClass]);
 
   useEffect(() => {
     if (!selectedStudentId || nhapTuDanhSach !== "danhSach") {
       setSelectedStudentData(null);
-      setDangKy("");
-      //if (snackbar.open) setSnackbar({ ...snackbar, open: false });
+      //setDangKy("");
       return;
     }
+
     const student = filteredStudents.find((s) => s.id === selectedStudentId);
     setSelectedStudentData(student || null);
-    setDangKy(student?.dangKy || "");
-    //if (snackbar.open) setSnackbar({ ...snackbar, open: false });
+
+    if (student) {
+      // Cập nhật trạng thái đăng ký dựa trên dangKyBanTru
+      setDangKy(student.dangKyBanTru ? "Hủy đăng ký" : "Đăng ký");
+    } else {
+      //setDangKy("");
+    }
   }, [selectedStudentId, filteredStudents, nhapTuDanhSach]);
 
   const handleUpdate = async () => {
@@ -316,11 +326,24 @@ export default function CapNhatDS({ onBack }) {
             <>
               <FormControl component="fieldset" sx={{ mb: 2 }}>
                 <Box sx={{ display: "flex", justifyContent: "center", width: "100%" }}>
-                  <RadioGroup row value={nhapTuDanhSach} onChange={(e) => { setNhapTuDanhSach(e.target.value); }}>
+                  <RadioGroup
+                    row
+                    value={nhapTuDanhSach}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setNhapTuDanhSach(value);
+                      if (value === "thuCong") {
+                        setDangKy("Đăng ký");
+                      } else {
+                        setDangKy("");
+                      }
+                    }}
+                  >
                     <FormControlLabel value="danhSach" control={<Radio size="small" />} label="Chọn từ danh sách" />
                     <FormControlLabel value="thuCong" control={<Radio size="small" />} label="Nhập thủ công" />
                   </RadioGroup>
                 </Box>
+
               </FormControl>
 
               <FormControl fullWidth size="small" sx={{ mb: 2 }}>
@@ -371,7 +394,7 @@ export default function CapNhatDS({ onBack }) {
                   value={dangKy}
                   label="Trạng thái đăng ký"
                   onChange={(e) => { setDangKy(e.target.value); }}
-                  disabled={nhapTuDanhSach === "danhSach" ? !selectedStudentData : false}
+                  disabled={true} // 🔒 Luôn vô hiệu hóa
                 >
                   <MenuItem value=""><em>Chọn trạng thái</em></MenuItem>
                   {dangKyOptions.map((opt) => (
@@ -379,6 +402,7 @@ export default function CapNhatDS({ onBack }) {
                   ))}
                 </Select>
               </FormControl>
+
 
               <Stack spacing={2} alignItems="center">
                 <Button variant="contained" color="primary" onClick={handleUpdate} disabled={saving} sx={{ width: 160, fontWeight: 600, py: 1 }}>

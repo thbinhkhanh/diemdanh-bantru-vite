@@ -71,7 +71,7 @@ export const downloadBackupAsJSON = async (selectedDataTypes) => {
     link.download = filename;
     link.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
-    console.log("✅ Đã tạo file JSON sao lưu!");
+    //console.log("✅ Đã tạo file JSON sao lưu!");
   } catch (error) {
     console.error("❌ Lỗi khi tạo file JSON:", error);
     alert("❌ Không thể sao lưu dữ liệu.");

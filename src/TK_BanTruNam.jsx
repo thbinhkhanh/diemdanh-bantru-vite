@@ -97,9 +97,9 @@ export default function ThongKeNam({ onBack }) {
           const enriched = enrichStudents(danhSachData, selectedDateStr, selectedClass, true);
           setClassData(key, enriched);
           rawData = enriched;
-          console.log(`✨ Enriched ${enriched.length} học sinh từ DANHSACH_${namHocValue}`);
+          //console.log(`✨ Enriched ${enriched.length} học sinh từ DANHSACH_${namHocValue}`);
         } else {
-          console.log(`📦 Dữ liệu lớp ${key} đã có sẵn trong context`);
+          //console.log(`📦 Dữ liệu lớp ${key} đã có sẵn trong context`);
         }
 
         // ✅ Lấy toàn bộ dữ liệu bán trú theo cấu trúc mới
@@ -109,7 +109,7 @@ export default function ThongKeNam({ onBack }) {
           danhSachAn: doc.data().danhSachAn || []
         }));
 
-        console.log("📦 Tổng số bản ghi BANTRU:", banTruData.length);
+        //console.log("📦 Tổng số bản ghi BANTRU:", banTruData.length);
 
         const studentMap = {};
         banTruData.forEach(doc => {
@@ -138,7 +138,7 @@ export default function ThongKeNam({ onBack }) {
           });
         });
 
-        console.log("📊 studentMap thống kê:", studentMap);
+        //console.log("📊 studentMap thống kê:", studentMap);
         const filteredRawData = rawData.filter(hs => hs.dangKyBanTru === true);
         const students = filteredRawData.map((hs, index) => {
           const ma = hs.maDinhDanh?.trim().replace(`${selectedClass}-`, "");

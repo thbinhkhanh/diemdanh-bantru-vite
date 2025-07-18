@@ -163,7 +163,7 @@ export default function XoaDLNgay({ onBack }) {
 
       if (option === "toantruong") {
         await deleteDoc(docRef);
-        console.log(`🗑️ Đã xoá toàn bộ dữ liệu ngày ${selectedDateStr}`);
+        //console.log(`🗑️ Đã xoá toàn bộ dữ liệu ngày ${selectedDateStr}`);
         setResultMessage(`✅ Đã xoá toàn bộ dữ liệu ngày ${selectedDateStr}`);
       } else if (option === "chonlop") {
         const removedStudents = danhSachAn.filter(id => {
@@ -181,9 +181,9 @@ export default function XoaDLNgay({ onBack }) {
           danhSachAn: filteredList,
         });
 
-        console.log(`🗑️ Đã xoá ${removedStudents.length} học sinh lớp ${selectedClass}:`);
+        //console.log(`🗑️ Đã xoá ${removedStudents.length} học sinh lớp ${selectedClass}:`);
         removedStudents.forEach(id => {
-          console.log(`— ${id}`);
+          //console.log(`— ${id}`);
         });
 
         setResultMessage(`✅ Đã xoá dữ liệu lớp ${selectedClass} ngày ${selectedDateStr}`);

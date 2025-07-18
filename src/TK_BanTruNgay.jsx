@@ -22,8 +22,8 @@ function groupData(banTruDataRaw, danhSachData) {
   // ✅ Tạo Set chứa mã học sinh đã điểm danh
   const banTruIds = new Set(banTruData.map(id => id?.trim()));
 
-  console.log("📦 Tổng mã học sinh điểm danh hôm nay:", banTruIds.size);
-  console.log("📌 Mã học sinh đã điểm danh:", Array.from(banTruIds));
+  //console.log("📦 Tổng mã học sinh điểm danh hôm nay:", banTruIds.size);
+  //console.log("📌 Mã học sinh đã điểm danh:", Array.from(banTruIds));
 
   const khoiData = {};
   let truongSiSo = 0;
@@ -36,10 +36,10 @@ function groupData(banTruDataRaw, danhSachData) {
       dangKyBanTru
     } = student;
 
-    console.log(`🧪 [${index + 1}] học sinh:`, student);
+    //console.log(`🧪 [${index + 1}] học sinh:`, student);
 
     if (!lop || !dangKyBanTru || !maDinhDanh) {
-      console.log(`⚠️ Bỏ qua: maDinhDanh=${maDinhDanh}, lop=${lop}, dangKyBanTru=${dangKyBanTru}`);
+      //console.log(`⚠️ Bỏ qua: maDinhDanh=${maDinhDanh}, lop=${lop}, dangKyBanTru=${dangKyBanTru}`);
       return;
     }
 
@@ -71,14 +71,14 @@ function groupData(banTruDataRaw, danhSachData) {
       khoiData[khoi].children[lop].anBanTru += 1;
       khoiData[khoi].anBanTru += 1;
       truongAn += 1;
-      console.log(`✅ ${maID} đã điểm danh`);
+      //console.log(`✅ ${maID} đã điểm danh`);
     } else {
-      console.log(`🚫 ${maID} chưa điểm danh`);
+      //console.log(`🚫 ${maID} chưa điểm danh`);
     }
   });
 
-  console.log("✅ Tổng sĩ số toàn trường:", truongSiSo);
-  console.log("✅ Tổng học sinh đã ăn bán trú:", truongAn);
+  //console.log("✅ Tổng sĩ số toàn trường:", truongSiSo);
+  //console.log("✅ Tổng học sinh đã ăn bán trú:", truongAn);
 
   const summaryData = [];
   const khoiList = Object.keys(khoiData).sort();
@@ -105,7 +105,7 @@ function groupData(banTruDataRaw, danhSachData) {
     isGroup: true,
   });
 
-  console.log("📊 Kết quả thống kê tóm tắt:", summaryData);
+  //console.log("📊 Kết quả thống kê tóm tắt:", summaryData);
 
   return summaryData;
 }
@@ -199,10 +199,10 @@ export default function ThongKeTheoNgay({ onBack }) {
         const danhSachData = danhSachSnap.docs.map(doc => doc.data());
 
         // 🔍 Kiểm tra dữ liệu đầu vào
-        console.log("🔍 Tổng số học sinh đăng ký ăn bán trú:", danhSachData.length);
-        console.log("🔍 Số học sinh đã điểm danh hôm nay:", banTruData.length);
-        console.log("📌 Mã học sinh đã điểm danh:", banTruData.map(d => d.maDinhDanh?.trim()));
-        console.log("📌 Mã học sinh đăng ký ăn:", danhSachData.map(d => d.maDinhDanh?.trim()));
+        //console.log("🔍 Tổng số học sinh đăng ký ăn bán trú:", danhSachData.length);
+        //console.log("🔍 Số học sinh đã điểm danh hôm nay:", banTruData.length);
+        //console.log("📌 Mã học sinh đã điểm danh:", banTruData.map(d => d.maDinhDanh?.trim()));
+        //console.log("📌 Mã học sinh đăng ký ăn:", danhSachData.map(d => d.maDinhDanh?.trim()));
 
         // 🚀 Gọi hàm thống kê
         setDataList(banTruData);

@@ -392,7 +392,7 @@ export default function Admin({ onCancel }) {
           await deleteDoc(snap.docs[i].ref);
           setProgress(Math.round(((i + 1) / total) * 100));
         }
-        console.log("✅ Đã xóa DANHSACH");
+        //console.log("✅ Đã xóa DANHSACH");
       }
 
       if (diemdan) {
@@ -403,7 +403,7 @@ export default function Admin({ onCancel }) {
           await deleteDoc(snap.docs[i].ref);
           setProgress(Math.round(((i + 1) / total) * 100));
         }
-        console.log("✅ Đã xóa DIEMDANH");
+        //console.log("✅ Đã xóa DIEMDANH");
       }
 
       if (bantru) {
@@ -414,7 +414,7 @@ export default function Admin({ onCancel }) {
           await deleteDoc(snap.docs[i].ref);
           setProgress(Math.round(((i + 1) / total) * 100));
         }
-        console.log("✅ Đã xóa BANTRU");
+        //console.log("✅ Đã xóa BANTRU");
       }
 
       // ✅ THÊM THÔNG BÁO THÀNH CÔNG

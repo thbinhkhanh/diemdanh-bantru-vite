@@ -79,10 +79,10 @@ export default function ThongKeThang({ onBack }) {
     // ⚠️ Lọc học sinh đã đăng ký bán trú
     const filteredStudents = rawStudents.filter(stu => stu.dangKyBanTru === true);
 
-    console.log("🧑‍🎓 Học sinh đăng ký bán trú:", filteredStudents.length);
+    //console.log("🧑‍🎓 Học sinh đăng ký bán trú:", filteredStudents.length);
 
     const enriched = enrichStudents(filteredStudents, selectedMonthStr, className, true);
-    console.log("🔍 Số học sinh sau enrich:", enriched.length);
+    //console.log("🔍 Số học sinh sau enrich:", enriched.length);
 
     const enrichedWithRegister = enriched.map((student, index) => {
       const maID = student.maDinhDanh?.trim();
@@ -168,10 +168,10 @@ export default function ThongKeThang({ onBack }) {
         const banTruData = banTruSnap.docs.map(doc => {
           const id = doc.id;
           const danhSachAn = doc.data().danhSachAn || [];
-          console.log(`📅 Ngày ${id}:`, danhSachAn);
+          //console.log(`📅 Ngày ${id}:`, danhSachAn);
           return { id, danhSachAn };
         });
-        console.log("📦 Tổng số ngày trong BANTRU:", banTruData.length);
+        //console.log("📦 Tổng số ngày trong BANTRU:", banTruData.length);
 
         // Xử lý và set dataList
         processStudentData(rawData, banTruData, selectedClass, selectedDate);
