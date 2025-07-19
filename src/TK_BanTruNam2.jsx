@@ -135,16 +135,16 @@ export default function ThongKeNam({ onBack }) {
         const rangeMap = new Map();
 
         rawData.forEach(hs => {
-        const maID = hs.maDinhDanh?.replace(`${selectedClass}-`, "");
-        const ranges = Array.isArray(hs.lichSuDangKy)
+          const maID = hs.maDinhDanh?.replace(`${selectedClass}-`, "");
+          const ranges = Array.isArray(hs.lichSuDangKy)
             ? hs.lichSuDangKy.map(reg => {
                 const from = new Date(reg.tuNgay);
                 const to = new Date(reg.denNgay);
                 return !isNaN(from) && !isNaN(to) ? { from, to } : null;
-            }).filter(Boolean)
+              }).filter(Boolean)
             : [];
 
-        rangeMap.set(maID, ranges);
+          rangeMap.set(maID, ranges);
         });
 
         banTruData.forEach(doc => {
@@ -156,24 +156,19 @@ export default function ThongKeNam({ onBack }) {
           }
 
           const month = dateObj.getMonth() + 1;
-          const danhSachAn = doc.danhSachAn || [];
           const danhSachKhongAn = doc.danhSachKhongAn || [];
 
-          console.log("📅 Ngày bán trú:", dateStr, "| Số học sinh:", danhSachAn.length);
+          console.log("📅 Ngày bán trú:", dateStr);
 
           rawData.forEach(hs => {
             if (!hs.dangKyBanTru) return;
 
-            const ranges = Array.isArray(hs.lichSuDangKy)
-              ? hs.lichSuDangKy.map(reg => {
-                  const from = new Date(reg.tuNgay);
-                  const to = new Date(reg.denNgay);
-                  return !isNaN(from) && !isNaN(to) ? { from, to } : null;
-                }).filter(Boolean)
-              : [];
-
             const maID = hs.maDinhDanh?.replace(`${selectedClass}-`, "");
+            if (!maID) return;
+
             const fullKey = `${selectedClass}-${maID}`;
+            const ranges = rangeMap.get(maID) || [];
+
             let didEat = false;
 
             if (ranges.length > 0) {

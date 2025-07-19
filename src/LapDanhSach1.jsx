@@ -5,7 +5,7 @@ import {
   Select, FormControl, InputLabel, Checkbox, Card, LinearProgress,
   Alert
 } from '@mui/material';
-import { getDocs, getDoc, collection, doc, updateDoc, setDoc } from 'firebase/firestore';
+import { getDocs, getDoc, collection, doc, updateDoc } from 'firebase/firestore';
 import { db } from './firebase';
 import { MySort } from './utils/MySort';
 import { useClassList } from './context/ClassListContext';
@@ -200,55 +200,6 @@ const handleClassChange = (event) => {
           dangKyBanTru: student.registered,
           diemDanhBanTru: student.registered,
         });
-
-        const todayStr = new Date().toISOString().split("T")[0];
-        const refMain = doc(db, `DANHSACH_${namHocValue}`, student.id);
-
-        // ✅ Ghi trạng thái đăng ký như cũ
-        await updateDoc(refMain, {
-          dangKyBanTru: student.registered,
-          diemDanhBanTru: student.registered,
-        });
-
-        // ✍️ Ghi nhật ký bán trú
-        const refNhatKy = doc(db, `NHATKYBANTRU_${namHocValue}`, student.maDinhDanh);
-        const snapshot = await getDoc(refNhatKy);
-        const existingData = snapshot.exists() ? snapshot.data() : null;
-        let lichSu = existingData?.lichSuDangKy ?? [];
-
-        if (!student.originalRegistered && student.registered) {
-          // 👉 Đăng ký mới
-          lichSu.push({ tuNgay: todayStr });
-
-          const payload = snapshot.exists()
-            ? { lichSuDangKy: lichSu }
-            : {
-                maDinhDanh: student.maDinhDanh,
-                hoVaTen: student.hoVaTen,
-                lop: student.lop,
-                lichSuDangKy: lichSu,
-              };
-
-          await setDoc(refNhatKy, payload, { merge: true });
-        }
-
-        if (student.originalRegistered && !student.registered) {
-          // 👉 Hủy đăng ký → thêm denNgay vào bản ghi cuối
-          const lastOpenIndex = [...lichSu].reverse().findIndex(e => !e.denNgay);
-          if (lastOpenIndex !== -1) {
-            const actualIndex = lichSu.length - 1 - lastOpenIndex;
-            const lastOpen = lichSu[actualIndex];
-
-            lastOpen.denNgay = todayStr;
-
-            // 🧹 Nếu tuNgay và denNgay cùng ngày → xóa luôn
-            if (lastOpen.tuNgay === todayStr && lastOpen.denNgay === todayStr) {
-              lichSu.splice(actualIndex, 1);
-            }
-
-            await updateDoc(refNhatKy, { lichSuDangKy: lichSu });
-          }
-        }
       }
 
       // Cập nhật lại local state và context
