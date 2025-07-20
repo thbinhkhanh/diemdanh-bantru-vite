@@ -153,7 +153,7 @@ export default function ThongKeThang({ onBack }) {
           const enriched = enrichStudents(danhSachData, selectedDateStr, selectedClass, true);
 
           // ✅ lưu enriched vào context
-          setClassData(selectedClass, enriched);
+          //setClassData(selectedClass, enriched);
 
           // ✅ sử dụng enriched
           rawData = enriched;

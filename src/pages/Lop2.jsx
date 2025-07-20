@@ -273,14 +273,6 @@ export default function Lop2() {
     const updatedStudents = [...students];
     updatedStudents[index].registered = !updatedStudents[index].registered;
 
-    console.log('✅ Toggle register:', {
-      id: updatedStudents[index].id,
-      maDinhDanh: updatedStudents[index].maDinhDanh,
-      newValue: updatedStudents[index].registered,
-      originalValue: originalRegistered[updatedStudents[index].id],
-      showRegisterCheckbox: updatedStudents[index].showRegisterCheckbox,
-    });
-
     setStudents(updatedStudents);
 
     const changed = [updatedStudents[index]].filter(
@@ -288,12 +280,12 @@ export default function Lop2() {
       (s) => s.registered !== originalRegistered[s.id]
     );
 
-    console.log('🟡 Students thay đổi để lưu:', changed);
+    //console.log('🟡 Students thay đổi để lưu:', changed);
 
     if (changed.length > 0) {
       try {
         await saveRegistrationChanges(changed, namHoc, selectedClass, setClassData, classData);
-        console.log('✅ Đã lưu thành công:', changed.map((s) => s.id));
+        //console.log('✅ Đã lưu thành công:', changed.map((s) => s.id));
 
         const updatedMap = { ...originalRegistered };
         changed.forEach((s) => {
@@ -305,7 +297,7 @@ export default function Lop2() {
         console.error('❌ Lỗi khi lưu đăng ký bán trú:', err.message);
       }
     } else {
-      console.log('⚠️ Không có thay đổi nào cần lưu');
+      //console.log('⚠️ Không có thay đổi nào cần lưu');
     }
   };
 
@@ -524,7 +516,7 @@ export default function Lop2() {
                               (originalRegistered[s.id] === undefined || s.registered !== originalRegistered[s.id])
                           );
 
-                          console.log("➡️ Những học sinh thay đổi:", changed.map((s) => s.hoVaTen));
+                          //console.log("➡️ Những học sinh thay đổi:", changed.map((s) => s.hoVaTen));
 
                           // 💾 Gọi lưu nếu có thay đổi
                           if (changed.length > 0) {

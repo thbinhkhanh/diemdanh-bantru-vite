@@ -28,7 +28,8 @@ export default function ThongKeNam({ onBack }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { getClassList, setClassListForKhoi } = useClassList();
-  const { getClassData, setClassData } = useClassData();
+  //const { getClassData, setClassData } = useClassData();
+  const { getClassData } = useClassData();
 
   // Lấy năm học động
   useEffect(() => {
@@ -95,7 +96,7 @@ export default function ThongKeNam({ onBack }) {
 
           const selectedDateStr = selectedDate.toISOString().split("T")[0];
           const enriched = enrichStudents(danhSachData, selectedDateStr, selectedClass, true);
-          setClassData(key, enriched);
+          //setClassData(key, enriched);
           rawData = enriched;
           //console.log(`✨ Enriched ${enriched.length} học sinh từ DANHSACH_${namHocValue}`);
         } else {
@@ -163,9 +164,7 @@ export default function ThongKeNam({ onBack }) {
     };
 
     fetchStudents();
-  }, [selectedClass, selectedDate, namHocValue, getClassData, setClassData]);
-
-
+  }, [selectedClass, selectedDate, namHocValue, getClassData]);
 
   const headCellStyle = {
     fontWeight: "bold",
