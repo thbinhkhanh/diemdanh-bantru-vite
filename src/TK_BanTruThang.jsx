@@ -76,10 +76,14 @@ export default function ThongKeThang({ onBack }) {
   const processStudentData = (rawStudents, banTruData, className, selectedDate) => {
     const selectedMonthStr = format(selectedDate, "yyyy-MM");
 
-    // Chỉ lấy học sinh có thông tin đăng ký bán trú
+    // ⚠️ Lọc học sinh đã đăng ký bán trú
+    //const filteredStudents = rawStudents.filter(stu => stu.dangKyBanTru === true);
     const filteredStudents = rawStudents.filter(stu => 'dangKyBanTru' in stu);
 
+    //console.log("🧑‍🎓 Học sinh đăng ký bán trú:", filteredStudents.length);
+
     const enriched = enrichStudents(filteredStudents, selectedMonthStr, className, true);
+    //console.log("🔍 Số học sinh sau enrich:", enriched.length);
 
     const enrichedWithRegister = enriched.map((student, index) => {
       const maID = student.maDinhDanh?.trim();
@@ -88,44 +92,17 @@ export default function ThongKeThang({ onBack }) {
       const daySummary = {};
       let total = 0;
 
-      // ✅ Tạo mảng khoảng ngày đăng ký hợp lệ
-      const ranges = Array.isArray(student.lichSuDangKy)
-        ? student.lichSuDangKy.map(reg => {
-            if (!reg.tuNgay || !reg.denNgay) return null;
-            const from = new Date(reg.tuNgay);
-            const to = new Date(reg.denNgay);
-            return !isNaN(from) && !isNaN(to) ? { from, to } : null;
-          }).filter(Boolean)
-        : [];
-
-      // 👀 Log để kiểm tra từng học sinh
-      console.log("📅 Ranges đăng ký của", student.hoVaTen, ":", ranges);
-
-      const isDangKy = student.dangKyBanTru === true;
       banTruData.forEach(doc => {
         const dateStr = doc.id;
+        const danhSachAn = doc.danhSachAn || [];
         const dateObj = new Date(dateStr);
-        const day = dateObj.getDate();
-        const danhSachKhongAn = doc.danhSachKhongAn || [];
 
-        const isValidDate = !isNaN(dateObj);
-
-        let didEat = false;
-
-        if (isValidDate) {
-          if (ranges.length > 0) {
-            // ✅ Chỉ tick nếu ngày nằm trong lịch sử
-            const isInRange = ranges.some(r => dateObj >= r.from && dateObj <= r.to);
-            didEat = isDangKy && isInRange && !danhSachKhongAn.includes(key);
-          } else {
-            // ✅ Nếu không có lịch sử, giả định ăn đủ nếu có đăng ký
-            didEat = isDangKy && !danhSachKhongAn.includes(key);
+        if (!isNaN(dateObj)) {
+          const day = dateObj.getDate();
+          if (danhSachAn.includes(key)) {
+            daySummary[day] = "✓";
+            total += 1;
           }
-        }
-
-        if (didEat) {
-          daySummary[day] = "✓";
-          total += 1;
         }
       });
 
@@ -163,49 +140,39 @@ export default function ThongKeThang({ onBack }) {
 
         let rawData = getClassData(selectedClass);
         if (!rawData || rawData.length === 0) {
-          // ⬇️ Tải danh sách học sinh
+          // Nếu chưa có dữ liệu trong context thì tải từ Firestore
           const danhSachSnap = await getDocs(query(
             collection(db, `DANHSACH_${namHocValue}`),
             where("lop", "==", selectedClass)
           ));
+
           const danhSachData = danhSachSnap.docs.map(d => d.data());
 
-          // ⬇️ Tải toàn bộ nhật ký bán trú rồi lọc
-          const dangKySnap = await getDocs(collection(db, `NHATKYBANTRU_${namHocValue}`));
-          const dangKyData = dangKySnap.docs.map(d => d.data()).filter(doc => doc.lop === selectedClass);
-
-          // ⬇️ Gộp lich sử đăng ký vào từng học sinh
-          const combinedData = danhSachData.map(stu => {
-            const matched = dangKyData.find(reg => reg.maDinhDanh === stu.maDinhDanh);
-            return {
-              ...stu,
-              lichSuDangKy: matched?.lichSuDangKy || [],
-            };
-          });
-
-          // ⬇️ Enrich dữ liệu
+          // ✅ enrich dữ liệu
           const selectedDateStr = format(selectedDate, "yyyy-MM-dd");
-          const enriched = enrichStudents(combinedData, selectedDateStr, selectedClass, true);
-          console.log("📦 Student enrich có lịch sử:", enriched);
+          const enriched = enrichStudents(danhSachData, selectedDateStr, selectedClass, true);
 
-          // ⬇️ Lưu vào context
+          // ✅ lưu enriched vào context
           setClassData(selectedClass, enriched);
+
+          // ✅ sử dụng enriched
           rawData = enriched;
         }
 
-        // ⬇️ Lấy dữ liệu bán trú
+        // Lấy dữ liệu bán trú
         const banTruSnap = await getDocs(collection(db, `BANTRU_${namHocValue}`));
         const banTruData = banTruSnap.docs.map(doc => {
           const id = doc.id;
           const danhSachAn = doc.data().danhSachAn || [];
-          const danhSachKhongAn = doc.data().danhSachKhongAn || [];
-          return { id, danhSachAn, danhSachKhongAn };
+          //console.log(`📅 Ngày ${id}:`, danhSachAn);
+          return { id, danhSachAn };
         });
+        //console.log("📦 Tổng số ngày trong BANTRU:", banTruData.length);
 
-        // ⬇️ Xử lý thống kê
+        // Xử lý và set dataList
         processStudentData(rawData, banTruData, selectedClass, selectedDate);
 
-        // ⬇️ Tạo danh sách ngày của tháng
+        // Tạo danh sách ngày của tháng
         const year = selectedDate.getFullYear();
         const month = selectedDate.getMonth();
         const daysInMonth = new Date(year, month + 1, 0).getDate();

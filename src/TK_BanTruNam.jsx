@@ -87,116 +87,60 @@ export default function ThongKeNam({ onBack }) {
         let rawData = getClassData(key);
 
         if (!rawData || rawData.length === 0) {
-          // ⬇️ Tải danh sách học sinh
           const danhSachSnap = await getDocs(query(
             collection(db, `DANHSACH_${namHocValue}`),
             where("lop", "==", selectedClass)
           ));
           const danhSachData = danhSachSnap.docs.map(d => d.data());
 
-          // ⬇️ Tải nhật ký bán trú và lọc theo lớp
-          const dangKySnap = await getDocs(collection(db, `NHATKYBANTRU_${namHocValue}`));
-          const dangKyData = dangKySnap.docs.map(d => d.data()).filter(doc => doc.lop === selectedClass);
-
-          // ⬇️ Gộp lich sử đăng ký vào từng học sinh
-          const combinedData = danhSachData.map(stu => {
-            const matched = dangKyData.find(reg => reg.maDinhDanh === stu.maDinhDanh);
-            return {
-              ...stu,
-              lichSuDangKy: matched?.lichSuDangKy || [],
-            };
-          });
-
           const selectedDateStr = selectedDate.toISOString().split("T")[0];
-          const enriched = enrichStudents(combinedData, selectedDateStr, selectedClass, true);
-
-          // 🔍 Log dữ liệu enrich để kiểm tra lịch sử từng học sinh
-          console.log("📦 Enriched rawData:", enriched.map(hs => ({
-            hoVaTen: hs.hoVaTen,
-            maDinhDanh: hs.maDinhDanh,
-            dangKy: hs.dangKyBanTru,
-            lichSuDangKy: hs.lichSuDangKy
-          })));
-
+          const enriched = enrichStudents(danhSachData, selectedDateStr, selectedClass, true);
           setClassData(key, enriched);
           rawData = enriched;
+          //console.log(`✨ Enriched ${enriched.length} học sinh từ DANHSACH_${namHocValue}`);
+        } else {
+          //console.log(`📦 Dữ liệu lớp ${key} đã có sẵn trong context`);
         }
 
-        // ⬇️ Tải dữ liệu bán trú theo năm
+        // ✅ Lấy toàn bộ dữ liệu bán trú theo cấu trúc mới
         const banTruSnap = await getDocs(collection(db, `BANTRU_${namHocValue}`));
         const banTruData = banTruSnap.docs.map(doc => ({
-          id: doc.id,
-          danhSachAn: doc.data().danhSachAn || [],
-          danhSachKhongAn: doc.data().danhSachKhongAn || []
+          id: doc.id, // "2025-07-15"
+          danhSachAn: doc.data().danhSachAn || []
         }));
 
+        //console.log("📦 Tổng số bản ghi BANTRU:", banTruData.length);
+
         const studentMap = {};
-        // ⬇️ Chuẩn bị map: maID => ranges[]
-        const rangeMap = new Map();
-
-        rawData.forEach(hs => {
-        const maID = hs.maDinhDanh?.replace(`${selectedClass}-`, "");
-        const ranges = Array.isArray(hs.lichSuDangKy)
-            ? hs.lichSuDangKy.map(reg => {
-                const from = new Date(reg.tuNgay);
-                const to = new Date(reg.denNgay);
-                return !isNaN(from) && !isNaN(to) ? { from, to } : null;
-            }).filter(Boolean)
-            : [];
-
-        rangeMap.set(maID, ranges);
-        });
-
         banTruData.forEach(doc => {
-          const dateStr = doc.id;
-          const dateObj = new Date(dateStr);
+          const dateObj = new Date(doc.id);
           if (isNaN(dateObj)) {
-            console.warn(`⚠️ Không thể chuyển đổi ngày từ ${dateStr}`);
+            console.warn(`⚠️ Không thể chuyển đổi ngày từ doc.id = ${doc.id}`);
             return;
           }
 
           const month = dateObj.getMonth() + 1;
           const danhSachAn = doc.danhSachAn || [];
-          const danhSachKhongAn = doc.danhSachKhongAn || [];
 
-          console.log("📅 Ngày bán trú:", dateStr, "| Số học sinh:", danhSachAn.length);
+          danhSachAn.forEach(entry => {
+            const parts = entry.split("-");
+            if (parts.length < 2) return;
 
-          rawData.forEach(hs => {
-            if (!hs.dangKyBanTru) return;
+            const lopStr = parts[0];
+            const maID = parts.slice(1).join("-");
 
-            const ranges = Array.isArray(hs.lichSuDangKy)
-              ? hs.lichSuDangKy.map(reg => {
-                  const from = new Date(reg.tuNgay);
-                  const to = new Date(reg.denNgay);
-                  return !isNaN(from) && !isNaN(to) ? { from, to } : null;
-                }).filter(Boolean)
-              : [];
+            if (lopStr !== selectedClass || !maID) return;
 
-            const maID = hs.maDinhDanh?.replace(`${selectedClass}-`, "");
-            const fullKey = `${selectedClass}-${maID}`;
-            let didEat = false;
-
-            if (ranges.length > 0) {
-              // Có lịch sử đăng ký → kiểm tra có trong khoảng và không bị loại
-              const isInRange = ranges.some(r => dateObj >= r.from && dateObj <= r.to);
-              didEat = isInRange && !danhSachKhongAn.includes(fullKey);
-            } else {
-              // Không có lịch sử → giả định ăn nếu không bị loại
-              didEat = !danhSachKhongAn.includes(fullKey);
-            }
-
-            if (didEat) {
-              studentMap[maID] = studentMap[maID] || { monthSummary: {}, total: 0 };
-              studentMap[maID].monthSummary[month] = (studentMap[maID].monthSummary[month] || 0) + 1;
-              studentMap[maID].total += 1;
-
-              console.log("✅ Tick cho", hs.hoVaTen, "| Tháng:", month, "| Tổng:", studentMap[maID].total);
-            }
+            studentMap[maID] = studentMap[maID] || { monthSummary: {}, total: 0 };
+            studentMap[maID].monthSummary[month] =
+              (studentMap[maID].monthSummary[month] || 0) + 1;
+            studentMap[maID].total += 1;
           });
         });
 
-        const filteredRawData = rawData.filter(hs => hs.dangKyBanTru === true || "dangKyBanTru" in hs);
-
+        //console.log("📊 studentMap thống kê:", studentMap);
+        //const filteredRawData = rawData.filter(hs => hs.dangKyBanTru === true);
+        const filteredRawData = rawData.filter(hs => 'dangKyBanTru' in hs);
         const students = filteredRawData.map((hs, index) => {
           const ma = hs.maDinhDanh?.trim().replace(`${selectedClass}-`, "");
           const summary = studentMap[ma] || {};

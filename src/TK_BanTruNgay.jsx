@@ -13,76 +13,99 @@ import { format } from "date-fns";
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 
-function groupData(danhSachKhongAnRaw, danhSachData, nhatKyBanTruData, selectedDateStr) {
-  const khongAnIds = new Set(
-    Array.isArray(danhSachKhongAnRaw) ? danhSachKhongAnRaw.map(id => id?.trim()) : []
-  );
-  const ngayThang = selectedDateStr; // "2025-07-19"
+function groupData(banTruDataRaw, danhSachData) {
+  // 🔄 Chuyển dữ liệu điểm danh từ object field số → mảng mã học sinh
+  const banTruData = Array.isArray(banTruDataRaw)
+    ? banTruDataRaw
+    : Object.values(banTruDataRaw || {}); // Đề phòng dữ liệu rỗng hoặc lỗi
+
+  // ✅ Tạo Set chứa mã học sinh đã điểm danh
+  const banTruIds = new Set(banTruData.map(id => id?.trim()));
+
+  //console.log("📦 Tổng mã học sinh điểm danh hôm nay:", banTruIds.size);
+  //console.log("📌 Mã học sinh đã điểm danh:", Array.from(banTruIds));
 
   const khoiData = {};
   let truongSiSo = 0;
   let truongAn = 0;
 
-  if (!nhatKyBanTruData || typeof nhatKyBanTruData !== "object") {
-    console.warn("⚠️ Dữ liệu nhật ký bán trú chưa được khởi tạo đúng!");
-    return []; // Trả về mảng rỗng để tránh lỗi .map hoặc undefined
-  }
+  danhSachData.forEach((student, index) => {
+    const {
+      maDinhDanh,
+      lop,
+      dangKyBanTru
+    } = student;
 
-  danhSachData.forEach((student) => {
-    const { maDinhDanh, lop } = student;
-    if (!maDinhDanh || !lop) return;
+    //console.log(`🧪 [${index + 1}] học sinh:`, student);
 
-    // ✅ Kiểm tra lịch sử đăng ký bán trú còn hiệu lực
-    const nhatKy = nhatKyBanTruData[maDinhDanh];
-    let isDangKyHieuLuc = Array.isArray(nhatKy)
-      ? nhatKy.some(entry =>
-          entry.tuNgay <= ngayThang &&
-          (!entry.denNgay || ngayThang < entry.denNgay)
-        )
-      : false;
-
-    // ✅ Fallback chỉ khi KHÔNG có nhật ký
-    if (!isDangKyHieuLuc && !nhatKy && student.dangKyBanTru !== undefined) {
-      isDangKyHieuLuc = true;
+    if (!lop || !dangKyBanTru || !maDinhDanh) {
+      //console.log(`⚠️ Bỏ qua: maDinhDanh=${maDinhDanh}, lop=${lop}, dangKyBanTru=${dangKyBanTru}`);
+      return;
     }
 
-    if (!isDangKyHieuLuc) return;
-
-    // ✅ Tính thống kê
-    const khoi = lop.trim().split(".")[0];
-    const id = maDinhDanh.trim();
+    const khoi = lop.toString().trim().split(".")[0];
+    const maID = maDinhDanh.trim();
 
     khoiData[khoi] = khoiData[khoi] || {
-      group: `KHỐI ${khoi}`, siSo: 0, anBanTru: 0, isGroup: true, children: {}
-    };
-    khoiData[khoi].children[lop] = khoiData[khoi].children[lop] || {
-      group: lop, siSo: 0, anBanTru: 0, isGroup: false
+      group: `KHỐI ${khoi}`,
+      siSo: 0,
+      anBanTru: 0,
+      isGroup: true,
+      children: {},
     };
 
+    khoiData[khoi].children[lop] = khoiData[khoi].children[lop] || {
+      group: lop,
+      siSo: 0,
+      anBanTru: 0,
+      isGroup: false,
+    };
+
+    // ✅ Tăng sĩ số nếu đăng ký ăn bán trú hiện tại
     khoiData[khoi].children[lop].siSo += 1;
     khoiData[khoi].siSo += 1;
     truongSiSo += 1;
 
-    if (!khongAnIds.has(id)) {
+    // ✅ Tăng số học sinh ăn nếu có mặt trong điểm danh hôm nay
+    if (banTruIds.has(maID)) {
       khoiData[khoi].children[lop].anBanTru += 1;
       khoiData[khoi].anBanTru += 1;
       truongAn += 1;
+      //console.log(`✅ ${maID} đã điểm danh`);
+    } else {
+      //console.log(`🚫 ${maID} chưa điểm danh`);
     }
   });
 
-  // ✨ Chuyển thành summaryData
+  //console.log("✅ Tổng sĩ số toàn trường:", truongSiSo);
+  //console.log("✅ Tổng học sinh đã ăn bán trú:", truongAn);
+
   const summaryData = [];
-  Object.keys(khoiData).sort().forEach(khoi => {
+  const khoiList = Object.keys(khoiData).sort();
+
+  for (const khoi of khoiList) {
     const khoiItem = khoiData[khoi];
-    summaryData.push({ ...khoiItem });
-    Object.keys(khoiItem.children).sort().forEach(lop => {
-      summaryData.push(khoiItem.children[lop]);
+    summaryData.push({
+      group: khoiItem.group,
+      siSo: khoiItem.siSo,
+      anBanTru: khoiItem.anBanTru,
+      isGroup: true,
     });
-  });
+
+    const lopList = Object.keys(khoiItem.children).sort();
+    for (const lop of lopList) {
+      summaryData.push(khoiItem.children[lop]);
+    }
+  }
 
   summaryData.push({
-    group: "TRƯỜNG", siSo: truongSiSo, anBanTru: truongAn, isGroup: true
+    group: "TRƯỜNG",
+    siSo: truongSiSo,
+    anBanTru: truongAn,
+    isGroup: true,
   });
+
+  //console.log("📊 Kết quả thống kê tóm tắt:", summaryData);
 
   return summaryData;
 }
@@ -162,17 +185,6 @@ export default function ThongKeTheoNgay({ onBack }) {
           return;
         }
 
-        const nhatKySnap = await getDocs(collection(db, `NHATKYBANTRU_${namHocValue}`));
-        const nhatKyBanTruData = {};
-
-        nhatKySnap.forEach(doc => {
-          const data = doc.data();
-          const maID = data.maDinhDanh?.trim();
-          if (maID && Array.isArray(data.lichSuDangKy)) {
-            nhatKyBanTruData[maID] = data.lichSuDangKy;
-          }
-        });
-
         // 🗓 Format ngày thành chuỗi yyyy-MM-dd
         const dateStr = format(selectedDate, "yyyy-MM-dd");
 
@@ -183,7 +195,7 @@ export default function ThongKeTheoNgay({ onBack }) {
         ]);
 
         // ✅ Tách dữ liệu đúng nguồn
-        const danhSachKhongAnRaw = banTruDoc.exists() ? banTruDoc.data().danhSachKhongAn : [];
+        const banTruData = banTruDoc.exists() ? banTruDoc.data().danhSachAn : [];
         const danhSachData = danhSachSnap.docs.map(doc => doc.data());
 
         // 🔍 Kiểm tra dữ liệu đầu vào
@@ -193,8 +205,8 @@ export default function ThongKeTheoNgay({ onBack }) {
         //console.log("📌 Mã học sinh đăng ký ăn:", danhSachData.map(d => d.maDinhDanh?.trim()));
 
         // 🚀 Gọi hàm thống kê
-        setDataList(danhSachKhongAnRaw);
-        const summary = groupData(danhSachKhongAnRaw, danhSachData, nhatKyBanTruData, dateStr);
+        setDataList(banTruData);
+        const summary = groupData(banTruData, danhSachData);
         setSummaryData(summary);
       } catch (err) {
         console.error("❌ Lỗi khi tải dữ liệu từ Firebase:", err);

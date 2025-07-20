@@ -2,9 +2,9 @@ import React, { useState, useEffect, useRef } from "react";
 import {
   Box, Typography, TextField, Button, Stack,
   Card, Divider, Select, MenuItem, FormControl, InputLabel,
-  RadioGroup, Radio, FormControlLabel, LinearProgress, Alert, Tabs, Tab, Checkbox, FormGroup, Grid
+  RadioGroup, Radio, FormControlLabel, LinearProgress, Alert, Tabs, Tab, Checkbox, FormGroup
 } from "@mui/material";
-import { doc, setDoc, getDoc, getDocs, deleteDoc, collection, updateDoc, getFirestore } from "firebase/firestore"; // ✅ thêm updateDoc, getFirestore
+import { doc, setDoc, getDoc, getDocs, deleteDoc, collection } from "firebase/firestore";
 import { db } from "./firebase";
 import {
   downloadBackupAsJSON,
@@ -23,14 +23,6 @@ import { useNavigate } from "react-router-dom";
 import LockResetIcon from "@mui/icons-material/LockReset";
 import { deleteField } from "firebase/firestore"; // 👈 nhớ import ở đầu file
 import { useClassData } from "./context/ClassDataContext";
-
-import { LocalizationProvider } from '@mui/x-date-pickers';
-import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import dayjs from 'dayjs';
-import 'dayjs/locale/vi'; // ✅ Import locale tiếng Việt
-
-dayjs.locale('vi'); // ✅ Set locale toàn cục ở đây — TRƯỚC render
 
 const ResetProgressText = ({ label, progress }) => (
   <Typography variant="caption" align="center" display="block" mt={0.5}>
@@ -79,8 +71,7 @@ export default function Admin({ onCancel }) {
   const [deleting, setDeleting] = useState(false); 
   const [deletingLabel, setDeletingLabel] = useState("");
   const [deleteSuccess, setDeleteSuccess] = useState(false);
-  const [startDate, setStartDate] = useState(null);
-  const firestore = getFirestore();
+
 
   const [selectedDataTypes, setSelectedDataTypes] = useState({
     danhsach: false,
@@ -115,25 +106,6 @@ export default function Admin({ onCancel }) {
       [key]: !prev[key],
     }));
   };
-
-  useEffect(() => {
-    const fetchStartDate = async () => {
-      try {
-        const docRef = doc(db, 'YEAR', 'NGAYBATDAU');
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          if (data.ngayBatDau) {
-            setStartDate(dayjs(data.ngayBatDau)); // lưu ý format phải đúng dạng ISO hoặc yyyy-MM-dd
-          }
-        }
-      } catch (error) {
-        console.error("Lỗi khi tải ngày bắt đầu:", error);
-      }
-    };
-
-    fetchStartDate();
-  }, []);
 
   useEffect(() => {
     if (restoreTriggered && inputRef.current) {
@@ -487,19 +459,6 @@ export default function Admin({ onCancel }) {
     }
   };
 
-  const handleDateChange = async (newValue) => {
-    setStartDate(newValue);
-    try {
-      const docRef = doc(db, 'YEAR', 'NGAYBATDAU');
-      await setDoc(docRef, {
-        ngayBatDau: newValue.format('YYYY-MM-DD')  // ✅ đúng tên field
-      });
-      //console.log('Ngày bắt đầu đã được cập nhật.');
-    } catch (error) {
-      console.error('Lỗi cập nhật ngày bắt đầu:', error);
-    }
-  };
-
   return (
     <Box sx={{ minHeight: "100vh", backgroundColor: "#e3f2fd" }}>
       <Banner title="QUẢN TRỊ HỆ THỐNG" />
@@ -524,45 +483,18 @@ export default function Admin({ onCancel }) {
                 🏫 HỆ THỐNG QUẢN LÝ BÁN TRÚ
               </Button>
 
-              <Stack direction="row" spacing={2} justifyContent="space-between">
-                <FormControl fullWidth size="small" sx={{ width: "50%" }}>
-                  <InputLabel>Năm học</InputLabel>
-                  <Select
-                    value={selectedYear}
-                    label="Năm học"
-                    onChange={(e) => handleYearChange(e.target.value)}
-                  >
-                    {yearOptions.map((year) => (
-                      <MenuItem key={year} value={year}>
-                        {year}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-
-                <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="vi">
-                  <DatePicker
-                    label="Ngày bắt đầu"
-                    value={startDate}
-                    onChange={handleDateChange}
-                    format="DD/MM/YYYY"
-                    slotProps={{
-                      textField: {
-                        size: 'small',
-                        sx: { width: "50%" }
-                      }
-                    }}
-                  />
-                </LocalizationProvider>
-              </Stack>
+              <FormControl fullWidth size="small">
+                <InputLabel>Năm học</InputLabel>
+                <Select value={selectedYear} label="Năm học" onChange={(e) => handleYearChange(e.target.value)}>
+                  {yearOptions.map((year) => (
+                    <MenuItem key={year} value={year}>{year}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
 
               <FormControl fullWidth size="small">
                 <InputLabel>Loại tài khoản</InputLabel>
-                <Select
-                  value={selectedAccount}
-                  label="Loại tài khoản"
-                  onChange={(e) => setSelectedAccount(e.target.value)}
-                >
+                <Select value={selectedAccount} label="Loại tài khoản" onChange={(e) => setSelectedAccount(e.target.value)}>
                   <MenuItem value="yte">🏥 Y tế</MenuItem>
                   <MenuItem value="ketoan">💰 Kế toán</MenuItem>
                   <MenuItem value="bgh">📋 BGH</MenuItem>
@@ -591,18 +523,13 @@ export default function Admin({ onCancel }) {
                 <Typography variant="subtitle1" fontWeight="bold">
                   📊 Tải dữ liệu từ Firestore
                 </Typography>
-                <RadioGroup
-                  row
-                  value={firestoreEnabled ? "khoi" : "lop"}
-                  onChange={handleToggleChange}
-                >
+                <RadioGroup row value={firestoreEnabled ? "khoi" : "lop"} onChange={handleToggleChange}>
                   <FormControlLabel value="khoi" control={<Radio />} label="Tải theo khối" />
                   <FormControlLabel value="lop" control={<Radio />} label="Tải theo lớp" />
                 </RadioGroup>
               </FormControl>
             </Stack>
           )}
-
 
           {tabIndex === 1 && (
             <Stack spacing={3} mt={3} sx={{ maxWidth: 300, mx: "auto", width: "100%" }}>
