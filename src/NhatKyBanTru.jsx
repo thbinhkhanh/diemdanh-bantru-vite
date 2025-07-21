@@ -76,8 +76,12 @@ try {
 }
 };
 
-    return (
-        <Paper elevation={3} sx={{ p: { xs: 2, sm: 4 }, borderRadius: 2 }}>
+return (
+    <Box sx={{ mt: 2, px: { xs: 2, sm: 4 } }}>
+        <Paper
+            elevation={3}
+            sx={{ p: { xs: 2, sm: 4 }, borderRadius: 2 }}
+        >
             <Typography
             variant="h5"
             fontWeight="bold"
@@ -85,7 +89,7 @@ try {
             color="primary"
             sx={{ mb: 4, borderBottom: "3px solid #1976d2", pb: 1 }}
             >
-            NHẬT KÝ BÁN TRÚ
+            LỊCH SỬ ĐĂNG KÝ
             </Typography>
 
             {isLoading ? (
@@ -115,11 +119,11 @@ try {
                         <Typography>Lớp: {item.lop || ""}</Typography>
                         <Typography
                             sx={{
-                                color: item.trangThai?.trim() === "Hủy đăng ký" ? "error.main" : "inherit"
+                            color: item.trangThai?.trim() === "Hủy đăng ký" ? "error.main" : "inherit"
                             }}
-                            >
-                            Trạng thái đăng ký: {item.trangThai?.trim() || "Chưa rõ"}
-                            </Typography>
+                        >
+                            Trạng thái: {item.trangThai?.trim() || "Chưa rõ"}
+                        </Typography>
                         <Typography>Ngày điều chỉnh: {formatNgayDieuChinh(item.ngayDieuChinh)}</Typography>
                         </Paper>
                     ))
@@ -171,11 +175,11 @@ try {
                             <TableCell>{item.lop || ""}</TableCell>
                             <TableCell
                                 sx={{
-                                    color: item.trangThai?.trim() === "Hủy đăng ký" ? "error.main" : "inherit"
+                                color: item.trangThai?.trim() === "Hủy đăng ký" ? "error.main" : "inherit"
                                 }}
-                                >
+                            >
                                 {item.trangThai?.trim() || "Chưa rõ"}
-                                </TableCell>
+                            </TableCell>
                             <TableCell>{formatNgayDieuChinh(item.ngayDieuChinh)}</TableCell>
                             </TableRow>
                         ))
@@ -191,5 +195,7 @@ try {
             <Button onClick={onBack} color="secondary">⬅️ Quay lại</Button>
             </Box>
         </Paper>
+        </Box>
+
     );
 }

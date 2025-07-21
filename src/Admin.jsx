@@ -369,6 +369,49 @@ export default function Admin({ onCancel }) {
     }
   };
 
+  const handleDeleteKyBanTru = async () => {
+    const confirmed = window.confirm("⚠️ Bạn có chắc chắn muốn xoá toàn bộ nhật ký bán trú?");
+    if (!confirmed) return;
+
+    try {
+      setResetProgress(0);
+      setResetMessage("");
+      setResetSeverity("info");
+      setResetType("dangky");
+
+      const namHocDoc = await getDoc(doc(db, "YEAR", "NAMHOC"));
+      const namHocValue = namHocDoc.exists() ? namHocDoc.data().value : null;
+      if (!namHocValue) {
+        setResetMessage("❌ Không tìm thấy năm học!");
+        setResetSeverity("error");
+        return;
+      }
+
+      const nhatKyCol = `NHATKYBANTRU_${namHocValue}`;
+      const nhatKySnapshot = await getDocs(collection(db, nhatKyCol));
+
+      const total = nhatKySnapshot.docs.length;
+      let completed = 0;
+
+      const batch = writeBatch(db);
+      nhatKySnapshot.docs.forEach((docSnap) => {
+        batch.delete(doc(db, nhatKyCol, docSnap.id));
+        completed++;
+        setResetProgress(Math.round((completed / total) * 100));
+      });
+
+      await batch.commit();
+
+      setResetMessage(`✅ Đã xoá toàn bộ nhật ký bán trú (${completed} bản ghi).`);
+      setResetSeverity("success");
+    } catch (err) {
+      console.error("❌ Lỗi khi xoá nhật ký bán trú:", err);
+      setResetMessage("❌ Có lỗi xảy ra khi xoá dữ liệu.");
+      setResetSeverity("error");
+    } finally {
+      setTimeout(() => setResetProgress(0), 3000);
+    }
+  };
 
   const handlePerformDelete = async () => {
     const { danhsach, bantru, diemdan } = deleteCollections;
@@ -848,6 +891,10 @@ export default function Admin({ onCancel }) {
 
                 </>
               )}
+
+              <Button variant="contained" color="primary" onClick={handleDeleteKyBanTru}>
+                🗑️ Xóa nhật ký bán trú
+              </Button>
 
               <Button variant="contained" color="warning" onClick={handleResetDangKyBanTru}>
                 ♻️ Reset bán trú

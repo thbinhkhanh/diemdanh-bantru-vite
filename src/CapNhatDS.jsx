@@ -35,6 +35,8 @@ export default function CapNhatDS({ onBack }) {
   const dangKyOptions = ["Đăng ký", "Hủy đăng ký"];
   const nanoid = customAlphabet('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', 6);
 
+  const isDangKyDisabled = nhapTuDanhSach === "thuCong" || (nhapTuDanhSach === "danhSach" && !selectedStudentId);
+
   const showSnackbar = (message, severity = "success") => {
     setSnackbar({ open: true, message, severity });
   };
@@ -439,13 +441,12 @@ export default function CapNhatDS({ onBack }) {
                 <TextField label="Họ và tên" size="small" fullWidth value={customHoTen} onChange={(e) => { setCustomHoTen(e.target.value);  }} sx={{ mb: 2 }} />
               )}
 
-              <FormControl fullWidth size="small" sx={{ mb: 3 }}>
+              <FormControl fullWidth size="small" sx={{ mb: 3 }} disabled={isDangKyDisabled}>
                 <InputLabel>Trạng thái đăng ký</InputLabel>
                 <Select
                   value={dangKy}
                   label="Trạng thái đăng ký"
                   onChange={(e) => { setDangKy(e.target.value); }}
-                  disabled={true} // 🔒 Luôn vô hiệu hóa
                 >
                   <MenuItem value=""><em>Chọn trạng thái</em></MenuItem>
                   {dangKyOptions.map((opt) => (
@@ -453,7 +454,6 @@ export default function CapNhatDS({ onBack }) {
                   ))}
                 </Select>
               </FormControl>
-
 
               <Stack spacing={2} alignItems="center">
                 <Button variant="contained" color="primary" onClick={handleUpdate} disabled={saving} sx={{ width: 160, fontWeight: 600, py: 1 }}>
