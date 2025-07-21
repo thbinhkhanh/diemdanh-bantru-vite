@@ -756,7 +756,8 @@ export default function Admin({ onCancel }) {
                         setRestoreProgress,
                         setAlertMessage,
                         setAlertSeverity,
-                        selectedDataTypes
+                        selectedDataTypes,
+                        restoreMode
                       );
                     } else {
                       restoreFromExcelFile(
@@ -764,7 +765,8 @@ export default function Admin({ onCancel }) {
                         setRestoreProgress,
                         setAlertMessage,
                         setAlertSeverity,
-                        selectedDataTypes
+                        selectedDataTypes,
+                        restoreMode
                       );
                     }
                   }}

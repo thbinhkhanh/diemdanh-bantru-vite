@@ -6,11 +6,10 @@ import UploadFileIcon from '@mui/icons-material/UploadFile';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { motion } from 'framer-motion';
 import * as XLSX from 'xlsx';
-//import { setDoc, doc, getDoc } from 'firebase/firestore';
-import { writeBatch, doc, getDoc, setDoc, collection } from "firebase/firestore";
+//import { writeBatch, doc, getDoc, setDoc } from "firebase/firestore";
+import { writeBatch, doc, getDoc, setDoc, getDocs, collection } from "firebase/firestore";
 
 import { db } from './firebase';
-import { customAlphabet } from 'nanoid';
 
 export default function TaiDanhSach({ onBack }) {
   const [selectedFile, setSelectedFile] = useState(null);
@@ -95,14 +94,14 @@ export default function TaiDanhSach({ onBack }) {
           headerRow.push((cell?.v || '').toString().trim().toUpperCase());
         }
 
-        const expectedHeaders = ['STT', 'HỌ VÀ TÊN', 'LỚP', 'ĐĂNG KÝ'];
+        const expectedHeaders = ['STT', 'MÃ ĐỊNH DANH', 'HỌ VÀ TÊN', 'LỚP', 'ĐĂNG KÝ'];
         const isValidHeader = headerRow.length === expectedHeaders.length &&
           expectedHeaders.every((title, index) => headerRow[index] === title);
 
         if (!isValidHeader) {
           setLoading(false);
           setSuccess(false);
-          setMessage('❌ Dữ liệu không hợp lệ! Tiêu đề phải nằm ở hàng 3 và đúng định dạng: STT, HỌ VÀ TÊN, LỚP, ĐĂNG KÝ.');
+          setMessage('❌ Dữ liệu không hợp lệ! Tiêu đề phải nằm ở hàng 3 và đúng định dạng: STT, MÃ ĐỊNH DANH, HỌ VÀ TÊN, LỚP, ĐĂNG KÝ.');
           return;
         }
 
@@ -137,12 +136,12 @@ export default function TaiDanhSach({ onBack }) {
   const processStudentData = async (jsonData) => {
     const studentCollection = `DANHSACH_${namHoc}`;
     const classListCollection = `CLASSLIST_${namHoc}`;
-    const nanoid = customAlphabet('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', 6);
 
+    // Tạo danh sách học sinh từ dữ liệu Excel
     const studentsNew = jsonData.map(row => {
       const lop = row['LỚP']?.toString().trim().toUpperCase();
-      const randomId = nanoid();
-      const maDinhDanh = `${lop}-${randomId}`;
+      const maGoc = row['MÃ ĐỊNH DANH']?.toString().trim().toUpperCase();
+      const maDinhDanh = `${lop}-${maGoc}`;
       const dangKyStr = row['ĐĂNG KÝ']?.toString().trim().toLowerCase();
 
       const student = {
@@ -167,14 +166,27 @@ export default function TaiDanhSach({ onBack }) {
       return;
     }
 
-    let successCount = 0;
-    let errorCount = 0;
     setTotalCount(studentsNew.length);
 
+    // Lấy danh sách mã định danh đã tồn tại trong Firestore
+    const snapshot = await getDocs(collection(db, studentCollection));
+    const existingIds = new Set(snapshot.docs.map(doc => doc.id));
+
+    // Lọc ra những học sinh chưa có trong Firestore
+    const studentsToAdd = studentsNew.filter(s => !existingIds.has(s.maDinhDanh));
+
+    if (studentsToAdd.length === 0) {
+      setSuccess(true);
+      setMessage('✅ Không có học sinh mới để thêm.');
+      return;
+    }
+
+    let successCount = 0;
+    let errorCount = 0;
     const BATCH_LIMIT = 500;
 
-    for (let i = 0; i < studentsNew.length; i += BATCH_LIMIT) {
-      const chunk = studentsNew.slice(i, i + BATCH_LIMIT);
+    for (let i = 0; i < studentsToAdd.length; i += BATCH_LIMIT) {
+      const chunk = studentsToAdd.slice(i, i + BATCH_LIMIT);
       const batch = writeBatch(db);
 
       chunk.forEach(student => {
@@ -190,31 +202,30 @@ export default function TaiDanhSach({ onBack }) {
         errorCount += chunk.length;
       }
 
-      setCurrentIndex(Math.min(i + BATCH_LIMIT, studentsNew.length));
-      setProgress(Math.round(((i + BATCH_LIMIT) / studentsNew.length) * 100));
+      const current = Math.min(i + BATCH_LIMIT, studentsToAdd.length);
+      setCurrentIndex(current);
+      setProgress(Math.round((current / studentsToAdd.length) * 100));
     }
 
+    // Cập nhật danh sách lớp
     try {
       const truongRef = doc(db, classListCollection, 'TRUONG');
       const truongSnap = await getDoc(truongRef);
       const oldClasses = truongSnap.exists() ? truongSnap.data().list || [] : [];
       const allClasses = new Set(oldClasses);
 
-      // ✅ Thêm các lớp mới
-      studentsNew.forEach(student => {
+      studentsToAdd.forEach(student => {
         const lop = student.lop?.toString().trim();
         if (lop) allClasses.add(lop);
       });
 
-      // ✅ Sắp xếp các lớp
       const classArray = Array.from(allClasses).map(x => x.replace(/\s+/g, '').toUpperCase()).sort((a, b) =>
         a.localeCompare(b, 'vi', { numeric: true })
       );
 
-      const grouped = {}; // Khối: K1, K2, K3...
-
+      const grouped = {};
       classArray.forEach(lop => {
-        const khoiMatch = lop.match(/^(\d+)/); // Lấy toàn bộ chữ số đầu (vd: 1.1 → 1)
+        const khoiMatch = lop.match(/^(\d+)/);
         if (khoiMatch) {
           const khoi = `K${khoiMatch[1]}`;
           if (!grouped[khoi]) grouped[khoi] = [];
@@ -222,10 +233,7 @@ export default function TaiDanhSach({ onBack }) {
         }
       });
 
-      // ✅ Lưu danh sách toàn trường
-      await setDoc(doc(db, classListCollection, 'TRUONG'), { list: classArray });
-
-      // ✅ Lưu theo từng khối
+      await setDoc(truongRef, { list: classArray });
       for (const khoiKey in grouped) {
         await setDoc(doc(db, classListCollection, khoiKey), { list: grouped[khoiKey] });
       }
@@ -235,13 +243,14 @@ export default function TaiDanhSach({ onBack }) {
       console.error('❌ Lỗi khi cập nhật CLASSLIST:', e.message);
     }
 
-
     if (successCount > 0) setSelectedFile(null);
+
     setSuccess(errorCount === 0);
     setMessage(errorCount === 0
-      ? `✅ Đã thêm thành công ${successCount} học sinh mới.`
-      : `⚠️ Có ${errorCount} lỗi khi thêm ${studentsNew.length} học sinh mới.`);
+      ? `✅ Đã thêm ${successCount} học sinh mới.`
+      : `⚠️ Có ${errorCount} lỗi khi thêm ${studentsToAdd.length} học sinh mới.`);
   };
+
 
   return (
     <Box sx={{ minHeight: '100vh', background: 'transparent', pt: 0, px: 1 }}>
