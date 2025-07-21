@@ -4,7 +4,8 @@ import {
   Card, Divider, Select, MenuItem, FormControl, InputLabel,
   RadioGroup, Radio, FormControlLabel, LinearProgress, Alert, Tabs, Tab, Checkbox, FormGroup
 } from "@mui/material";
-import { doc, setDoc, getDoc, getDocs, deleteDoc, collection } from "firebase/firestore";
+import { doc, setDoc, getDoc, getDocs, deleteDoc, collection, writeBatch } from "firebase/firestore";
+
 import { db } from "./firebase";
 import {
   downloadBackupAsJSON,
@@ -265,18 +266,19 @@ export default function Admin({ onCancel }) {
       let completed = 0;
       let count = 0;
 
+      const batch = writeBatch(db);
+
       for (const docSnap of snapshot.docs) {
         const data = docSnap.data();
         if (data.diemDanhBanTru === false) {
-          await setDoc(doc(db, colName, docSnap.id), {
-            ...data,
-            diemDanhBanTru: true
-          }, { merge: true });
+          batch.set(doc(db, colName, docSnap.id), { diemDanhBanTru: true }, { merge: true });
           count++;
         }
         completed++;
         setResetProgress(Math.round((completed / total) * 100));
       }
+
+      await batch.commit(); // ✅ Ghi toàn bộ trong một lần duy nhất
 
       // 🔁 Cập nhật lại dữ liệu context classData nếu có
       const currentClassData = getClassData() || {};
@@ -301,7 +303,6 @@ export default function Admin({ onCancel }) {
       setTimeout(() => setResetProgress(0), 3000);
     }
   };
-
 
   const handleResetDiemDanh = async () => {
     const confirmed = window.confirm("⚠️ Bạn có chắc chắn muốn reset điểm danh?");
@@ -328,6 +329,8 @@ export default function Admin({ onCancel }) {
       let completed = 0;
       let count = 0;
 
+      const batch = writeBatch(db);
+
       for (const docSnap of snapshot.docs) {
         const data = docSnap.data();
         const updates = {};
@@ -340,21 +343,20 @@ export default function Admin({ onCancel }) {
           updates.lyDo = "";
         }
 
-        if (
-          typeof data.phep === "boolean" ||
-          data.phep === null
-        ) {
+        if (typeof data.phep === "boolean" || data.phep === null) {
           updates.phep = deleteField();
         }
 
         if (Object.keys(updates).length > 0) {
-          await setDoc(doc(db, colName, docSnap.id), updates, { merge: true });
+          batch.set(doc(db, colName, docSnap.id), updates, { merge: true });
           count++;
         }
 
         completed++;
         setResetProgress(Math.round((completed / total) * 100));
       }
+
+      await batch.commit(); // ✅ Ghi tất cả trong một lần duy nhất
 
       setResetMessage(`✅ Đã reset điểm danh cho ${count} học sinh.`);
       setResetSeverity("success");
