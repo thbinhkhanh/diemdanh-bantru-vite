@@ -293,7 +293,7 @@ export default function Admin({ onCancel }) {
 
       setClassData(updatedClassData);
 
-      setResetMessage(`✅ Đã reset xong điểm danh bán trú.`);
+      setResetMessage(`✅ Đã reset xong bán trú (${count} học sinh).`);
       setResetSeverity("success");
     } catch (err) {
       console.error("❌ Lỗi khi reset điểm danh bán trú:", err);
@@ -358,7 +358,7 @@ export default function Admin({ onCancel }) {
 
       await batch.commit(); // ✅ Ghi tất cả trong một lần duy nhất
 
-      setResetMessage(`✅ Đã reset điểm danh cho ${count} học sinh.`);
+      setResetMessage(`✅ Đã reset xong điểm danh (${count} học sinh).`);
       setResetSeverity("success");
     } catch (err) {
       console.error("❌ Lỗi khi reset điểm danh:", err);
