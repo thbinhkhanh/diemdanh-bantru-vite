@@ -893,7 +893,7 @@ export default function Admin({ onCancel }) {
               )}
 
               <Button variant="contained" color="primary" onClick={handleDeleteKyBanTru}>
-                🗑️ Xóa nhật ký bán trú
+                🗑️ Xóa lịch sử đăng ký
               </Button>
 
               <Button variant="contained" color="warning" onClick={handleResetDangKyBanTru}>
