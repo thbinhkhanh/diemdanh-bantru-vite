@@ -5,12 +5,12 @@ import {
   Select, FormControl, InputLabel, Checkbox, Card, LinearProgress,
   Alert
 } from '@mui/material';
-import { getDocs, getDoc, collection, doc, updateDoc, setDoc, addDoc } from 'firebase/firestore';
+import { getDocs, getDoc, collection, doc, updateDoc, setDoc, addDoc, writeBatch } from 'firebase/firestore';
 import { db } from './firebase';
 import { MySort } from './utils/MySort';
 import { useClassList } from './context/ClassListContext';
 import { useClassData } from './context/ClassDataContext';
-import { query, where } from "firebase/firestore";
+//import { query, where } from "firebase/firestore";
 import { enrichStudents } from "./pages/ThanhPhan/enrichStudents";
 
 export default function LapDanhSach({ onBack }) {
@@ -205,25 +205,32 @@ const handleClassChange = (event) => {
         return;
       }
 
-      for (let student of changedStudents) {
-        await updateDoc(doc(db, `DANHSACH_${namHocValue}`, student.id), {
+      const batch = writeBatch(db);
+      const timestampNow = Date.now();
+
+      for (let i = 0; i < changedStudents.length; i++) {
+        const student = changedStudents[i];
+
+        const studentRef = doc(db, `DANHSACH_${namHocValue}`, student.id);
+        batch.update(studentRef, {
           dangKyBanTru: student.registered,
           diemDanhBanTru: student.registered,
         });
 
-          // Ghi nhật ký bán trú KHÔNG ghi đè và có thời gian chi tiết
-          const timestamp = Date.now();
-          const logId = `${student.lop}-${student.id.slice(-7)}-${timestamp}`;
-          const logRef = doc(db, `NHATKYBANTRU_${namHocValue}`, logId);
+        const logId = `${student.lop}-${student.id.slice(-7)}-${timestampNow}-${i}`;
+        const logRef = doc(db, `NHATKYBANTRU_${namHocValue}`, logId);
 
-          await setDoc(logRef, {
-            maDinhDanh: `${student.lop}-${student.id.slice(-7)}`,
-            hoVaTen: student.hoVaTen || "",
-            lop: student.lop || selectedClass,
-            trangThai: student.registered ? "Đăng ký" : "Hủy đăng ký",
-            ngayDieuChinh: getNgayVN(), // 👇 Định nghĩa lại bên dưới
-          });
+        batch.set(logRef, {
+          maDinhDanh: `${student.lop}-${student.id.slice(-7)}`,
+          hoVaTen: student.hoVaTen || "",
+          lop: student.lop || selectedClass,
+          trangThai: student.registered ? "Đăng ký" : "Hủy đăng ký",
+          ngayDieuChinh: getNgayVN(),
+        });
       }
+
+      await batch.commit(); // ✅ Lưu 1 lần duy nhất
+
 
       // Cập nhật lại local state và context
       const updatedAllStudents = allStudents.map(student => {

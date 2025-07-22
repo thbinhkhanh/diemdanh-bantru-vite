@@ -72,8 +72,7 @@ export default function Admin({ onCancel }) {
   const [deleting, setDeleting] = useState(false); 
   const [deletingLabel, setDeletingLabel] = useState("");
   const [deleteSuccess, setDeleteSuccess] = useState(false);
-  const [xoaHSBanTru, setXoaHSBanTru] = useState(false);
-
+  
   const [selectedDataTypes, setSelectedDataTypes] = useState({
     danhsach: false,
     bantru: false,
@@ -85,7 +84,6 @@ export default function Admin({ onCancel }) {
     bantru: false,
     diemdan: false,
     nhatkybantru: false,
-    xoaHocSinhBanTru: false,
   });
 
   const handleDeleteCheckboxChange = (key) => {
@@ -373,9 +371,9 @@ export default function Admin({ onCancel }) {
 
   const handlePerformDelete = async () => {
     const namHocValue = selectedYear;
-    const { danhsach, bantru, diemdan, nhatkybantru, xoaHocSinhBanTru } = deleteCollections;
+    const { danhsach, bantru, diemdan, nhatkybantru } = deleteCollections;
 
-    if (!danhsach && !bantru && !diemdan && !nhatkybantru && !xoaHocSinhBanTru) {
+    if (!danhsach && !bantru && !diemdan && !nhatkybantru) {
       alert("⚠️ Vui lòng chọn ít nhất một loại dữ liệu để xóa.");
       return;
     }
@@ -427,75 +425,11 @@ export default function Admin({ onCancel }) {
         }
       }
 
-      // ✅ Thêm logic xóa field của học sinh bán trú
-      if (xoaHocSinhBanTru) {
-        setDeletingLabel("Đang xử lý học sinh bán trú...");
-        try {
-          const danhSachRef = collection(db, `DANHSACH_${namHocValue}`);
-          const banTruRef = collection(db, `BANTRU_${namHocValue}`);
-
-          const [danhSachSnap, banTruSnap] = await Promise.all([
-            getDocs(danhSachRef),
-            getDocs(banTruRef),
-          ]);
-
-          // Bước 1: lọc học sinh có dangKyBanTru: false
-          const hocSinhCanKiemTra = [];
-          danhSachSnap.forEach((docSnap) => {
-            const data = docSnap.data();
-            if (data.dangKyBanTru === false) {
-              hocSinhCanKiemTra.push({
-                id: docSnap.id,
-                ref: docSnap.ref,
-                hoTen: data.hoVaTen || "(Không có tên)",
-              });
-            }
-          });
-
-          // Bước 2: tạo Set từ BANTRU để tra cứu nhanh
-          const banTruIDs = new Set(banTruSnap.docs.map((doc) => doc.id));
-
-          // Bước 3: dùng batch để xóa các field không hợp lệ
-          const batch = writeBatch(db);
-          let count = 0;
-          const tenHocSinhDaXoa = [];
-
-          hocSinhCanKiemTra.forEach(({ id, ref, hoTen }) => {
-            if (!banTruIDs.has(id)) {
-              batch.update(ref, {
-                dangKyBanTru: deleteField(),
-                diemDanhBanTru: deleteField(),
-              });
-              count++;
-              tenHocSinhDaXoa.push(hoTen);
-            }
-          });
-
-          await batch.commit();
-
-          //console.log("🧾 Danh sách học sinh đã xóa field:", tenHocSinhDaXoa);
-
-          setDeleteMessage(`✅ Đã xoá field 'dangKyBanTru' và 'diemDanhBanTru' của ${count} học sinh.`);
-          setDeleteSeverity("success");
-
-        } catch (err) {
-          console.error("❌ Lỗi khi xử lý học sinh bán trú:", err);
-          setDeleteMessage("❌ Lỗi khi xoá field học sinh bán trú.");
-          setDeleteSeverity("error");
-        }
-      }
-
-
       setDeleteMessage("✅ Đã xóa xong dữ liệu.");
       setDeleteSeverity("success");
+
       setDeleteSuccess(true);
-      setDeleteCollections({
-        danhsach: false,
-        bantru: false,
-        diemdan: false,
-        nhatkybantru: false,
-        xoaHocSinhBanTru: false, // reset luôn checkbox mới
-      });
+      setDeleteCollections({ danhsach: false, bantru: false, diemdan: false, nhatky: false }); // 👈 reset nhatky
       setShowDeleteOptions(false);
     } catch (err) {
       console.error("❌ Lỗi khi xóa dữ liệu:", err);
@@ -511,6 +445,8 @@ export default function Admin({ onCancel }) {
       }, 1500);
     }
   };
+
+
 
   const handleInitNewYearData = async () => {
     const confirmed = window.confirm(`⚠️ Bạn có chắc muốn khởi tạo dữ liệu cho năm ${selectedYear}?`);
@@ -883,78 +819,70 @@ export default function Admin({ onCancel }) {
 
               {/* ✅ Khối checkbox + nút thực hiện xóa */}
               {showDeleteOptions && (
-              <>
-                <FormGroup sx={{ ml: 1 }}>
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={deleteCollections.danhsach}
-                        onChange={() => handleDeleteCheckboxChange("danhsach")}
-                      />
-                    }
-                    label="Danh sách"
-                  />
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={deleteCollections.bantru}
-                        onChange={() => handleDeleteCheckboxChange("bantru")}
-                      />
-                    }
-                    label="Bán trú"
-                  />
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={deleteCollections.diemdan}
-                        onChange={() => handleDeleteCheckboxChange("diemdan")}
-                      />
-                    }
-                    label="Điểm danh"
-                  />
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={deleteCollections.nhatkybantru}
-                        onChange={() => handleDeleteCheckboxChange("nhatkybantru")}
-                      />
-                    }
-                    label="Lịch sử đăng ký"
-                  />
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={deleteCollections.xoaHocSinhBanTru}
-                        onChange={() => handleDeleteCheckboxChange("xoaHocSinhBanTru")}
-                      />
-                    }
-                    label="Xóa học sinh bán trú"
-                  />
-                </FormGroup>
-
-                <Button variant="contained" color="primary" sx={{ mt: 1 }} onClick={handlePerformDelete}>
-                  ❌ Thực hiện xóa dữ liệu
-                </Button>
-
-                {deleting && (
-                  <Box sx={{ mt: 2 }}>
-                    <LinearProgress
-                      variant="determinate"
-                      value={progress}
-                      sx={{ height: 10, borderRadius: 5 }}
+                <>
+                  <FormGroup>
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={deleteCollections.danhsach}
+                          onChange={() => handleDeleteCheckboxChange("danhsach")}
+                        />
+                      }
+                      label="Danh sách"
                     />
-                    <ResetProgressText label={deletingLabel} progress={progress} />
-                  </Box>
-                )}
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={deleteCollections.bantru}
+                          onChange={() => handleDeleteCheckboxChange("bantru")}
+                        />
+                      }
+                      label="Bán trú"
+                    />
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={deleteCollections.diemdan}
+                          onChange={() => handleDeleteCheckboxChange("diemdan")}
+                        />
+                      }
+                      label="Điểm danh"
+                    />
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={deleteCollections.nhatkybantru}
+                          onChange={() => handleDeleteCheckboxChange("nhatkybantru")}
+                        />
+                      }
+                      label="Lịch sử đăng ký"
+                    />
+                  </FormGroup>
 
-                {deleteSuccess && (
-                  <p style={{ marginTop: 8, color: "green", fontWeight: "bold", textAlign: "center" }}>
-                    ✅ Đã xóa xong dữ liệu.
-                  </p>
-                )}
-              </>
-            )}
 
+                  <Button variant="contained" color="primary" sx={{ mt: 1 }} onClick={handlePerformDelete}>
+                    ❌ Thực hiện xóa dữ liệu
+                  </Button>
+
+                  {deleting && (
+                    <Box sx={{ mt: 2 }}>
+                      <LinearProgress
+                        variant="determinate"
+                        value={progress}
+                        sx={{ height: 10, borderRadius: 5 }}
+                      />
+                      <ResetProgressText label={deletingLabel} progress={progress} />
+                    </Box>
+                  )}
+
+                  {deleteSuccess && (
+                    <p style={{ marginTop: 8, color: "green", fontWeight: "bold", textAlign: "center" }}>
+                      ✅ Đã xóa xong dữ liệu.
+                    </p>
+                  )}
+
+                </>
+              )}
               
               <Button variant="contained" color="warning" onClick={handleResetDangKyBanTru}>
                 ♻️ Reset bán trú
