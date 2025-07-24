@@ -5,8 +5,6 @@ import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
 
-  //thbinhkhanh.tuyensinh@gmail.com
-  //firestore B
   apiKey: "AIzaSyDABUgzEzkd02WfAFU-hUuol_ZFRVo97YI",
   authDomain: "diemdanh-bantru.firebaseapp.com",
   projectId: "diemdanh-bantru",
@@ -25,7 +23,6 @@ const firebaseConfig = {
   //appId: "1:444541342075:web:ff4bb4db26967676ebedde",
   //measurementId: "G-KGCTCSD3GJ",
   
-  //test
 };
 
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();

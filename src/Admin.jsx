@@ -954,8 +954,6 @@ export default function Admin({ onCancel }) {
                       <ResetProgressText label={deletingLabel} progress={progress} />
                     </Box>
                   )}
-
-                  {/* ✅ Hiển thị kết quả có số dòng */}                  
                 </>
               )}
 
