@@ -99,7 +99,7 @@ export default function Home() {
                       color="text.secondary"
                       sx={{ mb: 1, fontSize: { xs: "0.8rem", sm: "0.9rem" } }}
                     >
-                      Nhấn để xem danh sách 
+                      Nhấn để truy cập 
                     </Typography>
 
                     <Button
