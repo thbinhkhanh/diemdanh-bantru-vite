@@ -18,14 +18,6 @@ import {
 } from '@mui/material';
 
 import HomeIcon from '@mui/icons-material/Home';
-import LooksOneIcon from '@mui/icons-material/LooksOne';
-import LooksTwoIcon from '@mui/icons-material/LooksTwo';
-import Looks3Icon from '@mui/icons-material/Looks3';
-import Looks4Icon from '@mui/icons-material/Looks4';
-import Looks5Icon from '@mui/icons-material/Looks5';
-import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
-import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
-
 import { getDoc, setDoc, doc } from 'firebase/firestore';
 import { db } from './firebase';
 
@@ -164,13 +156,6 @@ function Navigation() {
   };
 
   const navItems = [
-    //{ path: '/home', name: 'Trang chủ', icon: <HomeIcon /> },
-    //{ path: '/lop1', name: 'Lớp 1', icon: <LooksOneIcon /> },
-    //{ path: '/lop2', name: 'Lớp 2', icon: <LooksTwoIcon /> },
-    //{ path: '/lop3', name: 'Lớp 3', icon: <Looks3Icon /> },
-    //{ path: '/lop4', name: 'Lớp 4', icon: <Looks4Icon /> },
-    //{ path: '/lop5', name: 'Lớp 5', icon: <Looks5Icon /> },
-
     { path: '/home', name: 'Trang chủ', icon: <HomeIcon /> },
     { path: '/lop1', name: 'Lớp 1' },
     { path: '/lop2', name: 'Lớp 2' },
@@ -249,14 +234,11 @@ function Navigation() {
               location.pathname === '/quanly' ? '3px solid white' : 'none',
             borderRadius: '4px',
             textTransform: 'none',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
           }}
         >
-          <AdminPanelSettingsIcon />
           Quản lý
         </Button>
+
 
         <Button
           onClick={handleMenuOpen}
@@ -277,12 +259,8 @@ function Navigation() {
                 : 'none',
             borderRadius: '4px',
             textTransform: 'none',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
           }}
         >
-          <HelpOutlineIcon />
           Trợ giúp
         </Button>
 
