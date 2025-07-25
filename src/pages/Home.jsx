@@ -47,7 +47,8 @@ export default function Home() {
       <Box sx={{ px: 2 }}>
         <Grid container spacing={3} justifyContent="center" sx={{ mt: 3, mb: 4 }}>
           {khốiList.map((label, index) => (
-            <Grid item xs={12} sm={6} md={4} key={label}>
+            //<Grid item xs={12} sm={6} md={4} key={label}>
+            <Grid item xs={6} sm={6} md={4} key={label}>
               <motion.div
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.97 }}
@@ -99,7 +100,7 @@ export default function Home() {
                       color="text.secondary"
                       sx={{ mb: 1, fontSize: { xs: "0.8rem", sm: "0.9rem" } }}
                     >
-                      Nhấn để xem danh sách lớp {index + 1}
+                      Nhấn để truy cập
                     </Typography>
 
                     <Button
