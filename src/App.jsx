@@ -17,6 +17,15 @@ import {
   Button,
 } from '@mui/material';
 
+import HomeIcon from '@mui/icons-material/Home';
+import LooksOneIcon from '@mui/icons-material/LooksOne';
+import LooksTwoIcon from '@mui/icons-material/LooksTwo';
+import Looks3Icon from '@mui/icons-material/Looks3';
+import Looks4Icon from '@mui/icons-material/Looks4';
+import Looks5Icon from '@mui/icons-material/Looks5';
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+
 import { getDoc, setDoc, doc } from 'firebase/firestore';
 import { db } from './firebase';
 
@@ -46,7 +55,6 @@ function PrivateRoute({ children }) {
 function App() {
   const [selectedFirestore, setSelectedFirestore] = useState('firestore1');
 
-  // Load từ localStorage khi bắt đầu
   useEffect(() => {
     const saved = localStorage.getItem('selectedFirestore') || 'firestore1';
     setSelectedFirestore(saved);
@@ -55,7 +63,7 @@ function App() {
   const handleFirestoreSelect = (value) => {
     setSelectedFirestore(value);
     localStorage.setItem('selectedFirestore', value);
-    window.location.reload(); // Reload để firebase.js nhận config mới
+    window.location.reload();
   };
 
   return (
@@ -63,8 +71,6 @@ function App() {
       <ClassDataProvider>
         <NhatKyProvider>
           <Router>
-
-            {/* Chọn Firestore trên đầu trang (có thể ẩn hoặc chuyển vào menu) */}
             <div style={{ padding: 10, background: '#f0f0f0', textAlign: 'center' }}>
               <strong>Chọn Firestore: </strong>
               <label style={{ marginLeft: 10 }}>
@@ -93,8 +99,6 @@ function App() {
               <Routes>
                 <Route path="/" element={<Home />} />
                 <Route path="/login" element={<Login />} />
-
-                {/* Trang yêu cầu đăng nhập */}
                 <Route path="/home" element={<PrivateRoute><Home /></PrivateRoute>} />
                 <Route path="/lop1" element={<PrivateRoute><Lop1 /></PrivateRoute>} />
                 <Route path="/lop2" element={<PrivateRoute><Lop2 /></PrivateRoute>} />
@@ -103,19 +107,11 @@ function App() {
                 <Route path="/lop5" element={<PrivateRoute><Lop5 /></PrivateRoute>} />
                 <Route path="/quanly" element={<PrivateRoute><QuanLy /></PrivateRoute>} />
                 <Route path="/nhatky" element={<PrivateRoute><NhatKyDiemDanhGV /></PrivateRoute>} />
-
-                <Route
-                  path="/admin"
-                  element={
-                    <Suspense fallback={<div>Đang tải trang quản lý...</div>}>
-                      <PrivateRoute>
-                        <Admin />
-                      </PrivateRoute>
-                    </Suspense>
-                  }
-                />
-
-                {/* Trang không cần đăng nhập */}
+                <Route path="/admin" element={
+                  <Suspense fallback={<div>Đang tải trang quản lý...</div>}>
+                    <PrivateRoute><Admin /></PrivateRoute>
+                  </Suspense>
+                } />
                 <Route path="/gioithieu" element={<About />} />
                 <Route path="/huongdan" element={<HuongDan />} />
                 <Route path="/chucnang" element={<About />} />
@@ -168,7 +164,14 @@ function Navigation() {
   };
 
   const navItems = [
-    { path: '/home', name: 'Trang chủ' },
+    //{ path: '/home', name: 'Trang chủ', icon: <HomeIcon /> },
+    //{ path: '/lop1', name: 'Lớp 1', icon: <LooksOneIcon /> },
+    //{ path: '/lop2', name: 'Lớp 2', icon: <LooksTwoIcon /> },
+    //{ path: '/lop3', name: 'Lớp 3', icon: <Looks3Icon /> },
+    //{ path: '/lop4', name: 'Lớp 4', icon: <Looks4Icon /> },
+    //{ path: '/lop5', name: 'Lớp 5', icon: <Looks5Icon /> },
+
+    { path: '/home', name: 'Trang chủ', icon: <HomeIcon /> },
     { path: '/lop1', name: 'Lớp 1' },
     { path: '/lop2', name: 'Lớp 2' },
     { path: '/lop3', name: 'Lớp 3' },
@@ -209,6 +212,7 @@ function Navigation() {
           alt="Logo"
           style={{ height: '40px', marginRight: '16px', flexShrink: 0 }}
         />
+
         {navItems.map((item, index) => (
           <Link
             key={index}
@@ -222,13 +226,17 @@ function Navigation() {
               borderBottom:
                 location.pathname === item.path ? '3px solid white' : 'none',
               borderRadius: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: item.icon ? '6px' : 0,
               flexShrink: 0,
-              whiteSpace: 'nowrap',
             }}
           >
+            {item.icon && item.icon}
             {item.name}
           </Link>
         ))}
+
 
         <Button
           onClick={handleClickQuanLy}
@@ -241,8 +249,12 @@ function Navigation() {
               location.pathname === '/quanly' ? '3px solid white' : 'none',
             borderRadius: '4px',
             textTransform: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
           }}
         >
+          <AdminPanelSettingsIcon />
           Quản lý
         </Button>
 
@@ -265,10 +277,15 @@ function Navigation() {
                 : 'none',
             borderRadius: '4px',
             textTransform: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
           }}
         >
+          <HelpOutlineIcon />
           Trợ giúp
         </Button>
+
         <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
           <MenuItem component={Link} to="/huongdan" onClick={handleMenuClose}>
             Hướng dẫn sử dụng
