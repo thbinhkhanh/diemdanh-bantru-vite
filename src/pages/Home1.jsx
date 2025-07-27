@@ -1,14 +1,16 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box, Grid, Typography, Card, CardContent, Button,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { getDoc, doc } from "firebase/firestore";
+import { db } from "../firebase";
 import Banner from "./Banner"; // Giữ nguyên
 
 export default function Home() {
   const navigate = useNavigate();
-
+  
   const khốiList = ["KHỐI 1", "KHỐI 2", "KHỐI 3", "KHỐI 4", "KHỐI 5"];
   const imageList = ["L1.png", "L2.png", "L3.png", "L4.png", "L5.png"];
   const colorMap = ["#42a5f5", "#66bb6a", "#ffb300", "#ab47bc", "#ef5350"];
@@ -22,7 +24,10 @@ export default function Home() {
         px: 0,
       }}
     >
-      <Banner title="ĐIỂM DANH BÁN TRÚ" />
+      {/* ✅ Banner nhận title và subtitle */}
+      <Banner
+        title="ĐIỂM DANH BÁN TRÚ"
+      />
 
       <Box sx={{ px: 2 }}>
         <Grid container spacing={3} justifyContent="center" sx={{ mt: 3, mb: 4 }}>
@@ -51,7 +56,7 @@ export default function Home() {
                       p: 1.5,
                       cursor: "pointer",
                     }}
-                    onClick={() => navigate(`/lop${index + 1}`)}
+                    onClick={() => navigate(`/lop${index + 1}`, { state: { useNewVersion } })}
                   >
                     <img
                       src={`/${imageList[index]}`}
@@ -95,7 +100,7 @@ export default function Home() {
                           filter: "brightness(0.9)",
                         },
                       }}
-                      onClick={() => navigate(`/lop${index + 1}`)}
+                      onClick={() => navigate(`/lop${index + 1}`, { state: { useNewVersion } })}
                     >
                       Vào {label}
                     </Button>

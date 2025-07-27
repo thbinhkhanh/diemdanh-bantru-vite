@@ -177,16 +177,47 @@ export default function Lop4() {
     const alreadyFetched = fetchedClasses[selectedClass];
     const shouldFetch = !Array.isArray(contextData) || contextData.length === 0;
 
-    if (!shouldFetch || alreadyFetched || !namHoc || !selectedClass) return;
+    //console.log("🔄 useEffect chạy");
+    //console.log("📌 selectedClass:", selectedClass);
+    //console.log("📌 namHoc:", namHoc);
+    //console.log("📌 contextData:", contextData);
+    //console.log("📌 alreadyFetched:", alreadyFetched);
+    //console.log("📌 shouldFetch:", shouldFetch);
+
+    if (!shouldFetch || alreadyFetched || !namHoc || !selectedClass) {
+      //console.log("❌ Bỏ qua fetch vì điều kiện không phù hợp");
+      return;
+    }
 
     const fetchData = async () => {
+      //console.log("🚀 Bắt đầu fetch học sinh...");
       setIsLoading(true);
       try {
-        //console.log(`🟡 Fetch Firestore lớp ${selectedClass}`);
         const col = `DANHSACH_${namHoc}`;
-        const raw = await fetchStudentsFromFirestore(col, selectedClass, useNewVersion);
-        const enriched = enrichStudents(raw, today, selectedClass, useNewVersion);
+        //console.log("📂 Collection:", col);
+        //console.log("📄 Document:", selectedClass);
+
+        const docRef = doc(db, col, selectedClass);
+        const snap = await getDoc(docRef);
+
+        if (!snap.exists()) {
+          console.warn(`⚠️ Không tìm thấy document lớp ${selectedClass} trong ${col}`);
+          return;
+        }
+
+        const data = snap.data();
+        //console.log("✅ Dữ liệu Firestore:", data);
+
+        // 🆕 Lấy dữ liệu từ studentsMap
+        const raw = data.hocSinh || [];
+
+        //console.log("📋 Danh sách học sinh thô:", raw);
+
+        const enriched = enrichStudents(raw, selectedClass, true);
+        //console.log("🔍 Danh sách enriched:", enriched);
+
         const sorted = MySort(enriched);
+        //console.log("✅ Danh sách sorted:", sorted);
 
         setStudents(sorted);
         setClassData(selectedClass, sorted);
@@ -195,16 +226,17 @@ export default function Lop4() {
         sorted.forEach(s => (initMap[s.id] = s.registered));
         setOriginalRegistered(initMap);
 
-        setFetchedClasses(prev => ({ ...prev, [selectedClass]: true })); // ✅ Đánh dấu đã fetch
+        setFetchedClasses(prev => ({ ...prev, [selectedClass]: true }));
+        //console.log("✅ Fetch & cập nhật state hoàn tất");
       } catch (err) {
-        console.error("🔥 Lỗi fetch học sinh:", err.message);
+        console.error("🔥 Lỗi khi fetch học sinh:", err.message || err);
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchData();
-  }, [selectedClass, namHoc, today, useNewVersion]);
+  }, [selectedClass, namHoc, today]);
 
   const handleSave = async () => {
     if (!namHoc) return;
@@ -234,40 +266,63 @@ export default function Lop4() {
 
 
   const toggleDiemDanh = async (index) => {
-    const updated = [...students];
-    updated[index].diemDanh = !updated[index].diemDanh;
+    const targetStudent = students[index];
+    const updatedStudent = {
+      ...targetStudent,
+      diemDanh: !targetStudent.diemDanh,
+      registered: !targetStudent.diemDanh,
+      lyDo: '',
+      vangCoPhep: '',
+    };
 
-    if (updated[index].diemDanh) {
-      updated[index].vangCoPhep = '';
-      updated[index].lyDo = '';
-      setExpandedRowId(null);
+    if (!updatedStudent.diemDanh) {
+      updatedStudent.registered = false;
+      setExpandedRowId(updatedStudent.id);
     } else {
-      updated[index].registered = false;
-      setExpandedRowId(updated[index].id);
-
-      // ✅ GỌI LƯU BÁN TRÚ NGAY LÚC ĐÓ
-      //await saveRegistrationChanges([updated[index]], namHoc);
-      await saveRegistrationChanges(
-        [updated[index]],
-        namHoc,
-        selectedClass,
-        setClassData,
-        classData // 💡 rất quan trọng để tránh mất dòng khác
-      );
-
-      // ✅ CẬP NHẬT BẢN SAO CỦA originalRegistered CHỈ VỚI HỌC SINH ĐÓ
-      setOriginalRegistered(prev => ({
-        ...prev,
-        [updated[index].id]: false,
-      }));
+      setExpandedRowId(null);
     }
 
-    setStudents(updated);
+    console.log('🔁 Trước khi setStudents:', updatedStudent);
 
-    // ✅ Điểm danh luôn lưu như cũ
-    //await saveSingleDiemDanh(updated[index], namHoc);
-    await saveSingleDiemDanh(updated[index], namHoc, selectedClass, classData, setClassData);
+    // ✅ 1. Cập nhật UI
+    setStudents(prev => {
+      const copy = [...prev];
+      copy[index] = updatedStudent;
+      console.log('✅ UI đã cập nhật học sinh tại index:', index, copy[index]);
+      return copy;
+    });
+
+    // ✅ 2. Ghi dữ liệu điểm danh và bán trú
+    try {
+      if (!updatedStudent.diemDanh) {
+        console.log('📌 Học sinh VẮNG => gọi saveRegistrationChanges');
+        await saveRegistrationChanges(
+          [updatedStudent],
+          namHoc,
+          selectedClass,
+          () => {}, // không cập nhật lại context
+          {}
+        );
+      }
+
+      console.log('📤 Gọi saveSingleDiemDanh với dữ liệu:', updatedStudent);
+
+      await saveSingleDiemDanh(
+        updatedStudent,
+        namHoc,
+        selectedClass,
+        classData,
+        setClassData
+      );
+
+      console.log('✅ Ghi dữ liệu điểm danh xong:', updatedStudent.id);
+
+    } catch (err) {
+      console.error('❌ toggleDiemDanh error:', err);
+    }
   };
+
+
 
   const toggleRegister = async (index) => {
     const updatedStudents = [...students];
@@ -319,7 +374,6 @@ export default function Lop4() {
     setStudents(updated);
     clearTimeout(saveTimeout.current);
     saveTimeout.current = setTimeout(() => {
-      //saveSingleDiemDanh(updated[index], namHoc);
       saveSingleDiemDanh(updated[index], namHoc, selectedClass, classData, setClassData);
     }, 1000);
   };
@@ -332,7 +386,6 @@ export default function Lop4() {
     // Gọi lưu sau khi cập nhật lý do
     clearTimeout(saveTimeout.current);
     saveTimeout.current = setTimeout(() => {
-      //saveSingleDiemDanh(updated[index], namHoc);
       saveSingleDiemDanh(updated[index], namHoc, selectedClass, classData, setClassData);
     }, 500); // debounce tránh lưu quá nhanh khi người dùng đang gõ
   };
@@ -604,7 +657,7 @@ export default function Lop4() {
                           sx={{ px: { xs: 1, sm: 2 }, width: { xs: 40, sm: 'auto' } }}
                         >
                           <Checkbox
-                            checked={s.diemDanh}
+                            checked={s.diemDanh === true}
                             onChange={() => toggleDiemDanh(index)}
                             size="small"
                             color="primary"
@@ -695,6 +748,7 @@ export default function Lop4() {
                   </React.Fragment>
                 ))}
               </TableBody>
+
             </Table>
           </TableContainer>
 
