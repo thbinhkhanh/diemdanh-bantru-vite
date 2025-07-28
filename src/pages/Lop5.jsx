@@ -3,11 +3,11 @@ import {
   Box, Table, TableBody, TableCell, TableContainer, TableHead,
   TableRow, Paper, Checkbox, FormControl, InputLabel,
   Select, MenuItem, LinearProgress, Typography,
-  Radio, FormControlLabel, Stack, TextField, Alert, Card, Button
+  Radio, FormControlLabel, Stack, TextField, Alert, Card, Button, IconButton
 } from '@mui/material';
 
 import { useLocation } from 'react-router-dom';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 
 import { fetchStudentsFromFirestore } from '../pages/ThanhPhan/fetchStudents';
@@ -15,6 +15,8 @@ import { enrichStudents } from '../pages/ThanhPhan/enrichStudents';
 import { saveRegistrationChanges } from '../pages/ThanhPhan/saveRegistration';
 import { saveMultipleDiemDanh } from '../pages/ThanhPhan/saveDiemDanh';
 import { saveSingleDiemDanh } from '../pages/ThanhPhan/saveSingleDiemDanh';
+import { updateLocalDiemDanh } from '../pages/ThanhPhan/updateLocalDiemDanh';
+
 
 import { MySort } from '../utils/MySort';
 import { useNavigate } from 'react-router-dom';
@@ -22,6 +24,9 @@ import NhatKyDiemDanhGV from '../NhatKyDiemDanhGV';
 
 import { useClassData } from '../context/ClassDataContext';
 import { useClassList } from '../context/ClassListContext';
+
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 
 export default function Lop5() {
   const location = useLocation();
@@ -51,6 +56,12 @@ export default function Lop5() {
   const navigate = useNavigate();
   const [radioValue, setRadioValue] = useState("DiemDanh");
   const { getClassList, setClassListForKhoi } = useClassList();
+  
+  const [showAbsentList, setShowAbsentList] = useState(false);
+  const absentStudents = students.filter(s => !s.diemDanh);
+  const hasAbsent = absentStudents.length > 0;
+
+
 
   const {
     classDataMap: classData,
@@ -60,6 +71,10 @@ export default function Lop5() {
   } = useClassData();
 
   const [fetchedClasses, setFetchedClasses] = useState({});
+
+  useEffect(() => {
+    setShowAbsentList(false); // Ẩn danh sách vắng khi đổi lớp
+  }, [selectedClass]);
 
   useEffect(() => {
     const lopFromState = location.state?.lop;
@@ -275,6 +290,10 @@ export default function Lop5() {
       vangCoPhep: '',
     };
 
+    // 🎯 Cập nhật vào local context
+    updateLocalDiemDanh(updatedStudent, selectedClass, classData, setClassData);
+
+    // 🔄 Hiện chi tiết nếu bỏ điểm danh
     if (!updatedStudent.diemDanh) {
       updatedStudent.registered = false;
       setExpandedRowId(updatedStudent.id);
@@ -282,43 +301,19 @@ export default function Lop5() {
       setExpandedRowId(null);
     }
 
-    console.log('🔁 Trước khi setStudents:', updatedStudent);
-
-    // ✅ 1. Cập nhật UI
+    // 🖼️ Cập nhật UI (state students)
     setStudents(prev => {
       const copy = [...prev];
       copy[index] = updatedStudent;
-      console.log('✅ UI đã cập nhật học sinh tại index:', index, copy[index]);
       return copy;
     });
 
-    // ✅ 2. Ghi dữ liệu điểm danh và bán trú
+    // ☁️ Ghi lên Firestore
     try {
-      if (!updatedStudent.diemDanh) {
-        console.log('📌 Học sinh VẮNG => gọi saveRegistrationChanges');
-        await saveRegistrationChanges(
-          [updatedStudent],
-          namHoc,
-          selectedClass,
-          () => {}, // không cập nhật lại context
-          {}
-        );
-      }
-
-      console.log('📤 Gọi saveSingleDiemDanh với dữ liệu:', updatedStudent);
-
-      await saveSingleDiemDanh(
-        updatedStudent,
-        namHoc,
-        selectedClass,
-        classData,
-        setClassData
-      );
-
-      console.log('✅ Ghi dữ liệu điểm danh xong:', updatedStudent.id);
-
+      await saveSingleDiemDanh(updatedStudent, namHoc, selectedClass);
+      console.log(`✅ Đã lưu điểm danh của ${updatedStudent.hoVaTen}`);
     } catch (err) {
-      console.error('❌ toggleDiemDanh error:', err);
+      console.error('❌ toggleDiemDanh error:', err.message);
     }
   };
 
@@ -454,36 +449,48 @@ export default function Lop5() {
       {/* Tóm tắt học sinh vắng */}
       {viewMode !== 'bantru' && (
         <Box sx={{ mb: 2, p: 2, backgroundColor: '#f1f8e9', borderRadius: 2 }}>
-          <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-            Thông tin tóm tắt
-          </Typography>
-          <Stack direction="row" spacing={4} sx={{ pl: 2 }}>
-            <Typography variant="body2">
-              Sĩ số: <strong>{students.length}</strong>
-            </Typography>
-            <Typography variant="body2">
-              Vắng: Phép: <strong>{students.filter(s => !s.diemDanh && s.vangCoPhep === 'có phép').length}</strong>
-              &nbsp;&nbsp;
-              Không: <strong>{students.filter(s => !s.diemDanh && s.vangCoPhep === 'không phép').length}</strong>
-            </Typography>
+          <Stack direction="row" alignItems="center" justifyContent="space-between">
+            <Box>
+              <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                Thông tin tóm tắt
+              </Typography>
+              <Stack direction="row" spacing={4} sx={{ pl: 2 }}>
+                <Typography variant="body2">
+                  Sĩ số: <strong>{students.length}</strong>
+                </Typography>
+                <Typography variant="body2">
+                  Vắng: Phép: <strong>{students.filter(s => !s.diemDanh && s.vangCoPhep === 'có phép').length}</strong>
+                  &nbsp;&nbsp;
+                  Không: <strong>{students.filter(s => !s.diemDanh && s.vangCoPhep === 'không phép').length}</strong>
+                </Typography>
+              </Stack>
+            </Box>
+
+            {hasAbsent && (
+              <IconButton onClick={() => setShowAbsentList(prev => !prev)}>
+                {showAbsentList ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+              </IconButton>
+            )}
           </Stack>
 
-          <Typography variant="subtitle1" fontWeight="bold" sx={{ mt: 2 }}>
-            Danh sách học sinh vắng:
-          </Typography>
-          <Box sx={{ pl: 2 }}>
-            {students.filter(s => !s.diemDanh).length === 0 ? (
-              <Typography variant="body2">Không có học sinh vắng.</Typography>
-            ) : (
+          {hasAbsent && showAbsentList && (
+            <Box sx={{ pl: 2 }}>
+              <Typography variant="subtitle1" fontWeight="bold" sx={{ mt: 2 }}>
+                Danh sách học sinh vắng:
+              </Typography>
               <Box component="ul" sx={{ pl: 2, mt: 0.5 }}>
-                {students.filter(s => !s.diemDanh).map((s, i) => (
-                  <li key={s.id}>{s.hoVaTen || 'Không tên'} ({s.vangCoPhep === 'có phép' ? 'P' : 'K'})</li>
+                {absentStudents.map((s) => (
+                  <li key={s.id}>
+                    {s.hoVaTen || 'Không tên'} ({s.vangCoPhep === 'có phép' ? 'P' : 'K'})
+                  </li>
                 ))}
               </Box>
-            )}
-          </Box>
+            </Box>
+          )}
         </Box>
       )}
+
+
 
       {isLoading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center' }}>

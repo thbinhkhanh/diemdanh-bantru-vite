@@ -175,9 +175,10 @@ export default function TaiDanhSach({ onBack }) {
       if (!groupedByClass[lop]) groupedByClass[lop] = [];
 
       const hocSinhData = {
-        id: student.maDinhDanh,
+        maDinhDanh: student.maDinhDanh,
         hoTen: student.hoVaTen,
         stt: student.stt,
+        diemDanh: true
         //phep: false,
         //lyDo: ''
       };
@@ -214,12 +215,14 @@ export default function TaiDanhSach({ onBack }) {
         await batch.commit();
         successCount += chunkKeys.length;
       } catch (err) {
-        console.error(`❌ Lỗi khi ghi batch lớp từ ${i} đến ${i + BATCH_LIMIT}:`, err.message);
+        console.error(`❌ Lỗi khi ghi batch lớp từ ${i} đến ${i + chunkKeys.length}:`, err.message);
         errorCount += chunkKeys.length;
       }
 
-      setCurrentIndex(Math.min(i + BATCH_LIMIT, allLopKeys.length));
-      setProgress(Math.round(((i + BATCH_LIMIT) / allLopKeys.length) * 100));
+      // ✅ Tính đúng tiến trình đã xử lý
+      const processed = i + chunkKeys.length;
+      setCurrentIndex(processed);
+      setProgress(Math.min(100, Math.round((processed / allLopKeys.length) * 100)));
     }
 
     try {
