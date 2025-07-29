@@ -2,29 +2,33 @@ import React, { useState, useEffect, useRef } from "react";
 import {
   Box, Typography, TextField, Button, Stack,
   Card, Divider, Select, MenuItem, FormControl, InputLabel,
-  RadioGroup, Radio, FormControlLabel, LinearProgress, Alert, Tabs, Tab, Checkbox, FormGroup
+  RadioGroup, Radio, FormControlLabel, LinearProgress, Alert,
+  Tabs, Tab, Checkbox, FormGroup
 } from "@mui/material";
-import { doc, setDoc, getDoc, getDocs, deleteDoc, collection, writeBatch } from "firebase/firestore";
-
-import { db } from "./firebase";
-import {
-  downloadBackupAsJSON,
-  downloadBackupAsExcel
-} from "./utils/backupUtils";
-import {
-  restoreFromJSONFile,
-  restoreFromExcelFile
-} from "./utils/restoreUtils";
-import { deleteAllDateFields as handleDeleteAllUtil } from "./utils/deleteUtils";
+import LockResetIcon from "@mui/icons-material/LockReset";
 
 import Banner from "./pages/Banner";
 import { useNavigate } from "react-router-dom";
-
-// ✅ Fix lỗi thiếu icon
-import LockResetIcon from "@mui/icons-material/LockReset";
-import { deleteField } from "firebase/firestore"; // 👈 nhớ import ở đầu file
+import { db } from "./firebase";
+import { deleteField, doc, getDoc, setDoc } from "firebase/firestore";
 import { useClassData } from "./context/ClassDataContext";
 
+// 🧠 Import logic đã tách
+import { xoaDatabase } from "./utils/xoaDatabase";
+import { resetBanTru } from "./utils/resetBanTru";
+import { resetDiemDanh } from "./utils/resetDiemDanh";
+
+import {
+  downloadBackupAsJSON,
+  downloadBackupAsExcel,
+} from "./utils/backupUtils";
+import {
+  restoreFromJSONFile,
+  restoreFromExcelFile,
+} from "./utils/restoreUtils";
+
+
+// ✅ Component phụ hiển thị tiến trình
 const ResetProgressText = ({ label, progress }) => (
   <Typography variant="caption" align="center" display="block" mt={0.5}>
     {label}... {progress}%
@@ -32,104 +36,141 @@ const ResetProgressText = ({ label, progress }) => (
 );
 
 export default function Admin({ onCancel }) {
-  const [firestoreEnabled, setFirestoreEnabled] = useState(false);
-  const [passwords, setPasswords] = useState({
-    yte: "",
-    ketoan: "",
-    bgh: "",
-    admin: ""
-  });
-  const [selectedAccount, setSelectedAccount] = useState("admin");
-  const [newPassword, setNewPassword] = useState("");
-  const [backupFormat, setBackupFormat] = useState("json");
-  const [restoreProgress, setRestoreProgress] = useState(0);
-  const [alertMessage, setAlertMessage] = useState("");
-  const [alertSeverity, setAlertSeverity] = useState("success");
-  const [deleteInProgress, setDeleteInProgress] = useState(false);
-  const [deleteMessage, setDeleteMessage] = useState("");
-  const [deleteSeverity, setDeleteSeverity] = useState("info");
-  const [deleteProgress, setDeleteProgress] = useState(0);
-  const [setDefaultProgress, setSetDefaultProgress] = useState(0);
-  const [setDefaultMessage, setSetDefaultMessage] = useState("");
-  const [setDefaultSeverity, setSetDefaultSeverity] = useState("success");
-  const [tabIndex, setTabIndex] = useState(0);
-  const [selectedYear, setSelectedYear] = useState("2024-2025");
-
-  const [showBackupOptions, setShowBackupOptions] = useState(false);
-  const [showRestoreOptions, setShowRestoreOptions] = useState(false);
-  const [showDeleteOptions, setShowDeleteOptions] = useState(false);
-
-  const [resetProgress, setResetProgress] = useState(0);
-  const [resetMessage, setResetMessage] = useState("");
-  const [resetSeverity, setResetSeverity] = useState("success");
-  const [resetType, setResetType] = useState(""); // "diemdanh" | "dangky"
-
-  const [restoreTriggered, setRestoreTriggered] = useState(false);
-  const inputRef = useRef(null); 
+  const navigate = useNavigate();
+  const inputRef = useRef(null);
   const { getClassData, setClassData } = useClassData();
 
-  const [progress, setProgress] = useState(0);
-  const [deleting, setDeleting] = useState(false); 
-  const [deletingLabel, setDeletingLabel] = useState("");
-  const [deleteSuccess, setDeleteSuccess] = useState(false);
-  //const [xoaHSBanTru, setXoaHSBanTru] = useState(false);
-
-  const [selectedBackupFile, setSelectedBackupFile] = useState(null);
-  const [restoreReady, setRestoreReady] = useState(false);
-
-  const [selectedDataTypes, setSelectedDataTypes] = useState({
-    danhsach: false,
-    bantru: false,
-    diemdan: false,
-  });
-
-  const [deleteCollections, setDeleteCollections] = useState({
-    danhsach: false,
-    bantru: false,
-    diemdan: false,
-    nhatkybantru: false,
-    xoaHocSinhBanTru: false,
-  });
-
-  const handleDeleteCheckboxChange = (key) => {
-    setDeleteCollections((prev) => ({
-      ...prev,
-      [key]: !prev[key],
-    }));
-  };
-
-  const [restoreMode, setRestoreMode] = useState("all"); // "all" hoặc "check"
-  
-  const navigate = useNavigate();
-
+  // 🔧 State chung
+  const [selectedYear, setSelectedYear] = useState("2024-2025");
+  const [tabIndex, setTabIndex] = useState(0);
   const yearOptions = [
     "2024-2025", "2025-2026", "2026-2027", "2027-2028", "2028-2029"
   ];
+  const [firestoreEnabled, setFirestoreEnabled] = useState(false);
 
+  // 📦 Tài khoản
+  const [passwords, setPasswords] = useState({ yte: "", ketoan: "", bgh: "", admin: "" });
+  const [newPassword, setNewPassword] = useState("");
+  const [selectedAccount, setSelectedAccount] = useState("admin");
+
+  // 🗑️ Xóa dữ liệu
+  const [deleteCollections, setDeleteCollections] = useState({
+    danhsach: false, bantru: false, diemdan: false,
+    nhatkybantru: false, xoaHocSinhBanTru: false
+  });
+  const [showDeleteOptions, setShowDeleteOptions] = useState(false);
+  const [deleteProgress, setDeleteProgress] = useState(0);
+  const [defaultProgress, setDefaultProgress] = useState(0);
+  const [deleting, setDeleting] = useState(false);
+  const [deletingLabel, setDeletingLabel] = useState("");
+  const [deleteMessage, setDeleteMessage] = useState("");
+  const [deleteSeverity, setDeleteSeverity] = useState("info");
+  const [deleteSuccess, setDeleteSuccess] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [defaultMessage, setDefaultMessage] = useState("");
+  const [defaultSeverity, setDefaultSeverity] = useState("info");
+
+  // ♻️ Reset dữ liệu
+  const [resetProgress, setResetProgress] = useState(0);
+  const [resetMessage, setResetMessage] = useState("");
+  const [resetSeverity, setResetSeverity] = useState("info");
+  const [resetType, setResetType] = useState("");
+
+  // 💾 Sao lưu/phục hồi
+  const [backupFormat, setBackupFormat] = useState("json");
+  const [selectedDataTypes, setSelectedDataTypes] = useState({
+    danhsach: false, bantru: false, diemdan: false, nhatky: false
+  });
+  const [selectedBackupFile, setSelectedBackupFile] = useState(null);
+  const [showBackupOptions, setShowBackupOptions] = useState(false);
+  const [showRestoreOptions, setShowRestoreOptions] = useState(false);
+  const [restoreMode, setRestoreMode] = useState("all");
+  const [restoreProgress, setRestoreProgress] = useState(0);
+  const [alertMessage, setAlertMessage] = useState("");
+  const [alertSeverity, setAlertSeverity] = useState("info");
+
+  // 🛠️ Xử lý form chọn
+  const handleDeleteCheckboxChange = (key) => {
+    setDeleteCollections((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
   const handleCheckboxChange = (key) => {
-    setSelectedDataTypes((prev) => ({
-      ...prev,
-      [key]: !prev[key],
-    }));
+    setSelectedDataTypes((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  useEffect(() => {
-    if (restoreTriggered && inputRef.current) {
-      inputRef.current.click();
-      setRestoreTriggered(false);
-    }
-  }, [restoreTriggered]);
+  // 🔁 Xử lý logic gọi hàm tách riêng
+  const handlePerformDelete = async () => {
+    await xoaDatabase({
+      selectedYear,
+      deleteCollections,
+      setDeleting,
+      setProgress,
+      setDeletingLabel,
+      setDeleteMessage,
+      setDeleteSeverity,
+      setDeleteSuccess,
+      setShowDeleteOptions,
+      setDeleteCollections,
+    });
+  };
 
+  const handleResetDangKyBanTru = async () => {
+    await resetBanTru({
+      setResetProgress,
+      setResetMessage,
+      setResetSeverity,
+      setResetType,
+      setClassData,
+      getClassData,
+    });
+  };
+
+  const handleResetDiemDanh = async () => {
+    await resetDiemDanh({
+      setResetProgress,
+      setResetMessage,
+      setResetSeverity,
+      setResetType,
+    });
+  };
+
+  const handleBackupData = () => {
+    const isEmpty = Object.values(selectedDataTypes).every((v) => !v);
+    if (isEmpty) return alert("⚠️ Vui lòng chọn ít nhất một loại dữ liệu để sao lưu.");
+    backupFormat === "json"
+      ? downloadBackupAsJSON(selectedDataTypes)
+      : downloadBackupAsExcel(selectedDataTypes);
+    setShowBackupOptions(false);
+  };
+
+  const handleRestoreData = () => {
+    const isEmpty = Object.values(selectedDataTypes).every((v) => !v);
+    if (isEmpty) return alert("⚠️ Vui lòng chọn ít nhất một loại dữ liệu để phục hồi.");
+    if (!selectedBackupFile) return alert("❌ Chưa chọn file phục hồi.");
+
+    const restoreFn = backupFormat === "json" ? restoreFromJSONFile : restoreFromExcelFile;
+    restoreFn(
+      selectedBackupFile, setRestoreProgress, setAlertMessage,
+      setAlertSeverity, selectedDataTypes, restoreMode
+    );
+
+    setShowRestoreOptions(false);
+    setSelectedBackupFile(null);
+  };
+
+  // 🧠 Tải cấu hình ban đầu
   useEffect(() => {
-    const fetchSettings = async () => {
+    const fetchConfig = async () => {
       try {
         const accounts = ["admin", "yte", "ketoan", "bgh"];
-        const newPasswords = {};
+        const passwords = {};
         for (const acc of accounts) {
           const snap = await getDoc(doc(db, "ACCOUNT", acc.toUpperCase()));
-          newPasswords[acc] = snap.exists() ? snap.data().password || "" : "";
+          passwords[acc] = snap.exists() ? snap.data().password || "" : "";
         }
-        setPasswords(newPasswords);
+        setPasswords(passwords);
+
+        const yearSnap = await getDoc(doc(db, "YEAR", "NAMHOC"));
+        if (yearSnap.exists()) setSelectedYear(yearSnap.data().value || "2024-2025");
 
         const toggleSnap = await getDoc(doc(db, "SETTINGS", "TAIDULIEU"));
         if (toggleSnap.exists()) setFirestoreEnabled(toggleSnap.data().theokhoi);
@@ -137,408 +178,31 @@ export default function Admin({ onCancel }) {
         console.error("❌ Lỗi khi tải cấu hình:", error);
       }
     };
-
-    const fetchYear = async () => {
-      try {
-        const yearSnap = await getDoc(doc(db, "YEAR", "NAMHOC"));
-        if (yearSnap.exists()) {
-          const firestoreYear = yearSnap.data().value;
-          if (firestoreYear) setSelectedYear(firestoreYear);
-        }
-      } catch (error) {
-        console.error("❌ Lỗi khi lấy năm học từ Firestore:", error);
-      }
-    };
-
-    fetchSettings();
-    fetchYear();
+    fetchConfig();
   }, []);
 
+  // ⌛ Tiện ích phụ
   useEffect(() => {
-    if (restoreProgress === 100) {
-      const timer = setTimeout(() => setRestoreProgress(0), 3000);
-      return () => clearTimeout(timer);
-    }
+    if (restoreProgress === 100) setTimeout(() => setRestoreProgress(0), 3000);
   }, [restoreProgress]);
 
   const handleYearChange = async (newYear) => {
     setSelectedYear(newYear);
-    try {
-      await setDoc(doc(db, "YEAR", "NAMHOC"), { value: newYear });
-    } catch (error) {
-      console.error("❌ Lỗi khi ghi năm học vào Firestore:", error);
-      alert("Không thể cập nhật năm học!");
-    }
+    await setDoc(doc(db, "YEAR", "NAMHOC"), { value: newYear });
   };
 
   const handleToggleChange = async (e) => {
     const newValue = e.target.value === "khoi";
     setFirestoreEnabled(newValue);
-    try {
-      await setDoc(doc(db, "SETTINGS", "TAIDULIEU"), { theokhoi: newValue });
-    } catch (error) {
-      alert("❌ Không thể cập nhật chế độ Firestore!");
-    }
+    await setDoc(doc(db, "SETTINGS", "TAIDULIEU"), { theokhoi: newValue });
   };
 
   const handleChangePassword = async (type) => {
-    if (!newPassword.trim()) {
-      alert("⚠️ Vui lòng nhập mật khẩu mới!");
-      return;
-    }
-
-    const accountDisplayNames = {
-      yte: "Y tế", ketoan: "Kế toán", bgh: "BGH", admin: "Admin"
-    };
-
-    try {
-      await setDoc(
-        doc(db, "ACCOUNT", type.toUpperCase()),
-        { password: newPassword },
-        { merge: true }
-      );
-      setPasswords((prev) => ({ ...prev, [type]: newPassword }));
-      alert(`✅ Đã đổi mật khẩu cho tài khoản ${accountDisplayNames[type] || type}!`);
-      setNewPassword("");
-    } catch {
-      alert("❌ Không thể đổi mật khẩu!");
-    }
-  };
-
-  const handleCreateAccounts = async () => {
-    try {
-      const ref = doc(db, `DANHSACH_${selectedYear}`, "TRUONG");
-      const snap = await getDoc(ref);
-      if (!snap.exists()) {
-        alert("❌ Không tìm thấy dữ liệu TRUONG!");
-        return;
-      }
-
-      const list = snap.data().list;
-      if (!Array.isArray(list)) {
-        alert("❌ Danh sách lớp không hợp lệ!");
-        return;
-      }
-
-      const created = [];
-      for (const lop of list) {
-        await setDoc(doc(db, "ACCOUNT", lop), { password: "123456" });
-        created.push(lop);
-      }
-
-      alert(`✅ Đã tạo ${created.length} tài khoản lớp: ${created.join(", ")}`);
-    } catch (error) {
-      console.error("❌ Lỗi khi tạo tài khoản:", error.message);
-      alert("❌ Không thể tạo tài khoản lớp!");
-    }
-  };
-
-  const handleDeleteAll = async () => {
-    const confirmed = window.confirm(`⚠️ Bạn có chắc chắn muốn xóa tất cả dữ liệu bán trú của năm ${selectedYear}?`);
-    if (!confirmed) return;
-
-    await handleDeleteAllUtil({
-      setDeleteInProgress,
-      setDeleteProgress,
-      setDeleteMessage,
-      setDeleteSeverity,
-      namHocValue: selectedYear,
-    });
-  };
-
-  const handleResetDangKyBanTru = async () => {
-    const confirmed = window.confirm("⚠️ Bạn có chắc chắn muốn reset điểm danh bán trú?");
-    if (!confirmed) return;
-
-    try {
-      setResetProgress(0);
-      setResetMessage("");
-      setResetSeverity("info");
-      setResetType("dangky");
-
-      const namHocDoc = await getDoc(doc(db, "YEAR", "NAMHOC"));
-      const namHocValue = namHocDoc.exists() ? namHocDoc.data().value : null;
-      if (!namHocValue) {
-        setResetMessage("❌ Không tìm thấy năm học!");
-        setResetSeverity("error");
-        return;
-      }
-
-      const colName = `DANHSACH_${namHocValue}`;
-      const snapshot = await getDocs(collection(db, colName));
-
-      const total = snapshot.docs.length;
-      let completed = 0;
-      let count = 0;
-
-      const batch = writeBatch(db);
-
-      for (const docSnap of snapshot.docs) {
-        const data = docSnap.data();
-        if (data.diemDanhBanTru === false) {
-          batch.set(doc(db, colName, docSnap.id), { diemDanhBanTru: true }, { merge: true });
-          count++;
-        }
-        completed++;
-        setResetProgress(Math.round((completed / total) * 100));
-      }
-
-      await batch.commit(); // ✅ Ghi toàn bộ trong một lần duy nhất
-
-      // 🔁 Cập nhật lại dữ liệu context classData nếu có
-      const currentClassData = getClassData() || {};
-      const updatedClassData = {};
-
-      Object.entries(currentClassData).forEach(([classId, studentList]) => {
-        updatedClassData[classId] = studentList.map((s) => ({
-          ...s,
-          diemDanhBanTru: s.diemDanhBanTru === false ? true : s.diemDanhBanTru
-        }));
-      });
-
-      setClassData(updatedClassData);
-
-      setResetMessage(`✅ Đã reset xong bán trú (${count} học sinh).`);
-      setResetSeverity("success");
-    } catch (err) {
-      console.error("❌ Lỗi khi reset điểm danh bán trú:", err);
-      setResetMessage("❌ Có lỗi xảy ra khi cập nhật.");
-      setResetSeverity("error");
-    } finally {
-      setTimeout(() => setResetProgress(0), 3000);
-    }
-  };
-
-  const handleResetDiemDanh = async () => {
-    const confirmed = window.confirm("⚠️ Bạn có chắc chắn muốn reset điểm danh?");
-    if (!confirmed) return;
-
-    try {
-      setResetProgress(0);
-      setResetMessage("");
-      setResetSeverity("info");
-      setResetType("diemdanh");
-
-      const namHocDoc = await getDoc(doc(db, "YEAR", "NAMHOC"));
-      const namHocValue = namHocDoc.exists() ? namHocDoc.data().value : null;
-      if (!namHocValue) {
-        setResetMessage("❌ Không tìm thấy năm học!");
-        setResetSeverity("error");
-        return;
-      }
-
-      const colName = `DANHSACH_${namHocValue}`;
-      const snapshot = await getDocs(collection(db, colName));
-
-      const total = snapshot.docs.length;
-      let completed = 0;
-      let count = 0;
-
-      const batch = writeBatch(db);
-
-      for (const docSnap of snapshot.docs) {
-        const data = docSnap.data();
-        const updates = {};
-
-        if (data.vang !== "") {
-          updates.vang = "";
-        }
-
-        if (data.lyDo !== "") {
-          updates.lyDo = "";
-        }
-
-        if (typeof data.phep === "boolean" || data.phep === null) {
-          updates.phep = deleteField();
-        }
-
-        if (Object.keys(updates).length > 0) {
-          batch.set(doc(db, colName, docSnap.id), updates, { merge: true });
-          count++;
-        }
-
-        completed++;
-        setResetProgress(Math.round((completed / total) * 100));
-      }
-
-      await batch.commit(); // ✅ Ghi tất cả trong một lần duy nhất
-
-      setResetMessage(`✅ Đã reset xong điểm danh (${count} học sinh).`);
-      setResetSeverity("success");
-    } catch (err) {
-      console.error("❌ Lỗi khi reset điểm danh:", err);
-      setResetMessage("❌ Có lỗi xảy ra khi cập nhật.");
-      setResetSeverity("error");
-    } finally {
-      setTimeout(() => setResetProgress(0), 3000);
-    }
-  };
-
-  const handlePerformDelete = async () => {
-    const namHocValue = selectedYear;
-    const { danhsach, bantru, diemdan, nhatkybantru, xoaHocSinhBanTru } = deleteCollections;
-
-    if (!danhsach && !bantru && !diemdan && !nhatkybantru && !xoaHocSinhBanTru) {
-      alert("⚠️ Vui lòng chọn ít nhất một loại dữ liệu để xóa.");
-      return;
-    }
-
-    const confirmed = window.confirm("⚠️ Bạn có chắc chắn muốn xóa dữ liệu đã chọn?");
-    if (!confirmed) return;
-
-    try {
-      setDeleting(true);
-      setProgress(0);
-
-      let totalDeletedCount = 0;
-
-      if (danhsach) {
-        setDeletingLabel("Đang xóa danh sách...");
-        const snap = await getDocs(collection(db, `DANHSACH_${namHocValue}`));
-        const total = snap.docs.length;
-        for (let i = 0; i < total; i++) {
-          await deleteDoc(snap.docs[i].ref);
-          totalDeletedCount++;
-          setProgress(Math.round(((i + 1) / total) * 100));
-        }
-      }
-
-      if (diemdan) {
-        setDeletingLabel("Đang xóa điểm danh...");
-        const snap = await getDocs(collection(db, `DIEMDANH_${namHocValue}`));
-        const total = snap.docs.length;
-        for (let i = 0; i < total; i++) {
-          await deleteDoc(snap.docs[i].ref);
-          totalDeletedCount++;
-          setProgress(Math.round(((i + 1) / total) * 100));
-        }
-      }
-
-      if (bantru) {
-        setDeletingLabel("Đang xóa bán trú...");
-        const snap = await getDocs(collection(db, `BANTRU_${namHocValue}`));
-        const total = snap.docs.length;
-        for (let i = 0; i < total; i++) {
-          await deleteDoc(snap.docs[i].ref);
-          totalDeletedCount++;
-          setProgress(Math.round(((i + 1) / total) * 100));
-        }
-      }
-
-      if (nhatkybantru) {
-        setDeletingLabel("Đang xóa nhật ký bán trú...");
-        const snap = await getDocs(collection(db, `NHATKYBANTRU_${namHocValue}`));
-        const total = snap.docs.length;
-        for (let i = 0; i < total; i++) {
-          await deleteDoc(snap.docs[i].ref);
-          totalDeletedCount++;
-          setProgress(Math.round(((i + 1) / total) * 100));
-        }
-      }
-
-      // ✅ Thêm logic xóa field của học sinh bán trú
-      if (xoaHocSinhBanTru) {
-        setDeletingLabel("Đang xử lý học sinh bán trú...");
-        try {
-          const danhSachRef = collection(db, `DANHSACH_${namHocValue}`);
-          const banTruRef = collection(db, `BANTRU_${namHocValue}`);
-
-          const [danhSachSnap, banTruSnap] = await Promise.all([
-            getDocs(danhSachRef),
-            getDocs(banTruRef),
-          ]);
-
-          const hocSinhCanKiemTra = [];
-          danhSachSnap.forEach((docSnap) => {
-            const data = docSnap.data();
-            if (data.dangKyBanTru === false) {
-              hocSinhCanKiemTra.push({
-                id: docSnap.id,
-                ref: docSnap.ref,
-                hoTen: data.hoVaTen || "(Không có tên)",
-              });
-            }
-          });
-
-          const banTruIDs = new Set(banTruSnap.docs.map((doc) => doc.id));
-
-          const batch = writeBatch(db);
-          let count = 0;
-          const tenHocSinhDaXoa = [];
-
-          hocSinhCanKiemTra.forEach(({ id, ref, hoTen }) => {
-            if (!banTruIDs.has(id)) {
-              batch.update(ref, {
-                dangKyBanTru: deleteField(),
-                diemDanhBanTru: deleteField(),
-              });
-              count++;
-              totalDeletedCount++;
-              tenHocSinhDaXoa.push(hoTen);
-            }
-          });
-
-          await batch.commit();
-
-          setDeleteMessage(`✅ Đã xoá field 'dangKyBanTru' và 'diemDanhBanTru' của ${count} học sinh.`);
-          setDeleteSeverity("success");
-
-        } catch (err) {
-          console.error("❌ Lỗi khi xử lý học sinh bán trú:", err);
-          setDeleteMessage("❌ Lỗi khi xoá field học sinh bán trú.");
-          setDeleteSeverity("error");
-        }
-      }
-
-      if (totalDeletedCount === 0) {
-        setDeleteMessage("ℹ️ Không phát hiện dòng dữ liệu nào để xóa.");
-        setDeleteSeverity("info");
-      } else {
-        setDeleteMessage(`✅ Đã xóa xong dữ liệu (${totalDeletedCount} dòng).`);
-        setDeleteSeverity("success");
-      }
-      setDeleteSeverity("success");
-      setDeleteSuccess(true);
-      setDeleteCollections({
-        danhsach: false,
-        bantru: false,
-        diemdan: false,
-        nhatkybantru: false,
-        xoaHocSinhBanTru: false,
-      });
-      setShowDeleteOptions(false);
-    } catch (err) {
-      console.error("❌ Lỗi khi xóa dữ liệu:", err);
-      setDeleteMessage("❌ Có lỗi xảy ra khi xóa.");
-      setDeleteSeverity("error");
-      setDeleteSuccess(false);
-    } finally {
-      setTimeout(() => {
-        setDeleting(false);
-        setDeletingLabel("");
-        setProgress(0);
-        setDeleteSuccess(false);
-      }, 1500);
-    }
-  };
-
-  const handleInitNewYearData = async () => {
-    const confirmed = window.confirm(`⚠️ Bạn có chắc muốn khởi tạo dữ liệu cho năm ${selectedYear}?`);
-    if (!confirmed) return;
-
-    const danhSachDocs = ["K1", "K2", "K3", "K4", "K5", "TRUONG"];
-
-    try {
-      for (const docName of danhSachDocs) {
-        await setDoc(doc(db, `DANHSACH_${selectedYear}`, docName), { list: "" });
-      }
-
-      await setDoc(doc(db, `BANTRU_${selectedYear}`, "init"), { temp: "" });
-      alert(`✅ Đã khởi tạo dữ liệu cho năm học ${selectedYear}`);
-    } catch (err) {
-      console.error("❌ Lỗi khi khởi tạo dữ liệu:", err);
-      alert("❌ Không thể khởi tạo dữ liệu năm mới!");
-    }
+    if (!newPassword.trim()) return alert("⚠️ Vui lòng nhập mật khẩu mới!");
+    await setDoc(doc(db, "ACCOUNT", type.toUpperCase()), { password: newPassword }, { merge: true });
+    setPasswords((prev) => ({ ...prev, [type]: newPassword }));
+    alert(`✅ Đã đổi mật khẩu cho ${type.toUpperCase()}!`);
+    setNewPassword("");
   };
 
   return (
@@ -650,7 +314,7 @@ export default function Admin({ onCancel }) {
                   onClick={() => {
                     setShowBackupOptions(true);
                     setShowRestoreOptions(false);
-                    setSelectedDataTypes({ danhsach: false, bantru: false, diemdan: false });
+                    setSelectedDataTypes({ danhsach: false, bantru: false, diemdan: false, nhatky: false });
                   }}
                 >
                   📥 Sao lưu dữ liệu
@@ -663,7 +327,7 @@ export default function Admin({ onCancel }) {
                   variant="contained"
                   color="secondary"
                   onClick={() => {
-                    setSelectedDataTypes({ danhsach: false, bantru: false, diemdan: false });
+                    setSelectedDataTypes({ danhsach: false, bantru: false, diemdan: false, nhatky: false });
                     setSelectedBackupFile(null);
                     if (inputRef.current) {
                       inputRef.current.value = "";
@@ -692,6 +356,10 @@ export default function Admin({ onCancel }) {
                       control={<Checkbox checked={selectedDataTypes.diemdan} onChange={() => handleCheckboxChange("diemdan")} />}
                       label="Điểm danh"
                     />
+                    <FormControlLabel
+                      control={<Checkbox checked={selectedDataTypes.nhatky} onChange={() => handleCheckboxChange("nhatky")} />}
+                      label="Nhật ký"
+                    />
                   </Stack>
 
                   {/* Radio chọn định dạng */}
@@ -718,7 +386,8 @@ export default function Admin({ onCancel }) {
                         const isEmpty =
                           !selectedDataTypes.danhsach &&
                           !selectedDataTypes.bantru &&
-                          !selectedDataTypes.diemdan;
+                          !selectedDataTypes.diemdan &&
+                          !selectedDataTypes.nhatky;
 
                         if (isEmpty) {
                           alert("⚠️ Vui lòng chọn ít nhất một loại dữ liệu để sao lưu.");
@@ -744,7 +413,7 @@ export default function Admin({ onCancel }) {
                       sx={{ width: "50%" }}
                       onClick={() => {
                         setShowBackupOptions(false);
-                        setSelectedDataTypes({ danhsach: false, bantru: false, diemdan: false });
+                        setSelectedDataTypes({ danhsach: false, bantru: false, diemdan: false, nhatky: false });
                       }}
                     >
                       ❌ Hủy
@@ -792,7 +461,12 @@ export default function Admin({ onCancel }) {
                       control={<Checkbox checked={selectedDataTypes.diemdan} onChange={() => handleCheckboxChange("diemdan")} />}
                       label="Điểm danh"
                     />
+                    <FormControlLabel
+                      control={<Checkbox checked={selectedDataTypes.nhatky} onChange={() => handleCheckboxChange("nhatky")} />}
+                      label="Nhật ký"
+                    />
                   </Stack>
+                  
 
                   <FormControl component="fieldset" sx={{ mt: 2 }}>
                     <Typography variant="subtitle2" fontWeight="bold">Chọn định dạng:</Typography>
@@ -829,7 +503,8 @@ export default function Admin({ onCancel }) {
                         const isEmpty =
                           !selectedDataTypes.danhsach &&
                           !selectedDataTypes.bantru &&
-                          !selectedDataTypes.diemdan;
+                          !selectedDataTypes.diemdan &&
+                          !selectedDataTypes.nhatky;
 
                         if (isEmpty) {
                           alert("⚠️ Vui lòng chọn ít nhất một loại dữ liệu để phục hồi.");
@@ -876,7 +551,8 @@ export default function Admin({ onCancel }) {
                       onClick={() => {
                         setShowRestoreOptions(false);
                         setSelectedBackupFile(null);
-                        setSelectedDataTypes({ danhsach: false, bantru: false, diemdan: false });
+                        //setSelectedDataTypes({ danhsach: false, bantru: false, diemdan: false });
+                        setSelectedDataTypes({ danhsach: false, bantru: false, diemdan: false, nhatky: false });
                       }}
                     >
                       ❌ Hủy
@@ -1032,17 +708,17 @@ export default function Admin({ onCancel }) {
               )}
 
               {/* ✅ Tiến trình cho hành động xóa & reset legacy */}
-              {(deleteProgress > 0 || setDefaultProgress > 0) && (
+              {(deleteProgress > 0 || defaultProgress > 0) && (
                 <Box sx={{ mt: 2 }}>
                   <LinearProgress
                     variant="determinate"
-                    value={deleteProgress || setDefaultProgress}
+                    value={deleteProgress || defaultProgress}
                     sx={{ height: 10, borderRadius: 5 }}
                   />
                   <Typography variant="caption" align="center" display="block" mt={0.5}>
                     {deleteProgress > 0
                       ? `Đang xóa dữ liệu bán trú... ${deleteProgress}%`
-                      : `Đang reset legacy... ${setDefaultProgress}%`}
+                      : `Đang reset legacy... ${defaultProgress}%`}
                   </Typography>
                 </Box>
               )}
@@ -1073,9 +749,12 @@ export default function Admin({ onCancel }) {
                 </Alert>
               )}
 
-              {setDefaultMessage && (
-                <Alert severity={setDefaultSeverity} onClose={() => setSetDefaultMessage("")}>
-                  {setDefaultMessage}
+              {defaultMessage && (
+                <Alert
+                  severity={["info", "success", "error", "warning"].includes(defaultSeverity) ? defaultSeverity : "info"}
+                  onClose={() => setDefaultMessage("")}
+                >
+                  {defaultMessage}
                 </Alert>
               )}
 
