@@ -88,30 +88,44 @@ export default function ThongKeNam({ onBack }) {
         let rawData = getClassData(key);
 
         if (!rawData || rawData.length === 0) {
-          const danhSachSnap = await getDocs(query(
-            collection(db, `DANHSACH_${namHocValue}`),
-            where("lop", "==", selectedClass)
-          ));
-          const danhSachData = danhSachSnap.docs.map(d => d.data());
+          // 📄 Truy xuất document theo tên lớp (document ID = selectedClass)
+          const docRef = doc(db, `DANHSACH_${namHocValue}`, selectedClass);
+          const docSnap = await getDoc(docRef);
+
+          const danhSachData = [];
+
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+
+            Object.entries(data).forEach(([fieldName, value]) => {
+              if (Array.isArray(value)) {
+                value.forEach(hs => {
+                  if (hs && typeof hs === "object") {
+                    danhSachData.push({
+                      ...hs,
+                      id: hs.maDinhDanh || `${selectedClass}_${fieldName}_${Math.random().toString(36).slice(2)}`,
+                      lop: selectedClass
+                    });
+                  }
+                });
+              }
+            });
+          }
 
           const selectedDateStr = selectedDate.toISOString().split("T")[0];
           const enriched = enrichStudents(danhSachData, selectedDateStr, selectedClass, true);
-          //setClassData(key, enriched);
           rawData = enriched;
-          //console.log(`✨ Enriched ${enriched.length} học sinh từ DANHSACH_${namHocValue}`);
-        } else {
-          //console.log(`📦 Dữ liệu lớp ${key} đã có sẵn trong context`);
+          //setClassData(key, enriched);
         }
 
-        // ✅ Lấy toàn bộ dữ liệu bán trú theo cấu trúc mới
+        // 📦 Lấy toàn bộ dữ liệu bán trú
         const banTruSnap = await getDocs(collection(db, `BANTRU_${namHocValue}`));
         const banTruData = banTruSnap.docs.map(doc => ({
-          id: doc.id, // "2025-07-15"
+          id: doc.id,
           danhSachAn: doc.data().danhSachAn || []
         }));
 
-        //console.log("📦 Tổng số bản ghi BANTRU:", banTruData.length);
-
+        // 🧠 Tính tổng số lượt ăn theo tháng
         const studentMap = {};
         banTruData.forEach(doc => {
           const dateObj = new Date(doc.id);
@@ -139,9 +153,8 @@ export default function ThongKeNam({ onBack }) {
           });
         });
 
-        //console.log("📊 studentMap thống kê:", studentMap);
-        //const filteredRawData = rawData.filter(hs => hs.dangKyBanTru === true);
-        const filteredRawData = rawData.filter(hs => 'dangKyBanTru' in hs);
+        // 🎯 Kết hợp thông tin thống kê vào từng học sinh
+        const filteredRawData = rawData.filter(hs => "dangKyBanTru" in hs);
         const students = filteredRawData.map((hs, index) => {
           const ma = hs.maDinhDanh?.trim().replace(`${selectedClass}-`, "");
           const summary = studentMap[ma] || {};

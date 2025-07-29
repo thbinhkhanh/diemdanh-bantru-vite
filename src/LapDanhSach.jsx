@@ -96,7 +96,7 @@ export default function LapDanhSach({ onBack }) {
       try {
         const cached = getClassData(selectedClass);
         if (cached && cached.length > 0) {
-          const sortedCached = MySort(cached); // 👉 thêm dòng này để sắp xếp
+          const sortedCached = MySort(cached);
           const transformedCached = sortedCached.map((s, index) => {
             const isRegistered = s.dangKyBanTru === true;
             return {
@@ -112,14 +112,31 @@ export default function LapDanhSach({ onBack }) {
           return;
         }
 
-        const snapshot = await getDocs(collection(db, `DANHSACH_${namHocValue}`));
-        const rawStudents = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
+        // 🔄 Truy xuất document của lớp được chọn
+        const docRef = doc(db, `DANHSACH_${namHocValue}`, selectedClass);
+        const docSnap = await getDoc(docRef);
 
-        const studentsOfClass = rawStudents.filter(s => s.lop === selectedClass);
-        const enriched = enrichStudents(studentsOfClass, null, selectedClass, true);
+        const danhSachData = [];
+
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+
+          Object.entries(data).forEach(([field, value]) => {
+            if (Array.isArray(value)) {
+              value.forEach(hs => {
+                if (hs && typeof hs === "object") {
+                  danhSachData.push({
+                    ...hs,
+                    id: hs.maDinhDanh || hs.id || hs.uid || `missing-${Math.random().toString(36).substring(2)}`,
+                    lop: selectedClass
+                  });
+                }
+              });
+            }
+          });
+        }
+
+        const enriched = enrichStudents(danhSachData, null, selectedClass, true);
 
         const enrichedStudents = MySort(enriched).map((s, index) => {
           const isRegistered = s.dangKyBanTru === true;
@@ -130,7 +147,6 @@ export default function LapDanhSach({ onBack }) {
             originalRegistered: isRegistered,
           };
         });
-
 
         setClassData(selectedClass, enrichedStudents);
         setFilteredStudents(enrichedStudents);

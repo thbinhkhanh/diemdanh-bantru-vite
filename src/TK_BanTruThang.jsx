@@ -125,69 +125,82 @@ export default function ThongKeThang({ onBack }) {
 
   // Load học sinh khi selectedClass hoặc selectedDate thay đổi
   useEffect(() => {
-    if (!selectedClass || !selectedDate) return;
+  if (!selectedClass || !selectedDate) return;
 
-    const fetchStudents = async () => {
-      setIsLoading(true);
-      try {
-        const namHocDoc = await getDoc(doc(db, "YEAR", "NAMHOC"));
-        const namHocValue = namHocDoc.exists() ? namHocDoc.data().value : null;
-        if (!namHocValue) {
-          setIsLoading(false);
-          console.error("❌ Không tìm thấy năm học!");
-          return;
-        }
-
-        let rawData = getClassData(selectedClass);
-        if (!rawData || rawData.length === 0) {
-          // Nếu chưa có dữ liệu trong context thì tải từ Firestore
-          const danhSachSnap = await getDocs(query(
-            collection(db, `DANHSACH_${namHocValue}`),
-            where("lop", "==", selectedClass)
-          ));
-
-          const danhSachData = danhSachSnap.docs.map(d => d.data());
-
-          // ✅ enrich dữ liệu
-          const selectedDateStr = format(selectedDate, "yyyy-MM-dd");
-          const enriched = enrichStudents(danhSachData, selectedDateStr, selectedClass, true);
-
-          // ✅ lưu enriched vào context
-          //setClassData(selectedClass, enriched);
-
-          // ✅ sử dụng enriched
-          rawData = enriched;
-        }
-
-        // Lấy dữ liệu bán trú
-        const banTruSnap = await getDocs(collection(db, `BANTRU_${namHocValue}`));
-        const banTruData = banTruSnap.docs.map(doc => {
-          const id = doc.id;
-          const danhSachAn = doc.data().danhSachAn || [];
-          //console.log(`📅 Ngày ${id}:`, danhSachAn);
-          return { id, danhSachAn };
-        });
-        //console.log("📦 Tổng số ngày trong BANTRU:", banTruData.length);
-
-        // Xử lý và set dataList
-        processStudentData(rawData, banTruData, selectedClass, selectedDate);
-
-        // Tạo danh sách ngày của tháng
-        const year = selectedDate.getFullYear();
-        const month = selectedDate.getMonth();
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
-        const fullDays = Array.from({ length: daysInMonth }, (_, i) => i + 1);
-        setDaySet(fullDays);
-
-      } catch (err) {
-        console.error("❌ Lỗi khi tải dữ liệu:", err);
-      } finally {
+  const fetchStudents = async () => {
+    setIsLoading(true);
+    try {
+      // 📦 Lấy năm học hiện tại
+      const namHocDoc = await getDoc(doc(db, "YEAR", "NAMHOC"));
+      const namHocValue = namHocDoc.exists() ? namHocDoc.data().value : null;
+      if (!namHocValue) {
         setIsLoading(false);
+        console.error("❌ Không tìm thấy năm học!");
+        return;
       }
-    };
 
-    fetchStudents();
-  }, [selectedClass, selectedDate, getClassData, setClassData]);
+      let rawData = getClassData(selectedClass);
+      if (!rawData || rawData.length === 0) {
+        // 🔍 Truy xuất document ứng với lớp (document ID = selectedClass)
+        const docRef = doc(db, `DANHSACH_${namHocValue}`, selectedClass);
+        const docSnap = await getDoc(docRef);
+
+        const danhSachData = [];
+
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+
+          Object.entries(data).forEach(([key, value]) => {
+            if (Array.isArray(value)) {
+              value.forEach(hs => {
+                if (hs && typeof hs === "object") {
+                  danhSachData.push({
+                    ...hs,
+                    id: hs.maDinhDanh || `${selectedClass}_${key}_${Math.random().toString(36).slice(2)}`,
+                    lop: selectedClass
+                  });
+                }
+              });
+            }
+          });
+        }
+
+        // ✅ enrich dữ liệu theo ngày được chọn
+        const selectedDateStr = format(selectedDate, "yyyy-MM-dd");
+        const enriched = enrichStudents(danhSachData, selectedDateStr, selectedClass, true);
+
+        // ✅ lưu enriched vào context nếu muốn
+        //setClassData(selectedClass, enriched);
+
+        rawData = enriched;
+      }
+
+      // 📦 Lấy toàn bộ dữ liệu bán trú
+      const banTruSnap = await getDocs(collection(db, `BANTRU_${namHocValue}`));
+      const banTruData = banTruSnap.docs.map(doc => ({
+        id: doc.id,
+        danhSachAn: doc.data().danhSachAn || []
+      }));
+
+      // 📊 Xử lý và render dữ liệu
+      processStudentData(rawData, banTruData, selectedClass, selectedDate);
+
+      // 📅 Tạo danh sách ngày của tháng
+      const year = selectedDate.getFullYear();
+      const month = selectedDate.getMonth();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const fullDays = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+      setDaySet(fullDays);
+
+    } catch (err) {
+      console.error("❌ Lỗi khi tải dữ liệu:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  fetchStudents();
+}, [selectedClass, selectedDate, getClassData, setClassData]);
 
   const headCellStyle = {
     fontWeight: "bold",

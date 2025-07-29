@@ -102,18 +102,44 @@ export default function DieuChinhSuatAn({ onBack }) {
       const selectedDateStr = adjustedDate.toISOString().split("T")[0];
 
       let students = [];
+
       if (cached && cached.length > 0) {
         students = cached;
       } else {
-        const q = query(collection(db, `DANHSACH_${nhValue}`), where("lop", "==", className));
-        const snapshot = await getDocs(q);
-        const rawStudents = snapshot.docs.map(docSnap => ({
-          id: docSnap.id,
-          ...docSnap.data(),
-        }));
-        students = enrichStudents(rawStudents, selectedDateStr, className, true);
-      }
+        const docRef = doc(db, `DANHSACH_${nhValue}`, className);
+        const docSnap = await getDoc(docRef);
 
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          const rawStudents = [];
+
+          // Duyệt từng field trong document
+          Object.entries(data).forEach(([key, value]) => {
+            if (Array.isArray(value)) {
+              console.log(`📚 Duyệt danh sách học sinh trong field: ${key}`);
+
+              value.forEach(hs => {
+                if (hs && typeof hs === 'object') {
+                  // Bạn có thể thêm điều kiện lọc học sinh ở đây nếu cần
+                  rawStudents.push({
+                    ...hs,
+                    id: hs.maDinhDanh || `${className}_${key}_${Math.random().toString(36).slice(2)}` // fallback id
+                  });
+                } else {
+                  console.log("⚠️ Phần tử không hợp lệ:", hs);
+                }
+              });
+            } else {
+              console.log(`⏭️ Field ${key} không phải mảng học sinh`);
+            }
+          });
+
+          students = enrichStudents(rawStudents, selectedDateStr, className, true);
+        } else {
+          console.warn("⚠️ Không tìm thấy lớp:", className);
+          students = [];
+        }
+      }
       const banTruDocRef = doc(db, `BANTRU_${nhValue}`, selectedDateStr);
       const banTruSnap = await getDoc(banTruDocRef);
       let banTruList = [];

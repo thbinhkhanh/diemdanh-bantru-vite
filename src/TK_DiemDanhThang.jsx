@@ -144,7 +144,9 @@ export default function DiemDanhThang({ onBack }) {
 
     const fetchStudents = async () => {
       setIsLoading(true);
+
       try {
+        // 🎓 Lấy năm học hiện tại
         const namHocDoc = await getDoc(doc(db, "YEAR", "NAMHOC"));
         const namHocValue = namHocDoc.exists() ? namHocDoc.data().value : null;
         if (!namHocValue) {
@@ -152,33 +154,59 @@ export default function DiemDanhThang({ onBack }) {
           return;
         }
 
+        // 📦 Lấy dữ liệu từ context nếu đã có
         let rawData = getClassData(selectedClass);
-        if (!Array.isArray(rawData) || rawData.length === 0) {
-          const danhSachSnap = await getDocs(query(
-            collection(db, `DANHSACH_${namHocValue}`),
-            where("lop", "==", selectedClass)
-          ));
-          const danhSachData = danhSachSnap.docs.map(d => d.data());
+        const isValid = Array.isArray(rawData) && rawData.length > 0;
+
+        if (!isValid) {
+          // 📥 Truy xuất document ứng với lớp
+          const docRef = doc(db, `DANHSACH_${namHocValue}`, selectedClass);
+          const docSnap = await getDoc(docRef);
+
+          const danhSachData = [];
+
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+
+            Object.entries(data).forEach(([field, value]) => {
+              if (Array.isArray(value)) {
+                value.forEach(hs => {
+                  if (hs && typeof hs === "object") {
+                    danhSachData.push({
+                      ...hs,
+                      id: hs.maDinhDanh || hs.id || hs.uid || `missing-${Math.random().toString(36).substring(2)}`,
+                      lop: selectedClass
+                    });
+                  }
+                });
+              }
+            });
+          }
 
           const selectedDateStr = format(selectedDate, "yyyy-MM-dd");
           const enriched = enrichStudents(danhSachData, selectedDateStr, selectedClass, true);
+
           const enrichedWithId = enriched.map(hs => ({
             ...hs,
             id: hs.maDinhDanh || hs.id || hs.uid || `missing-${Math.random().toString(36).substring(2)}`
           }));
+
           setClassData(selectedClass, enrichedWithId);
           rawData = enrichedWithId;
         }
 
+        // 🗓 Tải toàn bộ dữ liệu điểm danh
         const diemDanhSnap = await getDocs(collection(db, `DIEMDANH_${namHocValue}`));
         const diemDanhData = diemDanhSnap.docs.map(doc => doc.data());
 
+        // 📅 Tạo danh sách ngày trong tháng hiện tại
         const year = selectedDate.getFullYear();
         const month = selectedDate.getMonth();
         const daysInMonth = new Date(year, month + 1, 0).getDate();
         const fullDays = Array.from({ length: daysInMonth }, (_, i) => i + 1);
         setDaySet(fullDays);
 
+        // 🔍 Xử lý và hiển thị dữ liệu
         processStudentData(rawData, diemDanhData, selectedClass, selectedDate);
       } catch (err) {
         console.error("❌ Lỗi khi tải dữ liệu:", err);

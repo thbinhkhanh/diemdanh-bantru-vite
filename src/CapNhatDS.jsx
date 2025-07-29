@@ -43,35 +43,48 @@ export default function CapNhatDS({ onBack }) {
 
   const fetchStudents = async (selectedClass, namHoc) => {
     try {
-      //console.log("🚀 Bắt đầu fetchStudents cho lớp:", selectedClass, "| Năm học:", namHoc);
-
-      const cacheKey = selectedClass; 
+      const cacheKey = selectedClass;
       let cachedData = getClassData(cacheKey);
 
       if (!cachedData || cachedData.length === 0) {
-        //console.log("🔥 [STUDENT LIST] Không có cache, tải từ Firestore");
-        const q = query(collection(db, `DANHSACH_${namHoc}`), where("lop", "==", selectedClass));
-        const snapshot = await getDocs(q);
-        const rawStudents = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        // 🔄 Truy xuất document lớp
+        const docRef = doc(db, `DANHSACH_${namHoc}`, selectedClass);
+        const docSnap = await getDoc(docRef);
 
-        //console.log(`✅ Lấy được ${rawStudents.length} học sinh từ Firestore cho lớp ${selectedClass}`);
+        const danhSachData = [];
 
-        // ✅ enrich dữ liệu (giả sử enrichStudents tồn tại)
-        const selectedDateStr = new Date().toISOString().split("T")[0]; // hoặc truyền ngày cụ thể bạn cần
-        const enriched = enrichStudents(rawStudents, selectedDateStr, selectedClass);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
 
-        // ✅ Gắn stt
+          Object.entries(data).forEach(([key, value]) => {
+            if (Array.isArray(value)) {
+              value.forEach(hs => {
+                if (hs && typeof hs === "object") {
+                  danhSachData.push({
+                    ...hs,
+                    id: hs.maDinhDanh || hs.id || `missing-${Math.random().toString(36).slice(2)}`,
+                    lop: selectedClass
+                  });
+                }
+              });
+            }
+          });
+        }
+
+        // 🧠 enrich dữ liệu với ngày hiện tại (hoặc truyền vào)
+        const selectedDateStr = new Date().toISOString().split("T")[0];
+        const enriched = enrichStudents(danhSachData, selectedDateStr, selectedClass);
+
+        // 🧮 Gắn số thứ tự
         const enrichedWithRegister = enriched.map((s, index) => ({
           ...s,
           stt: index + 1
         }));
 
-        setClassData(cacheKey, enrichedWithRegister); // ✅ Lưu vào context
+        setClassData(cacheKey, enrichedWithRegister);
         setAllStudents(enrichedWithRegister);
         setFilteredStudents(MySort(enrichedWithRegister));
-
       } else {
-        //console.log("📦 [STUDENT LIST] Lấy từ context:", cachedData.length, "học sinh");
         setAllStudents(cachedData);
         setFilteredStudents(MySort(cachedData));
       }
