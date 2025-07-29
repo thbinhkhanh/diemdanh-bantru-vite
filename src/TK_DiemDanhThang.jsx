@@ -46,6 +46,7 @@ export default function DiemDanhThang({ onBack }) {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { getClassList, setClassListForKhoi } = useClassList();
   const { getClassData, setClassData } = useClassData();
+  const [fetchedClasses, setFetchedClasses] = useState({});
 
   const headCellStyle = {
     fontWeight: "bold",
@@ -154,11 +155,18 @@ export default function DiemDanhThang({ onBack }) {
           return;
         }
 
-        // 📦 Lấy dữ liệu từ context nếu đã có
-        let rawData = getClassData(selectedClass);
-        const isValid = Array.isArray(rawData) && rawData.length > 0;
+        // 📦 Kiểm tra cache lớp đã fetch + dữ liệu context
+        const contextData = getClassData(selectedClass);
+        const alreadyFetched = fetchedClasses[selectedClass];
+        const shouldFetchClass = !Array.isArray(contextData) || contextData.length === 0;
 
-        if (!isValid) {
+        let rawData = [];
+
+        if (!shouldFetchClass || alreadyFetched) {
+          console.log(`📦 Dữ liệu lớp ${selectedClass} lấy từ context hoặc đã cached.`);
+          rawData = contextData;
+        } else {
+          console.log(`🌐 Dữ liệu lớp ${selectedClass} đang được lấy từ Firestore...`);
           // 📥 Truy xuất document ứng với lớp
           const docRef = doc(db, `DANHSACH_${namHocValue}`, selectedClass);
           const docSnap = await getDoc(docRef);
@@ -168,7 +176,7 @@ export default function DiemDanhThang({ onBack }) {
           if (docSnap.exists()) {
             const data = docSnap.data();
 
-            Object.entries(data).forEach(([field, value]) => {
+            Object.entries(data).forEach(([_, value]) => {
               if (Array.isArray(value)) {
                 value.forEach(hs => {
                   if (hs && typeof hs === "object") {
@@ -192,6 +200,7 @@ export default function DiemDanhThang({ onBack }) {
           }));
 
           setClassData(selectedClass, enrichedWithId);
+          setFetchedClasses(prev => ({ ...prev, [selectedClass]: true }));
           rawData = enrichedWithId;
         }
 

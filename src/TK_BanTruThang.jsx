@@ -9,7 +9,7 @@ import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import vi from "date-fns/locale/vi";
-import { getDoc, getDocs, doc, collection, query, where } from "firebase/firestore";
+import { getDoc, getDocs, doc, collection } from "firebase/firestore";
 import { format } from "date-fns";
 import { db } from "./firebase";
 import { MySort } from './utils/MySort';
@@ -28,13 +28,11 @@ export default function ThongKeThang({ onBack }) {
   const [dataList, setDataList] = useState([]);
   const [daySet, setDaySet] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [showDays, setShowDays] = useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { getClassList, setClassListForKhoi } = useClassList();
-  const { getClassData, setClassData } = useClassData();
+  const { getClassData, setClassData, checkClassFetched, setFetchedClasses } = useClassData();
 
-  // Load danh sách lớp khi mount
   useEffect(() => {
     const fetchClassList = async () => {
       try {
@@ -72,18 +70,10 @@ export default function ThongKeThang({ onBack }) {
     fetchClassList();
   }, []);
 
-  // Hàm xử lý dữ liệu học sinh + thống kê bán trú, rồi set dataList
   const processStudentData = (rawStudents, banTruData, className, selectedDate) => {
     const selectedMonthStr = format(selectedDate, "yyyy-MM");
-
-    // ⚠️ Lọc học sinh đã đăng ký bán trú
-    //const filteredStudents = rawStudents.filter(stu => stu.dangKyBanTru === true);
     const filteredStudents = rawStudents.filter(stu => 'dangKyBanTru' in stu);
-
-    //console.log("🧑‍🎓 Học sinh đăng ký bán trú:", filteredStudents.length);
-
     const enriched = enrichStudents(filteredStudents, selectedMonthStr, className, true);
-    //console.log("🔍 Số học sinh sau enrich:", enriched.length);
 
     const enrichedWithRegister = enriched.map((student, index) => {
       const maID = student.maDinhDanh?.trim();
@@ -94,9 +84,8 @@ export default function ThongKeThang({ onBack }) {
 
       banTruData.forEach(doc => {
         const dateStr = doc.id;
-        const danhSachAn = doc.danhSachAn || [];
+        const danhSachAn = doc.data().danhSachAn || [];
         const dateObj = new Date(dateStr);
-
         if (!isNaN(dateObj)) {
           const day = dateObj.getDate();
           if (danhSachAn.includes(key)) {
@@ -122,85 +111,79 @@ export default function ThongKeThang({ onBack }) {
     setDataList(sorted);
   };
 
-
-  // Load học sinh khi selectedClass hoặc selectedDate thay đổi
   useEffect(() => {
-  if (!selectedClass || !selectedDate) return;
+    if (!selectedClass || !selectedDate) return;
 
-  const fetchStudents = async () => {
-    setIsLoading(true);
-    try {
-      // 📦 Lấy năm học hiện tại
-      const namHocDoc = await getDoc(doc(db, "YEAR", "NAMHOC"));
-      const namHocValue = namHocDoc.exists() ? namHocDoc.data().value : null;
-      if (!namHocValue) {
-        setIsLoading(false);
-        console.error("❌ Không tìm thấy năm học!");
-        return;
-      }
-
-      let rawData = getClassData(selectedClass);
-      if (!rawData || rawData.length === 0) {
-        // 🔍 Truy xuất document ứng với lớp (document ID = selectedClass)
-        const docRef = doc(db, `DANHSACH_${namHocValue}`, selectedClass);
-        const docSnap = await getDoc(docRef);
-
-        const danhSachData = [];
-
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-
-          Object.entries(data).forEach(([key, value]) => {
-            if (Array.isArray(value)) {
-              value.forEach(hs => {
-                if (hs && typeof hs === "object") {
-                  danhSachData.push({
-                    ...hs,
-                    id: hs.maDinhDanh || `${selectedClass}_${key}_${Math.random().toString(36).slice(2)}`,
-                    lop: selectedClass
-                  });
-                }
-              });
-            }
-          });
+    const fetchStudents = async () => {
+      setIsLoading(true);
+      try {
+        const namHocDoc = await getDoc(doc(db, "YEAR", "NAMHOC"));
+        const namHocValue = namHocDoc.exists() ? namHocDoc.data().value : null;
+        if (!namHocValue) {
+          console.error("❌ Không tìm thấy năm học!");
+          setIsLoading(false);
+          return;
         }
 
-        // ✅ enrich dữ liệu theo ngày được chọn
-        const selectedDateStr = format(selectedDate, "yyyy-MM-dd");
-        const enriched = enrichStudents(danhSachData, selectedDateStr, selectedClass, true);
+        const alreadyFetched = checkClassFetched?.(selectedClass);
+        const contextData = getClassData?.(selectedClass);
+        const hasValidContext = contextData && contextData.length > 0;
 
-        // ✅ lưu enriched vào context nếu muốn
-        //setClassData(selectedClass, enriched);
+        let rawData;
 
-        rawData = enriched;
+        if (alreadyFetched && hasValidContext) {
+          console.log(`📦 Dữ liệu lớp ${selectedClass} lấy từ context.`);
+          rawData = contextData;
+        } else {
+          console.log(`🌐 Lấy dữ liệu lớp ${selectedClass} từ Firestore...`);
+          const docRef = doc(db, `DANHSACH_${namHocValue}`, selectedClass);
+          const docSnap = await getDoc(docRef);
+          const danhSachData = [];
+
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            Object.entries(data).forEach(([key, value]) => {
+              if (Array.isArray(value)) {
+                value.forEach(hs => {
+                  if (hs && typeof hs === "object") {
+                    danhSachData.push({
+                      ...hs,
+                      id: hs.maDinhDanh || `${selectedClass}_${key}_${Math.random().toString(36).slice(2)}`,
+                      lop: selectedClass
+                    });
+                  }
+                });
+              }
+            });
+          }
+
+          const selectedDateStr = format(selectedDate, "yyyy-MM-dd");
+          const enriched = enrichStudents(danhSachData, selectedDateStr, selectedClass, true);
+          rawData = enriched;
+
+          setClassData?.(selectedClass, enriched);
+          setFetchedClasses?.(prev => ({ ...prev, [selectedClass]: true }));
+        }
+
+        const banTruSnap = await getDocs(collection(db, `BANTRU_${namHocValue}`));
+        const banTruData = banTruSnap.docs;
+
+        processStudentData(rawData, banTruData, selectedClass, selectedDate);
+
+        const year = selectedDate.getFullYear();
+        const month = selectedDate.getMonth();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const fullDays = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+        setDaySet(fullDays);
+      } catch (err) {
+        console.error("❌ Lỗi khi tải dữ liệu:", err);
+      } finally {
+        setIsLoading(false);
       }
+    };
 
-      // 📦 Lấy toàn bộ dữ liệu bán trú
-      const banTruSnap = await getDocs(collection(db, `BANTRU_${namHocValue}`));
-      const banTruData = banTruSnap.docs.map(doc => ({
-        id: doc.id,
-        danhSachAn: doc.data().danhSachAn || []
-      }));
-
-      // 📊 Xử lý và render dữ liệu
-      processStudentData(rawData, banTruData, selectedClass, selectedDate);
-
-      // 📅 Tạo danh sách ngày của tháng
-      const year = selectedDate.getFullYear();
-      const month = selectedDate.getMonth();
-      const daysInMonth = new Date(year, month + 1, 0).getDate();
-      const fullDays = Array.from({ length: daysInMonth }, (_, i) => i + 1);
-      setDaySet(fullDays);
-
-    } catch (err) {
-      console.error("❌ Lỗi khi tải dữ liệu:", err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  fetchStudents();
-}, [selectedClass, selectedDate, getClassData, setClassData]);
+    fetchStudents();
+  }, [selectedClass, selectedDate]);
 
   const headCellStyle = {
     fontWeight: "bold",

@@ -30,6 +30,7 @@ export default function ThongKeNam_DiemDanh({ onBack }) {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { getClassList, setClassListForKhoi } = useClassList();
   const { getClassData, setClassData } = useClassData(); 
+  const [fetchedClasses, setFetchedClasses] = useState({});
 
   useEffect(() => {
     const fetchNamHoc = async () => {
@@ -92,12 +93,19 @@ export default function ThongKeNam_DiemDanh({ onBack }) {
       setIsLoading(true);
 
       try {
-        // ======= STEP 1: Lấy enriched từ context nếu có =======
-        let rawData = getClassData?.(selectedClass);
-        const isValid = Array.isArray(rawData) && rawData.length > 0;
+        // ======= STEP 1: Lấy enriched từ context hoặc fetch nếu cần =======
+        const contextData = getClassData?.(selectedClass);
+        const alreadyFetched = fetchedClasses?.[selectedClass];
+        const shouldFetchClass = !Array.isArray(contextData) || contextData.length === 0;
 
-        if (!isValid) {
-          // ======= STEP 2: Truy xuất document lớp và extract học sinh =======
+        let rawData = [];
+
+        if (!shouldFetchClass || alreadyFetched) {
+          console.log(`📦 Dữ liệu lớp ${selectedClass} lấy từ context hoặc đã cached.`);
+          rawData = contextData;
+        } else {
+          console.log(`🌐 Dữ liệu lớp ${selectedClass} đang được lấy từ Firestore...`);
+          
           const docRef = doc(db, `DANHSACH_${namHocValue}`, selectedClass);
           const docSnap = await getDoc(docRef);
 
@@ -130,6 +138,7 @@ export default function ThongKeNam_DiemDanh({ onBack }) {
           }));
 
           setClassData?.(selectedClass, enrichedWithId);
+          setFetchedClasses?.(prev => ({ ...prev, [selectedClass]: true }));
           rawData = enrichedWithId;
         }
 
@@ -139,7 +148,7 @@ export default function ThongKeNam_DiemDanh({ onBack }) {
           return;
         }
 
-        // ======= STEP 3: Truy xuất dữ liệu điểm danh =======
+        // ======= STEP 2: Truy xuất dữ liệu điểm danh =======
         const diemDanhQuery = query(
           collection(db, `DIEMDANH_${namHocValue}`),
           where("lop", "==", selectedClass)
@@ -166,7 +175,7 @@ export default function ThongKeNam_DiemDanh({ onBack }) {
           diemDanhByStudent[maDinhDanh][thang][type]++;
         });
 
-        // ======= STEP 4: Tổng hợp dữ liệu điểm danh theo từng học sinh =======
+        // ======= STEP 3: Tổng hợp dữ liệu điểm danh theo học sinh =======
         const students = rawData.map((s, index) => {
           const maDinhDanh = s.id;
           const rawMonthData = diemDanhByStudent[maDinhDanh] || {};
@@ -189,7 +198,7 @@ export default function ThongKeNam_DiemDanh({ onBack }) {
           };
         });
 
-        // ======= STEP 5: Hiển thị dữ liệu =======
+        // ======= STEP 4: Hiển thị kết quả =======
         setMonthSet(Array.from({ length: 12 }, (_, i) => i + 1));
         const sorted = MySort(students).map((s, idx) => ({ ...s, stt: idx + 1 }));
         setDataList(sorted);
