@@ -57,30 +57,30 @@ async function groupData(namHocValue) {
     // Duyệt từng field trong tài liệu
     Object.entries(data).forEach(([key, value]) => {
       if (Array.isArray(value)) {
-        console.log(`📚 Đang duyệt danh sách học sinh trong key: ${key}`);
+        //console.log(`📚 Đang duyệt danh sách học sinh trong key: ${key}`);
         value.forEach(hs => {
           if (hs && typeof hs === 'object' && hs.dangKyBanTru === true) {
             khoiData[khoi].siSo += 1;
             khoiData[khoi].children[lop].siSo += 1;
             truongSiSo += 1;
 
-            console.log("👤 Học sinh đăng ký bán trú:", hs.hoVaTen);
+            //console.log("👤 Học sinh đăng ký bán trú:", hs.hoVaTen);
 
             if (hs.diemDanhBanTru === true) {
               khoiData[khoi].anBanTru += 1;
               khoiData[khoi].children[lop].anBanTru += 1;
               truongAn += 1;
 
-              console.log("🍱 Đã điểm danh ăn bán trú:", hs.hoVaTen);
+              //console.log("🍱 Đã điểm danh ăn bán trú:", hs.hoVaTen);
             } else {
-              console.log("📋 Chưa điểm danh bán trú:", hs.hoVaTen);
+              //console.log("📋 Chưa điểm danh bán trú:", hs.hoVaTen);
             }
           } else {
-            console.log("⚠️ Không tính vào bán trú:", hs);
+            //console.log("⚠️ Không tính vào bán trú:", hs);
           }
         });
       } else {
-        console.log(`⚠️ Field ${key} không phải danh sách học sinh:`, value);
+        //console.log(`⚠️ Field ${key} không phải danh sách học sinh:`, value);
       }
     });
   });

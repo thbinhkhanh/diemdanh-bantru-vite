@@ -30,6 +30,8 @@ export default function CapNhatDS({ onBack }) {
   const [customMaDinhDanh, setCustomMaDinhDanh] = useState("");
   const { getClassList, setClassListForKhoi } = useClassList();
   const { getClassData, setClassData } = useClassData();
+  const [fetchedClasses, setFetchedClasses] = useState({});
+  
 
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
   const dangKyOptions = ["Đăng ký", "Hủy đăng ký"];
@@ -44,18 +46,23 @@ export default function CapNhatDS({ onBack }) {
   const fetchStudents = async (selectedClass, namHoc) => {
     try {
       const cacheKey = selectedClass;
-      let cachedData = getClassData(cacheKey);
+      const cachedData = getClassData?.(cacheKey);
+      const isFetched = fetchedClasses?.[cacheKey];
+      const shouldFetch = !Array.isArray(cachedData) || cachedData.length === 0;
 
-      if (!cachedData || cachedData.length === 0) {
-        // 🔄 Truy xuất document lớp
+      let finalStudents = [];
+
+      if (!shouldFetch || isFetched) {
+        //console.log(`📦 Dữ liệu lớp ${cacheKey} lấy từ context hoặc đã cached.`);
+        finalStudents = cachedData;
+      } else {
+        //console.log(`🌐 Dữ liệu lớp ${cacheKey} đang được lấy từ Firestore...`);
         const docRef = doc(db, `DANHSACH_${namHoc}`, selectedClass);
         const docSnap = await getDoc(docRef);
-
         const danhSachData = [];
 
         if (docSnap.exists()) {
           const data = docSnap.data();
-
           Object.entries(data).forEach(([key, value]) => {
             if (Array.isArray(value)) {
               value.forEach(hs => {
@@ -71,24 +78,16 @@ export default function CapNhatDS({ onBack }) {
           });
         }
 
-        // 🧠 enrich dữ liệu với ngày hiện tại (hoặc truyền vào)
         const selectedDateStr = new Date().toISOString().split("T")[0];
         const enriched = enrichStudents(danhSachData, selectedDateStr, selectedClass);
+        finalStudents = enriched.map((s, index) => ({ ...s, stt: index + 1 }));
 
-        // 🧮 Gắn số thứ tự
-        const enrichedWithRegister = enriched.map((s, index) => ({
-          ...s,
-          stt: index + 1
-        }));
-
-        setClassData(cacheKey, enrichedWithRegister);
-        setAllStudents(enrichedWithRegister);
-        setFilteredStudents(MySort(enrichedWithRegister));
-      } else {
-        setAllStudents(cachedData);
-        setFilteredStudents(MySort(cachedData));
+        setClassData?.(cacheKey, finalStudents);
+        setFetchedClasses?.(prev => ({ ...prev, [cacheKey]: true }));
       }
 
+      setAllStudents(finalStudents);
+      setFilteredStudents(MySort(finalStudents));
       setLoading(false);
     } catch (error) {
       console.error("❌ Lỗi khi tải danh sách học sinh:", error);

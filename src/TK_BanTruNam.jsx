@@ -85,23 +85,21 @@ export default function ThongKeNam({ onBack }) {
       const key = selectedClass;
 
       try {
+        // 📦 Kiểm tra context và cache
         const contextData = getClassData?.(key);
         const alreadyFetched = fetchedClasses?.[key];
         const shouldFetchClass = !Array.isArray(contextData) || contextData.length === 0;
 
         let rawData = [];
 
-        const isAlreadyFetched = fetchedClasses?.[key];
-
-        if (isAlreadyFetched && !shouldFetchClass) {
-          console.log(`📦 Dữ liệu lớp ${key} lấy từ context hoặc đã cached.`);
+        if (!shouldFetchClass || alreadyFetched) {
+          //console.log(`📦 Dữ liệu lớp ${key} lấy từ context hoặc đã cached.`);
           rawData = contextData;
         } else {
-          console.log(`🌐 Dữ liệu lớp ${key} đang được lấy từ Firestore...`);
+          //console.log(`🌐 Dữ liệu lớp ${key} đang được lấy từ Firestore...`);
 
           const docRef = doc(db, `DANHSACH_${namHocValue}`, key);
           const docSnap = await getDoc(docRef);
-
           const danhSachData = [];
 
           if (docSnap.exists()) {
@@ -137,7 +135,7 @@ export default function ThongKeNam({ onBack }) {
           danhSachAn: doc.data().danhSachAn || []
         }));
 
-        // 🧠 Tính tổng số lượt ăn theo tháng
+        // 🧮 Tính thống kê lượt ăn
         const studentMap = {};
         banTruData.forEach(doc => {
           const dateObj = new Date(doc.id);
@@ -159,24 +157,24 @@ export default function ThongKeNam({ onBack }) {
             if (lopStr !== key || !maID) return;
 
             studentMap[maID] = studentMap[maID] || { monthSummary: {}, total: 0 };
-            studentMap[maID].monthSummary[month] =
-              (studentMap[maID].monthSummary[month] || 0) + 1;
+            studentMap[maID].monthSummary[month] = (studentMap[maID].monthSummary[month] || 0) + 1;
             studentMap[maID].total += 1;
           });
         });
 
-        // 🎯 Kết hợp thông tin thống kê vào từng học sinh
-        const filteredRawData = rawData.filter(hs => "dangKyBanTru" in hs);
-        const students = filteredRawData.map((hs, index) => {
-          const ma = hs.maDinhDanh?.trim().replace(`${key}-`, "");
-          const summary = studentMap[ma] || {};
-          return {
-            ...hs,
-            monthSummary: summary.monthSummary || {},
-            total: summary.total || 0,
-            stt: index + 1
-          };
-        });
+        // 🎯 Kết hợp thống kê vào học sinh
+        const students = rawData
+          .filter(hs => "dangKyBanTru" in hs)
+          .map((hs, index) => {
+            const ma = hs.maDinhDanh?.trim().replace(`${key}-`, "");
+            const summary = studentMap[ma] || {};
+            return {
+              ...hs,
+              monthSummary: summary.monthSummary || {},
+              total: summary.total || 0,
+              stt: index + 1
+            };
+          });
 
         const sorted = MySort(students).map((s, idx) => ({ ...s, stt: idx + 1 }));
         setDataList(sorted);
@@ -189,7 +187,7 @@ export default function ThongKeNam({ onBack }) {
     };
 
     fetchStudents();
-  }, [selectedClass, selectedDate, namHocValue, getClassData]);
+  }, [selectedClass, selectedDate, namHocValue]);
 
   const headCellStyle = {
     fontWeight: "bold",

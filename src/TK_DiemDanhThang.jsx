@@ -163,10 +163,10 @@ export default function DiemDanhThang({ onBack }) {
         let rawData = [];
 
         if (!shouldFetchClass || alreadyFetched) {
-          console.log(`📦 Dữ liệu lớp ${selectedClass} lấy từ context hoặc đã cached.`);
+          //console.log(`📦 Dữ liệu lớp ${selectedClass} lấy từ context hoặc đã cached.`);
           rawData = contextData;
         } else {
-          console.log(`🌐 Dữ liệu lớp ${selectedClass} đang được lấy từ Firestore...`);
+          //console.log(`🌐 Dữ liệu lớp ${selectedClass} đang được lấy từ Firestore...`);
           // 📥 Truy xuất document ứng với lớp
           const docRef = doc(db, `DANHSACH_${namHocValue}`, selectedClass);
           const docSnap = await getDoc(docRef);

@@ -196,7 +196,7 @@ export default function ChotSoLieu({ onBack }) {
         danhSachAn: Array.from(currentSet),
       });
 
-      console.log("✅ Đã cập nhật:", formattedDate, "| Ghi mới:", newList.length, "| Xoá:", removed.length);
+      //console.log("✅ Đã cập nhật:", formattedDate, "| Ghi mới:", newList.length, "| Xoá:", removed.length);
     } catch (err) {
       console.error("❌ Lỗi khi xử lý:", err);
       setErrorMessage("❌ Có lỗi xảy ra khi cập nhật!");

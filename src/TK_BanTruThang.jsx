@@ -9,7 +9,7 @@ import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import vi from "date-fns/locale/vi";
-import { getDoc, getDocs, doc, collection } from "firebase/firestore";
+import { getDoc, getDocs, doc, collection, query, where } from "firebase/firestore";
 import { format } from "date-fns";
 import { db } from "./firebase";
 import { MySort } from './utils/MySort';
@@ -28,11 +28,14 @@ export default function ThongKeThang({ onBack }) {
   const [dataList, setDataList] = useState([]);
   const [daySet, setDaySet] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [showDays, setShowDays] = useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { getClassList, setClassListForKhoi } = useClassList();
-  const { getClassData, setClassData, checkClassFetched, setFetchedClasses } = useClassData();
+  const { getClassData, setClassData } = useClassData();
+  const [fetchedClasses, setFetchedClasses] = useState({});
 
+  // Load danh sách lớp khi mount
   useEffect(() => {
     const fetchClassList = async () => {
       try {
@@ -70,10 +73,18 @@ export default function ThongKeThang({ onBack }) {
     fetchClassList();
   }, []);
 
+  // Hàm xử lý dữ liệu học sinh + thống kê bán trú, rồi set dataList
   const processStudentData = (rawStudents, banTruData, className, selectedDate) => {
     const selectedMonthStr = format(selectedDate, "yyyy-MM");
+
+    // ⚠️ Lọc học sinh đã đăng ký bán trú
+    //const filteredStudents = rawStudents.filter(stu => stu.dangKyBanTru === true);
     const filteredStudents = rawStudents.filter(stu => 'dangKyBanTru' in stu);
+
+    //console.log("🧑‍🎓 Học sinh đăng ký bán trú:", filteredStudents.length);
+
     const enriched = enrichStudents(filteredStudents, selectedMonthStr, className, true);
+    //console.log("🔍 Số học sinh sau enrich:", enriched.length);
 
     const enrichedWithRegister = enriched.map((student, index) => {
       const maID = student.maDinhDanh?.trim();
@@ -84,8 +95,9 @@ export default function ThongKeThang({ onBack }) {
 
       banTruData.forEach(doc => {
         const dateStr = doc.id;
-        const danhSachAn = doc.data().danhSachAn || [];
+        const danhSachAn = doc.danhSachAn || [];
         const dateObj = new Date(dateStr);
+
         if (!isNaN(dateObj)) {
           const day = dateObj.getDate();
           if (danhSachAn.includes(key)) {
@@ -111,33 +123,37 @@ export default function ThongKeThang({ onBack }) {
     setDataList(sorted);
   };
 
+  // Load học sinh khi selectedClass hoặc selectedDate thay đổi
   useEffect(() => {
     if (!selectedClass || !selectedDate) return;
 
     const fetchStudents = async () => {
       setIsLoading(true);
+
       try {
+        // 🎓 Lấy năm học hiện tại
         const namHocDoc = await getDoc(doc(db, "YEAR", "NAMHOC"));
         const namHocValue = namHocDoc.exists() ? namHocDoc.data().value : null;
         if (!namHocValue) {
           console.error("❌ Không tìm thấy năm học!");
-          setIsLoading(false);
           return;
         }
 
-        const alreadyFetched = checkClassFetched?.(selectedClass);
-        const contextData = getClassData?.(selectedClass);
-        const hasValidContext = contextData && contextData.length > 0;
+        // 📦 Kiểm tra cache và context
+        const contextData = getClassData(selectedClass);
+        const alreadyFetched = fetchedClasses?.[selectedClass];
+        const shouldFetchClass = !Array.isArray(contextData) || contextData.length === 0;
 
-        let rawData;
+        let rawData = [];
 
-        if (alreadyFetched && hasValidContext) {
-          console.log(`📦 Dữ liệu lớp ${selectedClass} lấy từ context.`);
+        if (!shouldFetchClass || alreadyFetched) {
+          //console.log(`📦 Dữ liệu lớp ${selectedClass} lấy từ context hoặc đã cached.`);
           rawData = contextData;
         } else {
-          console.log(`🌐 Lấy dữ liệu lớp ${selectedClass} từ Firestore...`);
+          //console.log(`🌐 Dữ liệu lớp ${selectedClass} đang được lấy từ Firestore...`);
           const docRef = doc(db, `DANHSACH_${namHocValue}`, selectedClass);
           const docSnap = await getDoc(docRef);
+
           const danhSachData = [];
 
           if (docSnap.exists()) {
@@ -148,7 +164,7 @@ export default function ThongKeThang({ onBack }) {
                   if (hs && typeof hs === "object") {
                     danhSachData.push({
                       ...hs,
-                      id: hs.maDinhDanh || `${selectedClass}_${key}_${Math.random().toString(36).slice(2)}`,
+                      id: hs.maDinhDanh || hs.id || `${selectedClass}_${key}_${Math.random().toString(36).slice(2)}`,
                       lop: selectedClass
                     });
                   }
@@ -161,20 +177,25 @@ export default function ThongKeThang({ onBack }) {
           const enriched = enrichStudents(danhSachData, selectedDateStr, selectedClass, true);
           rawData = enriched;
 
-          setClassData?.(selectedClass, enriched);
-          setFetchedClasses?.(prev => ({ ...prev, [selectedClass]: true }));
+          setClassData(selectedClass, enriched);
+          setFetchedClasses(prev => ({ ...prev, [selectedClass]: true }));
         }
 
+        // 📦 Lấy dữ liệu bán trú
         const banTruSnap = await getDocs(collection(db, `BANTRU_${namHocValue}`));
-        const banTruData = banTruSnap.docs;
+        const banTruData = banTruSnap.docs.map(doc => ({
+          id: doc.id,
+          danhSachAn: doc.data().danhSachAn || []
+        }));
 
+        // 📊 Xử lý và render
         processStudentData(rawData, banTruData, selectedClass, selectedDate);
 
+        // 📅 Lập danh sách ngày trong tháng
         const year = selectedDate.getFullYear();
         const month = selectedDate.getMonth();
         const daysInMonth = new Date(year, month + 1, 0).getDate();
-        const fullDays = Array.from({ length: daysInMonth }, (_, i) => i + 1);
-        setDaySet(fullDays);
+        setDaySet(Array.from({ length: daysInMonth }, (_, i) => i + 1));
       } catch (err) {
         console.error("❌ Lỗi khi tải dữ liệu:", err);
       } finally {

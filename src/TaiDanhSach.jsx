@@ -225,6 +225,9 @@ export default function TaiDanhSach({ onBack }) {
       setProgress(Math.min(100, Math.round((processed / allLopKeys.length) * 100)));
     }
 
+    const totalStudentsAdded = Object.values(groupedByClass)
+      .reduce((acc, list) => acc + list.length, 0);
+
     try {
       const truongRef = doc(db, classListCollection, 'TRUONG');
       const truongSnap = await getDoc(truongRef);
@@ -256,16 +259,19 @@ export default function TaiDanhSach({ onBack }) {
         await setDoc(doc(db, classListCollection, khoiKey), { list: grouped[khoiKey] });
       }
 
-      console.log('✅ Cập nhật CLASSLIST thành công');
+      //console.log('✅ Cập nhật CLASSLIST thành công');
     } catch (e) {
       console.error('❌ Lỗi khi cập nhật CLASSLIST:', e.message);
     }
 
     if (successCount > 0) setSelectedFile(null);
     setSuccess(errorCount === 0);
-    setMessage(errorCount === 0
-      ? `✅ Đã thêm thành công ${successCount} lớp học sinh.`
-      : `⚠️ Có ${errorCount} lỗi khi thêm danh sách lớp học sinh.`);
+    //setMessage(errorCount === 0
+    //  ? `✅ Đã thêm thành công ${successCount} lớp học sinh.`
+    //  : `⚠️ Có ${errorCount} lỗi khi thêm danh sách lớp học sinh.`);
+      setMessage(errorCount === 0
+    ? `✅ Đã thêm thành công ${successCount} lớp với tổng cộng ${totalStudentsAdded} học sinh.`
+    : `⚠️ Có ${errorCount} lỗi khi thêm danh sách lớp học sinh.`);
   };
 
   return (

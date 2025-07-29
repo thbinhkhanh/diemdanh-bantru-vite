@@ -15,7 +15,7 @@ export const NhatKyProvider = ({ children }) => {
   const setMonthlyData = (lop, nam, thang, data) => {
     const key = getKey(lop, nam, thang);
 
-    console.log("📦 Dữ liệu gửi vào setMonthlyData:", data); // ✅ Dùng đúng biến
+    //console.log("📦 Dữ liệu gửi vào setMonthlyData:", data); // ✅ Dùng đúng biến
 
     setCache((prev) => {
       const existing = prev[key] || [];
@@ -27,11 +27,11 @@ export const NhatKyProvider = ({ children }) => {
 
       const finalList = Object.values(mergedById);
 
-      console.log(`[NhatKy] ✅ Ghi đè cache lớp ${lop} tháng ${thang}/${nam}:`);
+      //console.log(`[NhatKy] ✅ Ghi đè cache lớp ${lop} tháng ${thang}/${nam}:`);
       finalList.forEach((entry, i) => {
-        console.log(
-          `  • ${i + 1}. ${entry.hoVaTen || entry.hoTen || "Không tên"} (ID: ${entry.id}) — ${entry.vangCoPhep || "?"} — ${entry.lyDo || "không ghi"}`
-        );
+        //console.log(
+        //  `  • ${i + 1}. ${entry.hoVaTen || entry.hoTen || "Không tên"} (ID: ${entry.id}) — ${entry.vangCoPhep || "?"} — ${entry.lyDo || "không ghi"}`
+        //);
       });
 
       return {

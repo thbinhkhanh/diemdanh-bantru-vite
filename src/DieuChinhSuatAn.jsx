@@ -28,8 +28,7 @@ export default function DieuChinhSuatAn({ onBack }) {
   const [namHocValue, setNamHocValue] = useState(null);
   const { getClassList, setClassListForKhoi } = useClassList();
   const { getClassData, setClassData } = useClassData();
-
-
+  const [fetchedClasses, setFetchedClasses] = useState({});
 
   useEffect(() => {
     if (saveSuccess !== null) {
@@ -91,11 +90,15 @@ export default function DieuChinhSuatAn({ onBack }) {
 
 
   const fetchStudents = async (className, nhValue = namHocValue) => {
-    if (!nhValue) return;
+    if (!nhValue || !className || !selectedDate) return;
 
     setIsLoading(true);
+
     try {
-      const cached = getClassData(className);
+      const cached = getClassData?.(className);
+      const alreadyFetched = fetchedClasses?.[className];
+      const shouldFetch = !Array.isArray(cached) || cached.length === 0;
+
       const selected = new Date(selectedDate);
       selected.setHours(0, 0, 0, 0);
       const adjustedDate = new Date(selected.getTime() + 7 * 60 * 60 * 1000);
@@ -103,43 +106,45 @@ export default function DieuChinhSuatAn({ onBack }) {
 
       let students = [];
 
-      if (cached && cached.length > 0) {
+      if (!shouldFetch || alreadyFetched) {
+        //console.log(`📦 Dữ liệu lớp ${className} lấy từ context hoặc đã cached.`);
         students = cached;
       } else {
+        //console.log(`🌐 Dữ liệu lớp ${className} đang được lấy từ Firestore...`);
         const docRef = doc(db, `DANHSACH_${nhValue}`, className);
         const docSnap = await getDoc(docRef);
 
+        const rawStudents = [];
+
         if (docSnap.exists()) {
           const data = docSnap.data();
-          const rawStudents = [];
-
-          // Duyệt từng field trong document
           Object.entries(data).forEach(([key, value]) => {
             if (Array.isArray(value)) {
-              console.log(`📚 Duyệt danh sách học sinh trong field: ${key}`);
-
+              //console.log(`📚 Duyệt danh sách học sinh trong field: ${key}`);
               value.forEach(hs => {
-                if (hs && typeof hs === 'object') {
-                  // Bạn có thể thêm điều kiện lọc học sinh ở đây nếu cần
+                if (hs && typeof hs === "object") {
                   rawStudents.push({
                     ...hs,
-                    id: hs.maDinhDanh || `${className}_${key}_${Math.random().toString(36).slice(2)}` // fallback id
+                    id: hs.maDinhDanh || `${className}_${key}_${Math.random().toString(36).slice(2)}`
                   });
                 } else {
-                  console.log("⚠️ Phần tử không hợp lệ:", hs);
+                  //console.log("⚠️ Phần tử không hợp lệ:", hs);
                 }
               });
             } else {
-              console.log(`⏭️ Field ${key} không phải mảng học sinh`);
+              //console.log(`⏭️ Field ${key} không phải mảng học sinh`);
             }
           });
-
-          students = enrichStudents(rawStudents, selectedDateStr, className, true);
         } else {
-          console.warn("⚠️ Không tìm thấy lớp:", className);
-          students = [];
+          console.warn(`⚠️ Không tìm thấy lớp ${className} trong Firestore.`);
         }
+
+        students = enrichStudents(rawStudents, selectedDateStr, className, true);
+        setClassData?.(className, students);
+        setFetchedClasses?.(prev => ({ ...prev, [className]: true }));
       }
+
+      // 🔍 Lấy danh sách học sinh đã đăng ký ăn trưa
       const banTruDocRef = doc(db, `BANTRU_${nhValue}`, selectedDateStr);
       const banTruSnap = await getDoc(banTruDocRef);
       let banTruList = [];
@@ -149,12 +154,11 @@ export default function DieuChinhSuatAn({ onBack }) {
 
       const banTruSet = new Set(banTruList);
 
-      // ✅ Không filter — xử lý tất cả học sinh
       const enriched = students.map((s, i) => ({
         ...s,
         stt: i + 1,
         registered: banTruSet.has(s.maDinhDanh),
-        disabled: false,
+        disabled: false
       }));
 
       const checkedMap = {};
@@ -162,9 +166,9 @@ export default function DieuChinhSuatAn({ onBack }) {
         checkedMap[s.maDinhDanh] = s.registered;
       });
 
-      setDataList(enriched); // Có thể dùng filter trong UI nếu muốn
+      setDataList(enriched);
       setOriginalChecked(checkedMap);
-      setClassData(className, enriched); // ✅ Lưu cả true và false vào context
+      setClassData?.(className, enriched); // ✅ lưu đầy đủ vào context
     } catch (err) {
       console.error("❌ Lỗi khi tải học sinh:", err);
     } finally {
