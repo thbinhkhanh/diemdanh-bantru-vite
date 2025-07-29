@@ -268,7 +268,6 @@ export default function TaiDanhSach({ onBack }) {
       : `⚠️ Có ${errorCount} lỗi khi thêm danh sách lớp học sinh.`);
   };
 
-
   return (
     <Box sx={{ minHeight: '100vh', background: 'transparent', pt: 0, px: 1 }}>
       <Box maxWidth={420} mx="auto">

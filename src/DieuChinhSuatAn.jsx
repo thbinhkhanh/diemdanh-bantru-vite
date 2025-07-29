@@ -183,6 +183,7 @@ export default function DieuChinhSuatAn({ onBack }) {
     const changed = dataList.filter(
       s => s.registered !== originalChecked[s.maDinhDanh]
     );
+
     if (changed.length === 0) {
       setSaveSuccess(null);
       return;
@@ -190,10 +191,10 @@ export default function DieuChinhSuatAn({ onBack }) {
 
     setIsSaving(true);
     setSaveSuccess(null);
+
     try {
       const adjustedDate = new Date(selectedDate.getTime() + 7 * 60 * 60 * 1000);
       const selectedDateStr = adjustedDate.toISOString().split("T")[0];
-
       const banTruDocRef = doc(db, `BANTRU_${namHocValue}`, selectedDateStr);
       const banTruSnap = await getDoc(banTruDocRef);
 
@@ -208,21 +209,14 @@ export default function DieuChinhSuatAn({ onBack }) {
         const before = originalChecked[s.maDinhDanh];
         const after = s.registered;
 
-        if (!before && after) {
-          updatedSet.add(s.maDinhDanh);
-          console.log(`📥 Thêm học sinh: ${s.hoVaTen} (${s.maDinhDanh})`);
-        }
-
-        if (before && !after) {
-          updatedSet.delete(s.maDinhDanh);
-          console.log(`🗑️ Xóa học sinh: ${s.hoVaTen} (${s.maDinhDanh})`);
-        }
+        if (!before && after) updatedSet.add(s.maDinhDanh);
+        if (before && !after) updatedSet.delete(s.maDinhDanh);
       });
 
       await setDoc(banTruDocRef, {
         ngay: selectedDateStr,
         danhSachAn: Array.from(updatedSet),
-      });
+      }, { merge: true });
 
       const updated = { ...originalChecked };
       changed.forEach(s => updated[s.maDinhDanh] = s.registered);
@@ -236,11 +230,11 @@ export default function DieuChinhSuatAn({ onBack }) {
     }
   };
 
-  const handleClassChange = async e => {
-    await saveData();
+  const handleClassChange = async (e) => {
     setSelectedClass(e.target.value);
     await fetchStudents(e.target.value);
   };
+
 
   const handleDateChange = nv => {
     if (nv instanceof Date && !isNaN(nv)) setSelectedDate(nv);
@@ -319,8 +313,10 @@ export default function DieuChinhSuatAn({ onBack }) {
                       <TableCell align="center">
                         <Checkbox
                           checked={s.registered}
-                          onChange={() => toggleRegister(i)}
-                          disabled={s.disabled}
+                          onChange={() => {
+                            const realIdx = dataList.findIndex(d => d.maDinhDanh === s.maDinhDanh);
+                            toggleRegister(realIdx);
+                          }}
                           size="small"
                           color="primary"
                         />
