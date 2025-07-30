@@ -3,20 +3,11 @@ import {
   BrowserRouter as Router,
   Routes,
   Route,
-  Link,
-  useLocation,
   Navigate,
+  useLocation,
   useNavigate,
 } from 'react-router-dom';
-
-import {
-  Box,
-  Typography,
-  Menu,
-  MenuItem,
-  Button,
-} from '@mui/material';
-
+import { Box, Typography, Menu, MenuItem, Button } from '@mui/material';
 import HomeIcon from '@mui/icons-material/Home';
 import { getDoc, setDoc, doc } from 'firebase/firestore';
 import { db } from './firebase';
@@ -33,16 +24,229 @@ import Footer from './pages/Footer';
 import HuongDan from './pages/HuongDan';
 import Login from './Login';
 import NhatKyDiemDanhGV from './NhatKyDiemDanhGV';
+
 import { ClassDataProvider } from './context/ClassDataContext';
 import { NhatKyProvider } from './context/NhatKyContext';
 import { ClassListProvider } from './context/ClassListContext';
 
 const Admin = lazy(() => import('./Admin'));
 
+// 🔒 Route bảo vệ
+//function PrivateRoute({ children }) {
+//  const isLoggedIn = localStorage.getItem('loggedIn') === 'true';
+//  const location = useLocation();
+//  return isLoggedIn ? children : <Navigate to="/login" replace state={{ redirectTo: location.pathname }} />;
+//}
+
 function PrivateRoute({ children }) {
-  const isLoggedIn = localStorage.getItem('loggedIn') === 'true';
-  return isLoggedIn ? children : <Navigate to="/login" replace />;
+  const location = useLocation();
+  const loginRole = localStorage.getItem("loginRole"); // "2.3", "admin", etc.
+  const isLoggedIn = localStorage.getItem("loggedIn") === "true";
+
+  const match = location.pathname.match(/^\/lop([1-5])$/); // eg: "/lop3" → ["lop3", "3"]
+
+  // Nếu chưa đăng nhập → chuyển đến login
+  if (!isLoggedIn || !loginRole) {
+    return <Navigate to="/login" replace state={{ redirectTo: location.pathname }} />;
+  }
+
+  // Nếu đăng nhập bằng tài khoản lớp (ví dụ: "2.3")
+  if (/^\d+\.\d+$/.test(loginRole)) {
+    const classLoggedIn = loginRole.split(".")[0]; // "2"
+    
+    if (match) {
+      const classTryingToAccess = match[1]; // "3"
+      if (classLoggedIn !== classTryingToAccess) {
+        return (
+          <Navigate
+            to="/login"
+            replace
+            state={{
+              redirectTo: location.pathname,
+              classId: `lop${classTryingToAccess}`,
+            }}
+          />
+        );
+      }
+    } else if (location.pathname === "/quanly") {
+      // Tài khoản lớp không được vào Quản lý
+      alert("⚠️ Hãy đăng xuất trước khi truy cập chức năng Quản lý.");
+      return <Navigate to="/home" replace />;
+    }
+  }
+
+  return children;
 }
+
+// 📌 Navigation
+function Navigation() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [selectedYear, setSelectedYear] = useState('');
+  const [anchorEl, setAnchorEl] = useState(null);
+
+  const [activeNavPath, setActiveNavPath] = useState('/home');
+
+  useEffect(() => {
+    const mainPath = '/' + location.pathname.split('/')[1]; // Lấy phần chính của path
+    setActiveNavPath(mainPath);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    const fetchYear = async () => {
+      const ref = doc(db, 'YEAR', 'NAMHOC');
+      const snap = await getDoc(ref);
+      if (snap.exists()) {
+        setSelectedYear(snap.data().value || '2024-2025');
+      } else {
+        await setDoc(ref, { value: '2024-2025' });
+        setSelectedYear('2024-2025');
+      }
+    };
+    fetchYear();
+  }, []);
+
+  
+  const handleMenuOpen = (e) => setAnchorEl(e.currentTarget);
+  const handleMenuClose = () => setAnchorEl(null);
+
+  const handleProtectedNavigate = (path) => {
+    const isLoggedIn = localStorage.getItem("loggedIn") === "true";
+    const loginRole = localStorage.getItem("loginRole");
+    const match = path.match(/^\/lop([1-5])$/);
+
+    if (match) {
+      const lopDuocChon = match[1];
+      const currentKhoi = loginRole?.split(".")[0];
+
+      if (isLoggedIn && currentKhoi === lopDuocChon) {
+        setActiveNavPath(path);        // ✅ chỉ set khi vào được
+        navigate(path);
+      } else {
+        navigate("/login", {
+          state: {
+            redirectTo: path,
+            classId: path.slice(1),
+          },
+        });
+      }
+      return;
+    }
+
+    if (path === "/quanly") {
+      if (!isLoggedIn) {
+        navigate("/login", { state: { redirectTo: path } });
+        return;
+      }
+
+      const isClassAccount = /^\d+\.\d+$/.test(loginRole);
+      if (isClassAccount) {
+        alert("⚠️ Hãy đăng xuất trước khi truy cập chức năng Quản lý.");
+        return;
+      }
+
+      setActiveNavPath(path);        // ✅ chỉ set khi được phép vào
+      navigate(path);
+      return;
+    }
+
+    // Các trang công khai khác (nếu có)
+    if (isLoggedIn) {
+      setActiveNavPath(path);
+      navigate(path);
+    } else {
+      navigate("/login", { state: { redirectTo: path } });
+    }
+  };
+
+  const handleLogout = () => {
+    ['loggedIn', 'account', 'loginRole', 'redirectTarget'].forEach(k => localStorage.removeItem(k));
+    navigate('/home');
+  };
+
+  const publicNavItems = [
+    { path: '/home', name: 'Trang chủ', icon: <HomeIcon /> },
+  ];
+
+  const protectedNavItems = [
+    { path: '/lop1', name: 'Lớp 1' },
+    { path: '/lop2', name: 'Lớp 2' },
+    { path: '/lop3', name: 'Lớp 3' },
+    { path: '/lop4', name: 'Lớp 4' },
+    { path: '/lop5', name: 'Lớp 5' },
+    { path: '/quanly', name: 'Quản lý' },
+  ];
+  
+  return (
+    <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1000, padding: '12px', background: '#1976d2', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'space-between', overflowX: 'auto' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'nowrap' }}>
+        <img src="/Logo.png" alt="Logo" style={{ height: '40px', marginRight: '16px' }} />
+
+        {publicNavItems.map((item, i) => (
+          <Button key={i} onClick={() => { setActiveNavPath(item.path); navigate(item.path); }} style={navStyle(item.path, activeNavPath)}>
+            {item.icon} {item.name}
+          </Button>
+        ))}
+        {protectedNavItems.map((item, i) => (
+          <Button key={i} onClick={() => handleProtectedNavigate(item.path)} style={navStyle(item.path, activeNavPath)}>
+            {item.name}
+          </Button>
+        ))}
+
+        <Button
+          onClick={(e) => {
+            handleMenuOpen(e); // ✅ truyền đúng event
+            if (location.pathname === '/login') {
+              navigate('/home'); // ẩn trang login
+            }
+          }}
+          style={navStyleGroup(['/gioithieu', '/huongdan', '/chucnang'], location.pathname)}
+        >
+          Trợ giúp
+        </Button>
+        <Menu anchorEl={anchorEl} open={!!anchorEl} onClose={handleMenuClose}>
+          <MenuItem onClick={() => { handleMenuClose(); navigate('/huongdan'); }}>Hướng dẫn sử dụng</MenuItem>
+          <MenuItem onClick={() => { handleMenuClose(); navigate('/chucnang'); }}>Giới thiệu chức năng</MenuItem>
+        </Menu>
+        {localStorage.getItem('loggedIn') === 'true' && (
+          <Button onClick={handleLogout} style={navStyle('/login', location.pathname)}>Đăng xuất</Button>
+        )}
+      </div>
+
+      <Box sx={{ display: { xs: 'none', sm: 'flex' }, alignItems: 'center', gap: 1 }}>
+        <Typography variant="body2" sx={{ color: 'white', fontWeight: 'bold' }}>Năm học:</Typography>
+        <Box sx={{ backgroundColor: 'white', minWidth: 100, borderRadius: 1, height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Typography sx={{ color: '#1976d2', fontWeight: 'bold', fontSize: '14px', padding: '6px 8px' }}>
+            {selectedYear}
+          </Typography>
+        </Box>
+      </Box>
+    </nav>
+  );
+}
+
+const navStyle = (path, currentPath) => {
+  const isExactMatch = currentPath === path;
+  return {
+    color: 'white',
+    padding: '8px 12px',
+    backgroundColor: isExactMatch ? '#1565c0' : 'transparent',
+    borderBottom: isExactMatch ? '3px solid white' : 'none',
+    borderRadius: '4px',
+    textTransform: 'none',
+    fontWeight: isExactMatch ? 'bold' : 'normal',
+  };
+};
+
+
+const navStyleGroup = (paths, currentPath) => ({
+  color: 'white',
+  padding: '8px 12px',
+  backgroundColor: paths.some(p => currentPath.includes(p)) ? '#1565c0' : 'transparent',
+  borderBottom: paths.some(p => currentPath.includes(p)) ? '3px solid white' : 'none',
+  borderRadius: '4px',
+  textTransform: 'none',
+});
 
 function App() {
   const [selectedFirestore, setSelectedFirestore] = useState('firestore1');
@@ -64,34 +268,24 @@ function App() {
         <NhatKyProvider>
           <Router>
             <div style={{ padding: 10, background: '#f0f0f0', textAlign: 'center' }}>
-              <strong>Chọn Firestore: </strong>
+              <strong>Chọn Firestore:</strong>
               <label style={{ marginLeft: 10 }}>
-                <input
-                  type="radio"
-                  value="firestore1"
-                  checked={selectedFirestore === 'firestore1'}
-                  onChange={(e) => handleFirestoreSelect(e.target.value)}
-                />
+                <input type="radio" value="firestore1" checked={selectedFirestore === 'firestore1'} onChange={(e) => handleFirestoreSelect(e.target.value)} />
                 Firestore 1
               </label>
               <label style={{ marginLeft: 20 }}>
-                <input
-                  type="radio"
-                  value="firestore2"
-                  checked={selectedFirestore === 'firestore2'}
-                  onChange={(e) => handleFirestoreSelect(e.target.value)}
-                />
+                <input type="radio" value="firestore2" checked={selectedFirestore === 'firestore2'} onChange={(e) => handleFirestoreSelect(e.target.value)} />
                 Firestore 2
               </label>
             </div>
 
             <Navigation />
 
-            <div style={{ paddingTop: 0 }}>
+            <div style={{ paddingTop: '10px' }}>
               <Routes>
-                <Route path="/" element={<Home />} />
+                <Route path="/" element={<Navigate to="/home" replace />} />
                 <Route path="/login" element={<Login />} />
-                <Route path="/home" element={<PrivateRoute><Home /></PrivateRoute>} />
+                <Route path="/home" element={<Home />} />
                 <Route path="/lop1" element={<PrivateRoute><Lop1 /></PrivateRoute>} />
                 <Route path="/lop2" element={<PrivateRoute><Lop2 /></PrivateRoute>} />
                 <Route path="/lop3" element={<PrivateRoute><Lop3 /></PrivateRoute>} />
@@ -100,7 +294,7 @@ function App() {
                 <Route path="/quanly" element={<PrivateRoute><QuanLy /></PrivateRoute>} />
                 <Route path="/nhatky" element={<PrivateRoute><NhatKyDiemDanhGV /></PrivateRoute>} />
                 <Route path="/admin" element={
-                  <Suspense fallback={<div>Đang tải trang quản lý...</div>}>
+                  <Suspense fallback={<div>Đang tải trang quản trị...</div>}>
                     <PrivateRoute><Admin /></PrivateRoute>
                   </Suspense>
                 } />
@@ -108,211 +302,12 @@ function App() {
                 <Route path="/huongdan" element={<HuongDan />} />
                 <Route path="/chucnang" element={<About />} />
               </Routes>
-
               <Footer />
             </div>
           </Router>
         </NhatKyProvider>
       </ClassDataProvider>
     </ClassListProvider>
-  );
-}
-
-function Navigation() {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const [selectedYear, setSelectedYear] = useState('');
-  const [anchorEl, setAnchorEl] = useState(null);
-
-  useEffect(() => {
-    const fetchYear = async () => {
-      try {
-        const docRef = doc(db, 'YEAR', 'NAMHOC');
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          setSelectedYear(data?.value || '2024-2025');
-        } else {
-          await setDoc(docRef, { value: '2024-2025' });
-          setSelectedYear('2024-2025');
-        }
-      } catch (error) {
-        console.error('Lỗi đọc năm học từ Firestore:', error);
-      }
-    };
-    fetchYear();
-  }, []);
-
-  const handleMenuOpen = (event) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-  };
-
-  const handleClickQuanLy = () => {
-    navigate('/login');
-  };
-
-  const navItems = [
-    { path: '/home', name: 'Trang chủ', icon: <HomeIcon /> },
-    { path: '/lop1', name: 'Lớp 1' },
-    { path: '/lop2', name: 'Lớp 2' },
-    { path: '/lop3', name: 'Lớp 3' },
-    { path: '/lop4', name: 'Lớp 4' },
-    { path: '/lop5', name: 'Lớp 5' },
-  ];
-
-  return (
-    <nav
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        zIndex: 1000,
-        padding: '12px',
-        background: '#1976d2',
-        color: 'white',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        overflowX: 'auto',
-      }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px',
-          flexWrap: 'nowrap',
-          overflowX: 'auto',
-          paddingRight: '8px',
-          whiteSpace: 'nowrap',
-        }}
-      >
-        <img
-          src="/Logo.png"
-          alt="Logo"
-          style={{ height: '40px', marginRight: '16px', flexShrink: 0 }}
-        />
-
-        {navItems.map((item, index) => (
-          <Link
-            key={index}
-            to={item.path}
-            style={{
-              color: 'white',
-              textDecoration: 'none',
-              padding: '8px 12px',
-              backgroundColor:
-                location.pathname === item.path ? '#1565c0' : 'transparent',
-              borderBottom:
-                location.pathname === item.path ? '3px solid white' : 'none',
-              borderRadius: '4px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: item.icon ? '6px' : 0,
-              flexShrink: 0,
-            }}
-          >
-            {item.icon && item.icon}
-            {item.name}
-          </Link>
-        ))}
-
-
-        <Button
-          onClick={handleClickQuanLy}
-          style={{
-            color: 'white',
-            padding: '8px 12px',
-            backgroundColor:
-              location.pathname === '/quanly' ? '#1565c0' : 'transparent',
-            borderBottom:
-              location.pathname === '/quanly' ? '3px solid white' : 'none',
-            borderRadius: '4px',
-            textTransform: 'none',
-          }}
-        >
-          Quản lý
-        </Button>
-
-
-        <Button
-          onClick={handleMenuOpen}
-          style={{
-            color: 'white',
-            padding: '8px 12px',
-            backgroundColor:
-              location.pathname.includes('/gioithieu') ||
-              location.pathname.includes('/huongdan') ||
-              location.pathname.includes('/chucnang')
-                ? '#1565c0'
-                : 'transparent',
-            borderBottom:
-              location.pathname.includes('/gioithieu') ||
-              location.pathname.includes('/huongdan') ||
-              location.pathname.includes('/chucnang')
-                ? '3px solid white'
-                : 'none',
-            borderRadius: '4px',
-            textTransform: 'none',
-          }}
-        >
-          Trợ giúp
-        </Button>
-
-        <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
-          <MenuItem component={Link} to="/huongdan" onClick={handleMenuClose}>
-            Hướng dẫn sử dụng
-          </MenuItem>
-          <MenuItem component={Link} to="/chucnang" onClick={handleMenuClose}>
-            Giới thiệu chức năng
-          </MenuItem>
-        </Menu>
-      </div>
-
-      <Box
-        sx={{
-          display: { xs: 'none', sm: 'flex' },
-          alignItems: 'center',
-          gap: 1,
-          flexShrink: 0,
-        }}
-      >
-        <Typography variant="body2" sx={{ color: 'white', fontWeight: 'bold' }}>
-          Năm học:
-        </Typography>
-        <Box
-          sx={{
-            backgroundColor: 'white',
-            minWidth: 100,
-            maxWidth: 100,
-            borderRadius: 1,
-            height: '32px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            border: '1px solid #c4c4c4',
-          }}
-        >
-          <Typography
-            sx={{
-              color: '#1976d2',
-              fontWeight: 'bold',
-              fontSize: '14px',
-              textAlign: 'center',
-              padding: '6px 8px',
-              width: '100%',
-            }}
-          >
-            {selectedYear}
-          </Typography>
-        </Box>
-      </Box>
-    </nav>
   );
 }
 
