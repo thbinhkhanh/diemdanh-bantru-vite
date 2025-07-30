@@ -10,12 +10,14 @@ import { useLocation } from 'react-router-dom';
 import { doc, getDoc} from 'firebase/firestore';
 import { db } from '../firebase';
 
-import { enrichStudents } from '../pages/ThanhPhan/enrichStudents';
+//import { enrichStudents } from '../pages/ThanhPhan/enrichStudents';
 import { saveRegistrationChanges } from '../pages/ThanhPhan/saveRegistration';
 import { saveSingleDiemDanh } from '../pages/ThanhPhan/saveSingleDiemDanh';
 import { updateLocalDiemDanh } from '../pages/ThanhPhan/updateLocalDiemDanh';
+import { fetchClassList } from '../utils/fetchClassList';
+import { fetchStudents } from '../utils/fetchStudents';
 
-import { MySort } from '../utils/MySort';
+//import { MySort } from '../utils/MySort';
 import { useNavigate } from 'react-router-dom';
 
 import { useClassData } from '../context/ClassDataContext';
@@ -25,7 +27,7 @@ import { useNhatKy } from '../context/NhatKyContext';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 
-export default function Lop5() {
+export default function DanhSach() {
   const location = useLocation();
   //const useNewVersion = location.state?.useNewVersion ?? false;
 
@@ -70,6 +72,34 @@ export default function Lop5() {
   const [fetchedClasses, setFetchedClasses] = useState({});
 
   useEffect(() => {
+    fetchClassList({
+      namHoc,
+      khoi: 'K5',
+      getClassList,
+      setClassList,
+      setClassListForKhoi,
+      setSelectedClass,
+      location,
+      db,
+    });
+  }, [namHoc]);
+
+  useEffect(() => {
+    fetchStudents({
+      db,
+      namHoc,
+      selectedClass,
+      classData,
+      fetchedClasses,
+      setStudents,
+      setClassData,
+      setOriginalRegistered,
+      setFetchedClasses,
+      setIsLoading,
+    });
+  }, [selectedClass, namHoc, today]);
+  
+  useEffect(() => {
     setShowAbsentList(false); // Ẩn danh sách vắng khi đổi lớp
   }, [selectedClass]);
 
@@ -83,12 +113,6 @@ export default function Lop5() {
   useEffect(() => {
     setExpandedRowId(null);
   }, [viewMode]);
-
-  useEffect(() => {
-    const allRegistered = students.length > 0 &&
-      students.every(s => !s.showRegisterCheckbox || s.registered);
-    setCheckAllBanTru(allRegistered); // cập nhật trạng thái checkbox theo dữ liệu mới
-  }, [students]);
 
   useEffect(() => {
     if (lastSaved && !isSaving) {
@@ -122,53 +146,6 @@ export default function Lop5() {
     fetchNamHoc();
   }, []);
 
-  
-  useEffect(() => {
-    const fetchClassList = async () => {
-      if (!namHoc) return;
-
-      const khoi = 'K5';
-      const cachedList = getClassList(khoi);
-
-      if (cachedList.length > 0) {
-        setClassList(cachedList);
-        const lopFromState = location.state?.lop;
-        if (lopFromState && cachedList.includes(lopFromState)) {
-          setSelectedClass(lopFromState);
-        } else {
-          setSelectedClass(cachedList[0]);
-        }
-        return;
-      }
-
-      try {
-        const docRef = doc(db, `CLASSLIST_${namHoc}`, khoi);
-        const docSnap = await getDoc(docRef);
-
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          const list = data.list || [];
-
-          setClassList(list);
-          setClassListForKhoi(khoi, list); // ✅ Lưu vào context
-
-          const lopFromState = location.state?.lop;
-          if (lopFromState && list.includes(lopFromState)) {
-            setSelectedClass(lopFromState);
-          } else if (list.length > 0) {
-            setSelectedClass(list[0]);
-          }
-        }
-      } catch (err) {
-        console.error('Lỗi khi tải danh sách lớp:', err.message);
-      }
-    };
-
-    fetchClassList();
-  }, [namHoc]);
-
-
-
   useEffect(() => {
     const contextData = classData[selectedClass];
 
@@ -183,53 +160,6 @@ export default function Lop5() {
       //console.log(`ℹ️ Không có dữ liệu lớp ${selectedClass} trong context`);
     }
   }, [classData, selectedClass]);
-
-  useEffect(() => {
-    const contextData = classData[selectedClass];
-    const alreadyFetched = fetchedClasses[selectedClass];
-    const shouldFetch = !Array.isArray(contextData) || contextData.length === 0;
-
-    if (!shouldFetch || alreadyFetched || !namHoc || !selectedClass) {
-      return;
-    }
-
-    const fetchData = async () => {
-      //console.log("🚀 Bắt đầu fetch học sinh...");
-      setIsLoading(true);
-      try {
-        const col = `DANHSACH_${namHoc}`;
-        const docRef = doc(db, col, selectedClass);
-        const snap = await getDoc(docRef);
-
-        if (!snap.exists()) {
-          console.warn(`⚠️ Không tìm thấy document lớp ${selectedClass} trong ${col}`);
-          return;
-        }
-
-        const data = snap.data();
-
-        // 🆕 Lấy dữ liệu từ studentsMap
-        const raw = data.hocSinh || [];
-        const enriched = enrichStudents(raw, selectedClass, true);
-        const sorted = MySort(enriched);
-
-        setStudents(sorted);
-        setClassData(selectedClass, sorted);
-
-        const initMap = {};
-        sorted.forEach(s => (initMap[s.id] = s.registered));
-        setOriginalRegistered(initMap);
-
-        setFetchedClasses(prev => ({ ...prev, [selectedClass]: true }));
-      } catch (err) {
-        console.error("🔥 Lỗi khi fetch học sinh:", err.message || err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [selectedClass, namHoc, today]);
 
   const toggleDiemDanh = async (index) => {
     const targetStudent = students[index];

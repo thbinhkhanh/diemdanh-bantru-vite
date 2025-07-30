@@ -2,7 +2,7 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 
 export const saveRegistrationChanges = async (
-  students,
+  students,         // chỉ là danh sách thay đổi (không đầy đủ!)
   namHoc,
   selectedClass,
   setClassData,
@@ -14,43 +14,46 @@ export const saveRegistrationChanges = async (
   try {
     const docSnap = await getDoc(classRef);
     if (!docSnap.exists()) return;
-
     const data = docSnap.data();
 
-    // 📌 Map ID → trạng thái registered từ UI
+    // 1. Map từ UI: id => registered
     const regMap = new Map(
-      students.map(s => [
-        s.maDinhDanh || s.id,
-        !!s.registered // đảm bảo boolean
-      ])
+      students.map(s => [s.maDinhDanh || s.id, !!s.registered])
     );
 
-    // 🔄 Duyệt và cập nhật tất cả field mảng học sinh trong tài liệu lớp
+    // 2. Cập nhật Firestore
     const newData = { ...data };
-    Object.entries(data).forEach(([key, value]) => {
-      if (!Array.isArray(value)) return;
-
-      newData[key] = value.map(hs => {
-        const reg = regMap.get(hs.maDinhDanh || hs.id);
-        return reg !== undefined
-          ? { ...hs, diemDanhBanTru: reg }
-          : { ...hs };
+    Object.entries(data).forEach(([key, val]) => {
+      if (!Array.isArray(val)) return;
+      newData[key] = val.map(hs => {
+        const id = hs.maDinhDanh || hs.id;
+        if (regMap.has(id)) {
+          return { ...hs, diemDanhBanTru: regMap.get(id) };
+        }
+        return hs;
       });
     });
 
     newData.updatedAt = new Date().toISOString();
-
     await setDoc(classRef, newData);
 
-    // 🧠 Trộn lại để cập nhật lại context hoặc state nếu cần
-    const mergedList = students.map(s => ({
-      ...s,
-      hoVaTen: s.hoVaTen || s.hoTen || 'Không có tên',
-      registered: !!s.registered
-    }));
+    // 3. ✅ Cập nhật context đúng cách: cập nhật từng học sinh trong danh sách gốc
+    const fullList = classData[selectedClass] || [];
+    const updatedList = fullList.map(hs => {
+      const id = hs.maDinhDanh || hs.id;
+      if (regMap.has(id)) {
+        const registered = regMap.get(id);
+        return {
+          ...hs,
+          diemDanhBanTru: registered,
+          registered: registered, // đảm bảo sync checkbox UI
+        };
+      }
+      return hs;
+    });
 
-    // Nếu cần cập nhật lại UI thì bỏ comment này
-    //setClassData(selectedClass, mergedList);
+    setClassData(selectedClass, updatedList);
+
   } catch (err) {
     console.error('❌ Lỗi khi lưu dữ liệu bán trú:', err);
   }
