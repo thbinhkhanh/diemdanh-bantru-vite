@@ -46,16 +46,7 @@ function App() {
             <Routes>
               <Route path="/" element={<Navigate to="/home" replace />} />
               <Route path="/login" element={<Login />} />
-              <Route
-                path="/home"
-                element={
-                  <Home
-                    handleProtectedNavigate={(path) =>
-                      Navigation_Route(path, navigate, setActiveNavPath)
-                    }
-                  />
-                }
-              />
+              <Route path="/home" element={<Home handleProtectedNavigate={(path) => Navigation_Route(path, navigate, setActiveNavPath)} />} />
               <Route path="/lop1" element={<PrivateRoute><Lop1 /></PrivateRoute>} />
               <Route path="/lop2" element={<PrivateRoute><Lop2 /></PrivateRoute>} />
               <Route path="/lop3" element={<PrivateRoute><Lop3 /></PrivateRoute>} />
@@ -66,12 +57,12 @@ function App() {
               <Route path="/doimatkhau" element={<PrivateRoute><ChangePassword /></PrivateRoute>} />
               <Route path="/gioithieu" element={<About />} />
               <Route path="/huongdan" element={<HuongDan />} />
-              <Route path="/chucnang" element={<About />} />                          
-              <Route path="/admin" element={                  
+              <Route path="/chucnang" element={<About />} />
+              <Route path="/admin" element={
                 <Suspense fallback={<div>Đang tải trang quản trị...</div>}>
                   <PrivateRoute><Admin /></PrivateRoute>
                 </Suspense>
-              } />            
+              } />
             </Routes>
             <Footer />
           </div>

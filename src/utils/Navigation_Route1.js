@@ -17,23 +17,32 @@ export const Navigation_Route = (path, navigate, setActiveNavPath) => {
     const targetClass = match[1]; // "1", "2", ...
     const isClassAccount = /^\d+\.\d+$/.test(loginRole);
 
-    if (isLoggedIn && isClassAccount) {
-      const userClass = loginRole.split('.')[0];
-      if (userClass === targetClass) {
-        setActiveNavPath?.(path);
-        navigate(path);
-      } else {
-        navigate('/login', {
-          state: {
-            redirectTo: `/lop${targetClass}`,
-            classId: `lop${targetClass}`,
-            switchingClass: true,
-          },
-        });
+    if (isLoggedIn) {
+      // ✅ Nếu tài khoản lớp -> kiểm tra đúng lớp mới cho vào
+      if (isClassAccount) {
+        const userClass = loginRole.split('.')[0];
+        if (userClass === targetClass) {
+          setActiveNavPath?.(path);
+          navigate(path);
+        } else {
+          navigate('/login', {
+            state: {
+              redirectTo: `/lop${targetClass}`,
+              classId: `lop${targetClass}`,
+              switchingClass: true,
+            },
+          });
+        }
+        return;
       }
+
+      // ✅ Nếu tài khoản quản lý -> cho vào bất kỳ lớp nào
+      setActiveNavPath?.(path);
+      navigate(path);
       return;
     }
 
+    // ❌ Chưa đăng nhập -> redirect login
     navigate('/login', {
       state: {
         redirectTo: `/lop${targetClass}`,

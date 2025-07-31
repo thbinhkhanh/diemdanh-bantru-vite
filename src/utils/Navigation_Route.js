@@ -1,48 +1,49 @@
-// 📁 src/utils/Navigation_Route.js
-import { useNavigate } from 'react-router-dom';
-
-/**
- * Điều hướng có kiểm tra đăng nhập và phân quyền truy cập.
- * @param {string} path - Đường dẫn cần chuyển đến (VD: "/lop2", "/quanly")
- * @param {function} navigate - Hàm điều hướng từ useNavigate()
- * @param {function} [setActiveNavPath] - Hàm cập nhật trạng thái đường dẫn đang chọn (optional)
- */
 export const Navigation_Route = (path, navigate, setActiveNavPath) => {
   const isLoggedIn = localStorage.getItem('loggedIn') === 'true';
   const loginRole = localStorage.getItem('loginRole');
   const match = path.match(/^\/lop([1-5])$/); // kiểm tra nếu là route lớp
+  const isClassAccount = /^\d+\.\d+$/.test(loginRole); // ví dụ: "2.3"
+  const isManagerAccount = ['admin', 'yte', 'bgh', 'ketoan'].includes(loginRole);
 
   // 👉 Trường hợp: đường dẫn tới lớp cụ thể
   if (match) {
     const targetClass = match[1]; // "1", "2", ...
-    const isClassAccount = /^\d+\.\d+$/.test(loginRole);
 
-    if (isLoggedIn) {
-      // ✅ Nếu tài khoản lớp -> kiểm tra đúng lớp mới cho vào
-      if (isClassAccount) {
-        const userClass = loginRole.split('.')[0];
-        if (userClass === targetClass) {
-          setActiveNavPath?.(path);
-          navigate(path);
-        } else {
-          navigate('/login', {
-            state: {
-              redirectTo: `/lop${targetClass}`,
-              classId: `lop${targetClass}`,
-              switchingClass: true,
-            },
-          });
-        }
-        return;
+    if (!isLoggedIn) {
+      navigate('/login', {
+        state: {
+          redirectTo: `/lop${targetClass}`,
+          classId: `lop${targetClass}`,
+        },
+      });
+      return;
+    }
+
+    if (isClassAccount) {
+      const userClass = loginRole.split('.')[0];
+      if (userClass === targetClass) {
+        setActiveNavPath?.(path);
+        navigate(path);
+      } else {
+        navigate('/login', {
+          state: {
+            redirectTo: `/lop${targetClass}`,
+            classId: `lop${targetClass}`,
+            switchingClass: true,
+          },
+        });
       }
+      return;
+    }
 
-      // ✅ Nếu tài khoản quản lý -> cho vào bất kỳ lớp nào
+    // ✅ Nếu là tài khoản quản lý -> cho phép truy cập bất kỳ lớp nào
+    if (isManagerAccount) {
       setActiveNavPath?.(path);
       navigate(path);
       return;
     }
 
-    // ❌ Chưa đăng nhập -> redirect login
+    // ❓ Nếu là kiểu tài khoản khác không xác định
     navigate('/login', {
       state: {
         redirectTo: `/lop${targetClass}`,
@@ -59,7 +60,7 @@ export const Navigation_Route = (path, navigate, setActiveNavPath) => {
       return;
     }
 
-    if (/^\d+\.\d+$/.test(loginRole)) {
+    if (isClassAccount) {
       alert('⚠️ Tài khoản lớp không được truy cập chức năng Quản lý. Hãy đăng xuất trước!');
       return;
     }
