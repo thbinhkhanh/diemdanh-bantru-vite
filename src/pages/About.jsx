@@ -23,7 +23,7 @@ export default function About() {
       {/* Tiêu đề khung xanh */}
       <Container
         sx={{
-          mt: { xs: '64px', sm: '70px' }, // để không bị che bởi menu
+          mt: { xs: '10px', sm: '10px' }, // để không bị che bởi menu
           width: { xs: "98%", sm: "90%", md: "850px" },
         }}
       >

@@ -28,6 +28,7 @@ const setSession = (userKey) => {
   localStorage.setItem("loggedIn", "true");
   localStorage.setItem("account", userKey);
   localStorage.setItem("loginRole", userKey.toLowerCase());
+  localStorage.setItem("isAdmin", "true");
 };
 
 export default function Login() {

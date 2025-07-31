@@ -28,7 +28,6 @@ import NhatKyDiemDanhGV from './NhatKyDiemDanhGV';
 import { ClassDataProvider } from './context/ClassDataContext';
 import { NhatKyProvider } from './context/NhatKyContext';
 import { ClassListProvider } from './context/ClassListContext';
-import ChangePassword from './pages/ChangePassword';
 
 const Admin = lazy(() => import('./Admin'));
 
@@ -87,8 +86,7 @@ function Navigation() {
   const [anchorEl, setAnchorEl] = useState(null);
   const [showLogoPopup, setShowLogoPopup] = useState(false);
   const [activeNavPath, setActiveNavPath] = useState('/home');
-  const [anchorElAccount, setAnchorElAccount] = useState(null);
-  
+
   useEffect(() => {
     const mainPath = '/' + location.pathname.split('/')[1];
     setActiveNavPath(mainPath);
@@ -282,72 +280,17 @@ function Navigation() {
             Trợ giúp
           </Button>
           <Menu anchorEl={anchorEl} open={!!anchorEl} onClose={handleMenuClose}>
-            <MenuItem
-              onClick={() => {
-                handleMenuClose();
-                navigate('/huongdan');
-              }}
-              sx={{ fontSize: '14px' }}
-            >
-              Hướng dẫn sử dụng
-            </MenuItem>
-
-            <MenuItem
-              onClick={() => {
-                handleMenuClose();
-                navigate('/chucnang');
-              }}
-              sx={{ fontSize: '14px' }}
-            >
-              Giới thiệu chức năng
-            </MenuItem>
+            <MenuItem onClick={() => { handleMenuClose(); navigate('/huongdan'); }}>Hướng dẫn sử dụng</MenuItem>
+            <MenuItem onClick={() => { handleMenuClose(); navigate('/chucnang'); }}>Giới thiệu chức năng</MenuItem>
           </Menu>
+
           {localStorage.getItem('loggedIn') === 'true' && (
-            <>
-              <Button
-                onClick={(e) => setAnchorElAccount(e.currentTarget)}
-                style={navStyle('/doimatkhau', location.pathname)}
-              >
-                Tài khoản
-              </Button>
-              <Menu
-                anchorEl={anchorElAccount}
-                open={Boolean(anchorElAccount)}
-                onClose={() => setAnchorElAccount(null)}
-              >
-                <MenuItem
-                  onClick={() => {
-                    setAnchorElAccount(null);
-                    const role = localStorage.getItem('loginRole');
-                    if (['admin', 'yte', 'bgh', 'ketoan'].includes(role)) {
-                      alert('🔒 Tài khoản quản lý không thể đổi mật khẩu tại đây.');
-                      return;
-                    }
-                    navigate('/doimatkhau');
-                  }}
-                  disabled={['admin', 'yte', 'bgh', 'ketoan'].includes(localStorage.getItem('loginRole'))}
-                  sx={{ fontSize: '14px' }} // 👈 giảm cỡ chữ tại đây
-                >
-                  Đổi mật khẩu
-                </MenuItem>
-
-                <MenuItem
-                  onClick={() => {
-                    setAnchorElAccount(null);
-                    handleLogout();
-                  }}
-                  sx={{ fontSize: '14px' }} // 👈 giảm cỡ chữ tại đây
-                >
-                  Đăng xuất
-                </MenuItem>
-              </Menu>
-            </>
+            <Button onClick={handleLogout} style={navStyle('/login', location.pathname)}>Đăng xuất</Button>
           )}
-
         </div>
 
         <Box sx={{ display: { xs: 'none', sm: 'flex' }, alignItems: 'center', gap: 1 }}>
-          <Typography variant="body2" sx={{ color: 'white'}}>Năm học:</Typography>
+          <Typography variant="body2" sx={{ color: 'white', fontWeight: 'bold' }}>Năm học:</Typography>
           <Box sx={{
             backgroundColor: 'white',
             minWidth: 100,
@@ -357,14 +300,12 @@ function Navigation() {
             alignItems: 'center',
             justifyContent: 'center'
           }}>
-            <Typography
-              sx={{
-                color: 'black', // ← màu chữ đen
-                fontWeight: 'bold',
-                fontSize: '14px',
-                padding: '6px 8px'
-              }}
-            >
+            <Typography sx={{
+              color: '#1976d2',
+              fontWeight: 'bold',
+              fontSize: '14px',
+              padding: '6px 8px'
+            }}>
               {selectedYear}
             </Typography>
           </Box>
@@ -442,8 +383,7 @@ function App() {
                 <Route path="/lop5" element={<PrivateRoute><Lop5 /></PrivateRoute>} />
                 <Route path="/quanly" element={<PrivateRoute><QuanLy /></PrivateRoute>} />
                 <Route path="/nhatky" element={<PrivateRoute><NhatKyDiemDanhGV /></PrivateRoute>} />
-                <Route path="/doimatkhau" element={<PrivateRoute><ChangePassword /></PrivateRoute>} />
-                <Route path="/admin" element={                  
+                <Route path="/admin" element={
                   <Suspense fallback={<div>Đang tải trang quản trị...</div>}>
                     <PrivateRoute><Admin /></PrivateRoute>
                   </Suspense>
