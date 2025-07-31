@@ -53,7 +53,7 @@ export default function Home() {
         px: 0,
       }}
     >
-      <Banner title="ĐIỂM DANH BÁN TRÚ" />
+      <Banner title="HỆ THỐNG BÁN TRÚ" />
 
       <Box sx={{ px: 2 }}>
         <Grid container spacing={3} justifyContent="center" sx={{ mt: 3, mb: 4 }}>

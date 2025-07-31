@@ -38,6 +38,7 @@ export default function Login() {
 
   const navigate = useNavigate();
   const location = useLocation();
+  const isTrangChu = location.pathname === '/home';
 
   const urlPath = location.pathname;
   const isLopPath = /^\/lop[1-5]$/.test(urlPath);
@@ -124,7 +125,15 @@ export default function Login() {
 
   return (
     <Box sx={{ minHeight: "100vh", backgroundColor: "#e3f2fd" }}>
-      <Banner title="ĐĂNG NHẬP HỆ THỐNG" />
+      <Banner
+        title={
+          isQuanLyLogin
+            ? "HỆ THỐNG QUẢN LÝ"
+            //: isTrangChu
+            //? "HỆ THỐNG BÁN TRÚ"
+            : "ĐIỂM DANH"
+        }
+      />
       <Box sx={{ width: { xs: "95%", sm: 400 }, mx: "auto", mt: 4 }}>
         <Card elevation={10} sx={{ p: 3, borderRadius: 4 }}>
           <Stack spacing={3} alignItems="center">
@@ -132,7 +141,7 @@ export default function Login() {
 
             <Typography variant="h5" fontWeight="bold" color="primary" textAlign="center">
               {classId
-                ? `ĐĂNG NHẬP LỚP ${lopSo}`
+                ? `ĐĂNG NHẬP KHỐI ${lopSo}`
                 : roleUsername?.toLowerCase() === "admin"
                 ? "QUẢN TRỊ HỆ THỐNG"
                 : "QUẢN LÝ BÁN TRÚ"}

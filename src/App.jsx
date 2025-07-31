@@ -84,11 +84,11 @@ function Navigation() {
   const navigate = useNavigate();
   const [selectedYear, setSelectedYear] = useState('');
   const [anchorEl, setAnchorEl] = useState(null);
-
+  const [showLogoPopup, setShowLogoPopup] = useState(false);
   const [activeNavPath, setActiveNavPath] = useState('/home');
 
   useEffect(() => {
-    const mainPath = '/' + location.pathname.split('/')[1]; // Lấy phần chính của path
+    const mainPath = '/' + location.pathname.split('/')[1];
     setActiveNavPath(mainPath);
   }, [location.pathname]);
 
@@ -106,7 +106,6 @@ function Navigation() {
     fetchYear();
   }, []);
 
-  
   const handleMenuOpen = (e) => setAnchorEl(e.currentTarget);
   const handleMenuClose = () => setAnchorEl(null);
 
@@ -120,7 +119,7 @@ function Navigation() {
       const currentKhoi = loginRole?.split(".")[0];
 
       if (isLoggedIn && currentKhoi === lopDuocChon) {
-        setActiveNavPath(path);        // ✅ chỉ set khi vào được
+        setActiveNavPath(path);
         navigate(path);
       } else {
         navigate("/login", {
@@ -145,12 +144,11 @@ function Navigation() {
         return;
       }
 
-      setActiveNavPath(path);        // ✅ chỉ set khi được phép vào
+      setActiveNavPath(path);
       navigate(path);
       return;
     }
 
-    // Các trang công khai khác (nếu có)
     if (isLoggedIn) {
       setActiveNavPath(path);
       navigate(path);
@@ -169,72 +167,138 @@ function Navigation() {
   ];
 
   const protectedNavItems = [
-    { path: '/lop1', name: 'Lớp 1' },
-    { path: '/lop2', name: 'Lớp 2' },
-    { path: '/lop3', name: 'Lớp 3' },
-    { path: '/lop4', name: 'Lớp 4' },
-    { path: '/lop5', name: 'Lớp 5' },
+    { path: '/lop1', name: 'Khối 1' },
+    { path: '/lop2', name: 'Khối 2' },
+    { path: '/lop3', name: 'Khối 3' },
+    { path: '/lop4', name: 'Khối 4' },
+    { path: '/lop5', name: 'Khối 5' },
     { path: '/quanly', name: 'Quản lý' },
   ];
-  
+
   return (
-    <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1000, padding: '12px', background: '#1976d2', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'space-between', overflowX: 'auto' }}>
-      <div style={{
+    <>
+      {/* 👇 Popup Logo to fullscreen */}
+      {showLogoPopup && (
+        <div
+          onClick={() => setShowLogoPopup(false)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            backgroundColor: 'rgba(0,0,0,0.6)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 2000,
+            cursor: 'zoom-out',
+          }}
+        >
+          <img
+            src="/Logo.png"
+            alt="Logo lớn"
+            style={{
+              maxWidth: '90%',
+              maxHeight: '90%',
+              borderRadius: '8px',
+              boxShadow: '0 0 20px rgba(255,255,255,0.8)',
+            }}
+          />
+        </div>
+      )}
+
+      {/* 👇 Navigation bar */}
+      <nav style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 1000,
+        padding: '4px 8px',
+        background: '#1976d2',
+        color: 'white',
         display: 'flex',
         alignItems: 'center',
-        gap: '10px',
-        flexWrap: 'nowrap',
-        overflowX: 'auto',
-        whiteSpace: 'nowrap',
-        WebkitOverflowScrolling: 'touch'
+        justifyContent: 'space-between',
+        overflowX: 'auto'
       }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          flexWrap: 'nowrap',
+          overflowX: 'auto',
+          whiteSpace: 'nowrap',
+          WebkitOverflowScrolling: 'touch'
+        }}>
+          <img
+            src="/Logo.png"
+            alt="Logo"
+            style={{ height: '35px', marginRight: '16px', cursor: 'pointer' }}
+            onClick={() => setShowLogoPopup(true)}
+          />
 
-        <img src="/Logo.png" alt="Logo" style={{ height: '40px', marginRight: '16px' }} />
-        {publicNavItems.map((item, i) => (
+          {publicNavItems.map((item, i) => (
+            <Button
+              key={i}
+              onClick={() => { setActiveNavPath(item.path); navigate(item.path); }}
+              style={{ ...navStyle(item.path, activeNavPath), minWidth: 'auto', padding: '6px' }}
+            >
+              {item.icon}
+            </Button>
+          ))}
+
+          {protectedNavItems.map((item, i) => (
+            <Button key={i} onClick={() => handleProtectedNavigate(item.path)} style={navStyle(item.path, activeNavPath)}>
+              {item.name}
+            </Button>
+          ))}
+
           <Button
-            key={i}
-            onClick={() => { setActiveNavPath(item.path); navigate(item.path); }}
-            style={{ ...navStyle(item.path, activeNavPath), minWidth: 'auto', padding: '8px' }}
+            onClick={(e) => {
+              handleMenuOpen(e);
+              if (location.pathname === '/login') {
+                navigate('/home');
+              }
+            }}
+            style={navStyleGroup(['/gioithieu', '/huongdan', '/chucnang'], location.pathname)}
           >
-            {item.icon}
+            Trợ giúp
           </Button>
-        ))}
+          <Menu anchorEl={anchorEl} open={!!anchorEl} onClose={handleMenuClose}>
+            <MenuItem onClick={() => { handleMenuClose(); navigate('/huongdan'); }}>Hướng dẫn sử dụng</MenuItem>
+            <MenuItem onClick={() => { handleMenuClose(); navigate('/chucnang'); }}>Giới thiệu chức năng</MenuItem>
+          </Menu>
 
-        {protectedNavItems.map((item, i) => (
-          <Button key={i} onClick={() => handleProtectedNavigate(item.path)} style={navStyle(item.path, activeNavPath)}>
-            {item.name}
-          </Button>
-        ))}
+          {localStorage.getItem('loggedIn') === 'true' && (
+            <Button onClick={handleLogout} style={navStyle('/login', location.pathname)}>Đăng xuất</Button>
+          )}
+        </div>
 
-        <Button
-          onClick={(e) => {
-            handleMenuOpen(e); // ✅ truyền đúng event
-            if (location.pathname === '/login') {
-              navigate('/home'); // ẩn trang login
-            }
-          }}
-          style={navStyleGroup(['/gioithieu', '/huongdan', '/chucnang'], location.pathname)}
-        >
-          Trợ giúp
-        </Button>
-        <Menu anchorEl={anchorEl} open={!!anchorEl} onClose={handleMenuClose}>
-          <MenuItem onClick={() => { handleMenuClose(); navigate('/huongdan'); }}>Hướng dẫn sử dụng</MenuItem>
-          <MenuItem onClick={() => { handleMenuClose(); navigate('/chucnang'); }}>Giới thiệu chức năng</MenuItem>
-        </Menu>
-        {localStorage.getItem('loggedIn') === 'true' && (
-          <Button onClick={handleLogout} style={navStyle('/login', location.pathname)}>Đăng xuất</Button>
-        )}
-      </div>
-
-      <Box sx={{ display: { xs: 'none', sm: 'flex' }, alignItems: 'center', gap: 1 }}>
-        <Typography variant="body2" sx={{ color: 'white', fontWeight: 'bold' }}>Năm học:</Typography>
-        <Box sx={{ backgroundColor: 'white', minWidth: 100, borderRadius: 1, height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Typography sx={{ color: '#1976d2', fontWeight: 'bold', fontSize: '14px', padding: '6px 8px' }}>
-            {selectedYear}
-          </Typography>
+        <Box sx={{ display: { xs: 'none', sm: 'flex' }, alignItems: 'center', gap: 1 }}>
+          <Typography variant="body2" sx={{ color: 'white', fontWeight: 'bold' }}>Năm học:</Typography>
+          <Box sx={{
+            backgroundColor: 'white',
+            minWidth: 100,
+            borderRadius: 1,
+            height: '32px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            <Typography sx={{
+              color: '#1976d2',
+              fontWeight: 'bold',
+              fontSize: '14px',
+              padding: '6px 8px'
+            }}>
+              {selectedYear}
+            </Typography>
+          </Box>
         </Box>
-      </Box>
-    </nav>
+      </nav>
+    </>
   );
 }
 
@@ -242,10 +306,10 @@ const navStyle = (path, currentPath) => {
   const isExactMatch = currentPath === path;
   return {
     color: 'white',
-    padding: '8px 15px', // 🔼 tăng padding để mở rộng vùng click và highlight
+    padding: '6px 12px',
     backgroundColor: isExactMatch ? '#1565c0' : 'transparent',
-    borderBottom: isExactMatch ? '4px solid white' : 'none', // 🔼 viền dưới rõ hơn
-    borderRadius: '6px',
+    borderBottom: isExactMatch ? '2px solid white' : 'none',
+    borderRadius: '4px',
     textTransform: 'none',
     fontWeight: isExactMatch ? 'bold' : 'normal',
   };
@@ -253,12 +317,13 @@ const navStyle = (path, currentPath) => {
 
 const navStyleGroup = (paths, currentPath) => ({
   color: 'white',
-  padding: '8px 12px',
+  padding: '6px 12px',
   backgroundColor: paths.some(p => currentPath.includes(p)) ? '#1565c0' : 'transparent',
   borderBottom: paths.some(p => currentPath.includes(p)) ? '3px solid white' : 'none',
   borderRadius: '4px',
   textTransform: 'none',
 });
+
 
 function App() {
   const [selectedFirestore, setSelectedFirestore] = useState('firestore1');
@@ -293,7 +358,7 @@ function App() {
 
             <Navigation />
 
-            <div style={{ paddingTop: '10px' }}>
+            <div style={{ paddingTop: '0px' }}>
               <Routes>
                 <Route path="/" element={<Navigate to="/home" replace />} />
                 <Route path="/login" element={<Login />} />
