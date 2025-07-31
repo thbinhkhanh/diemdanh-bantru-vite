@@ -11,37 +11,14 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import Banner from "./Banner";
 
-export default function Home() {
-  const navigate = useNavigate();
-
+export default function Home({ handleProtectedNavigate }) {
   const khốiList = ["KHỐI 1", "KHỐI 2", "KHỐI 3", "KHỐI 4", "KHỐI 5"];
   const imageList = ["L1.png", "L2.png", "L3.png", "L4.png", "L5.png"];
   const colorMap = ["#42a5f5", "#66bb6a", "#ffb300", "#ab47bc", "#ef5350"];
 
   const handleClickKhoiLop = (index) => {
-    const rawValue = localStorage.getItem("loggedIn");
-    console.log("🔍 Giá trị gốc localStorage.getItem('loggedIn'):", rawValue);
-
-    const isLoggedIn = rawValue === "true";
-    console.log("🧠 isLoggedIn:", isLoggedIn);
-    console.log("📌 Khối lớp được chọn:", index + 1);
-
-    if (!isLoggedIn) {
-      const redirectPath = `/lop${index + 1}`;
-      const classIdValue = `lop${index + 1}`;
-      console.log("➡️ Đang navigate tới /login với:");
-      console.log("🔗 redirectTo:", redirectPath);
-      console.log("🏷️ classId:", classIdValue);
-
-      navigate("/login", {
-        state: {
-          redirectTo: redirectPath,
-          classId: classIdValue, // 👈 Truyền thêm để Login lấy danh sách lớp
-        },
-      });
-    } else {
-      navigate(`/lop${index + 1}`);
-    }
+    const path = `/lop${index + 1}`;
+    handleProtectedNavigate(path); // ✅ Dùng logic kiểm tra từ App.jsx
   };
 
   return (

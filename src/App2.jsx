@@ -28,6 +28,7 @@ import NhatKyDiemDanhGV from './NhatKyDiemDanhGV';
 import { ClassDataProvider } from './context/ClassDataContext';
 import { NhatKyProvider } from './context/NhatKyContext';
 import { ClassListProvider } from './context/ClassListContext';
+import ChangePassword from './pages/ChangePassword';
 
 const Admin = lazy(() => import('./Admin'));
 
@@ -86,7 +87,8 @@ function Navigation() {
   const [anchorEl, setAnchorEl] = useState(null);
   const [showLogoPopup, setShowLogoPopup] = useState(false);
   const [activeNavPath, setActiveNavPath] = useState('/home');
-
+  const [anchorElAccount, setAnchorElAccount] = useState(null);
+  
   useEffect(() => {
     const mainPath = '/' + location.pathname.split('/')[1];
     setActiveNavPath(mainPath);
@@ -111,39 +113,45 @@ function Navigation() {
 
   const handleProtectedNavigate = (path) => {
     const isLoggedIn = localStorage.getItem("loggedIn") === "true";
-    const loginRole = localStorage.getItem("loginRole");
-    const match = path.match(/^\/lop([1-5])$/);
+    const loginRole = localStorage.getItem("loginRole"); // ví dụ: "1.2" hoặc "admin"
+    const match = path.match(/^\/lop([1-5])$/); // /lop1 → /lop5
 
     if (match) {
-      const lopDuocChon = match[1];
-      const currentKhoi = loginRole?.split(".")[0];
+      const lopDuocChon = match[1]; // ví dụ: "2"
+      const isClassAccount = /^\d+\.\d+$/.test(loginRole); // "1.2" hợp lệ
 
       if (isLoggedIn) {
-        const isClassAccount = /^\d+\.\d+$/.test(loginRole);
-
-        // ✅ Nếu là tài khoản quản lý (admin, yte, etc.) → cho vào thẳng
-        if (!isClassAccount || currentKhoi === lopDuocChon) {
-          setActiveNavPath(path);
-          navigate(path);
-        } else {
-          navigate("/login", {
-            state: {
-              redirectTo: path,
-              classId: path.slice(1),
-            },
-          });
+        if (isClassAccount) {
+          const currentKhoi = loginRole.split(".")[0]; // 👈 BỔ SUNG DÒNG NÀY
+          if (lopDuocChon === currentKhoi) {
+            // ✅ Đúng khối → cho vào
+            setActiveNavPath(path);
+            navigate(path);
+          } else {
+            // ❌ Chuyển lớp → về trang login (không logout)
+            navigate("/login", {
+              state: {
+                redirectTo: `/lop${lopDuocChon}`,
+                classId: `lop${lopDuocChon}`,
+                switchingClass: true, // để Login.jsx xử lý không logout
+              },
+            });
+          }
+          return;
         }
-      } else {
-        navigate("/login", {
-          state: {
-            redirectTo: path,
-            classId: path.slice(1),
-          },
-        });
       }
+
+      // ❌ Chưa đăng nhập → yêu cầu đăng nhập
+      navigate("/login", {
+        state: {
+          redirectTo: `/lop${lopDuocChon}`,
+          classId: `lop${lopDuocChon}`,
+        },
+      });
       return;
     }
 
+    // 👉 Truy cập /quanly (chỉ tài khoản quản lý)
     if (path === "/quanly") {
       if (!isLoggedIn) {
         navigate("/login", { state: { redirectTo: path } });
@@ -161,6 +169,7 @@ function Navigation() {
       return;
     }
 
+    // ✅ Các path còn lại
     if (isLoggedIn) {
       setActiveNavPath(path);
       navigate(path);
@@ -170,9 +179,14 @@ function Navigation() {
   };
 
 
+  //const handleLogout = () => {
+  //  ['loggedIn', 'account', 'loginRole', 'redirectTarget', 'isAdmin', 'rememberedAccount'].forEach(k => localStorage.removeItem(k));
+  //  navigate('/home');
+  //};
+
   const handleLogout = () => {
-    ['loggedIn', 'account', 'loginRole', 'redirectTarget'].forEach(k => localStorage.removeItem(k));
-    navigate('/home');
+    ['loggedIn', 'account', 'loginRole', 'redirectTarget', 'isAdmin', 'rememberedAccount'].forEach(k => localStorage.removeItem(k));
+    window.location.href = '/home'; // 👈 Hard reload tránh lỗi React Router khi mất context
   };
 
   const publicNavItems = [
@@ -280,17 +294,72 @@ function Navigation() {
             Trợ giúp
           </Button>
           <Menu anchorEl={anchorEl} open={!!anchorEl} onClose={handleMenuClose}>
-            <MenuItem onClick={() => { handleMenuClose(); navigate('/huongdan'); }}>Hướng dẫn sử dụng</MenuItem>
-            <MenuItem onClick={() => { handleMenuClose(); navigate('/chucnang'); }}>Giới thiệu chức năng</MenuItem>
-          </Menu>
+            <MenuItem
+              onClick={() => {
+                handleMenuClose();
+                navigate('/huongdan');
+              }}
+              sx={{ fontSize: '14px' }}
+            >
+              Hướng dẫn sử dụng
+            </MenuItem>
 
+            <MenuItem
+              onClick={() => {
+                handleMenuClose();
+                navigate('/chucnang');
+              }}
+              sx={{ fontSize: '14px' }}
+            >
+              Giới thiệu chức năng
+            </MenuItem>
+          </Menu>
           {localStorage.getItem('loggedIn') === 'true' && (
-            <Button onClick={handleLogout} style={navStyle('/login', location.pathname)}>Đăng xuất</Button>
+            <>
+              <Button
+                onClick={(e) => setAnchorElAccount(e.currentTarget)}
+                style={navStyle('/doimatkhau', location.pathname)}
+              >
+                Tài khoản
+              </Button>
+              <Menu
+                anchorEl={anchorElAccount}
+                open={Boolean(anchorElAccount)}
+                onClose={() => setAnchorElAccount(null)}
+              >
+                <MenuItem
+                  onClick={() => {
+                    setAnchorElAccount(null);
+                    const role = localStorage.getItem('loginRole');
+                    if (['admin', 'yte', 'bgh', 'ketoan'].includes(role)) {
+                      alert('🔒 Tài khoản quản lý không thể đổi mật khẩu tại đây.');
+                      return;
+                    }
+                    navigate('/doimatkhau');
+                  }}
+                  disabled={['admin', 'yte', 'bgh', 'ketoan'].includes(localStorage.getItem('loginRole'))}
+                  sx={{ fontSize: '14px' }} // 👈 giảm cỡ chữ tại đây
+                >
+                  Đổi mật khẩu
+                </MenuItem>
+
+                <MenuItem
+                  onClick={() => {
+                    setAnchorElAccount(null);
+                    handleLogout();
+                  }}
+                  sx={{ fontSize: '14px' }} // 👈 giảm cỡ chữ tại đây
+                >
+                  Đăng xuất
+                </MenuItem>
+              </Menu>
+            </>
           )}
+
         </div>
 
         <Box sx={{ display: { xs: 'none', sm: 'flex' }, alignItems: 'center', gap: 1 }}>
-          <Typography variant="body2" sx={{ color: 'white', fontWeight: 'bold' }}>Năm học:</Typography>
+          <Typography variant="body2" sx={{ color: 'white'}}>Năm học:</Typography>
           <Box sx={{
             backgroundColor: 'white',
             minWidth: 100,
@@ -300,12 +369,14 @@ function Navigation() {
             alignItems: 'center',
             justifyContent: 'center'
           }}>
-            <Typography sx={{
-              color: '#1976d2',
-              fontWeight: 'bold',
-              fontSize: '14px',
-              padding: '6px 8px'
-            }}>
+            <Typography
+              sx={{
+                color: 'black', // ← màu chữ đen
+                fontWeight: 'bold',
+                fontSize: '14px',
+                padding: '6px 8px'
+              }}
+            >
               {selectedYear}
             </Typography>
           </Box>
@@ -383,7 +454,8 @@ function App() {
                 <Route path="/lop5" element={<PrivateRoute><Lop5 /></PrivateRoute>} />
                 <Route path="/quanly" element={<PrivateRoute><QuanLy /></PrivateRoute>} />
                 <Route path="/nhatky" element={<PrivateRoute><NhatKyDiemDanhGV /></PrivateRoute>} />
-                <Route path="/admin" element={
+                <Route path="/doimatkhau" element={<PrivateRoute><ChangePassword /></PrivateRoute>} />
+                <Route path="/admin" element={                  
                   <Suspense fallback={<div>Đang tải trang quản trị...</div>}>
                     <PrivateRoute><Admin /></PrivateRoute>
                   </Suspense>
