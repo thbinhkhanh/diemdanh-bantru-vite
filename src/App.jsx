@@ -179,14 +179,27 @@ function Navigation() {
   
   return (
     <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1000, padding: '12px', background: '#1976d2', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'space-between', overflowX: 'auto' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'nowrap' }}>
-        <img src="/Logo.png" alt="Logo" style={{ height: '40px', marginRight: '16px' }} />
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+        flexWrap: 'nowrap',
+        overflowX: 'auto',
+        whiteSpace: 'nowrap',
+        WebkitOverflowScrolling: 'touch'
+      }}>
 
+        <img src="/Logo.png" alt="Logo" style={{ height: '40px', marginRight: '16px' }} />
         {publicNavItems.map((item, i) => (
-          <Button key={i} onClick={() => { setActiveNavPath(item.path); navigate(item.path); }} style={navStyle(item.path, activeNavPath)}>
-            {item.icon} {item.name}
+          <Button
+            key={i}
+            onClick={() => { setActiveNavPath(item.path); navigate(item.path); }}
+            style={{ ...navStyle(item.path, activeNavPath), minWidth: 'auto', padding: '8px' }}
+          >
+            {item.icon}
           </Button>
         ))}
+
         {protectedNavItems.map((item, i) => (
           <Button key={i} onClick={() => handleProtectedNavigate(item.path)} style={navStyle(item.path, activeNavPath)}>
             {item.name}
@@ -229,15 +242,14 @@ const navStyle = (path, currentPath) => {
   const isExactMatch = currentPath === path;
   return {
     color: 'white',
-    padding: '8px 12px',
+    padding: '8px 15px', // 🔼 tăng padding để mở rộng vùng click và highlight
     backgroundColor: isExactMatch ? '#1565c0' : 'transparent',
-    borderBottom: isExactMatch ? '3px solid white' : 'none',
-    borderRadius: '4px',
+    borderBottom: isExactMatch ? '4px solid white' : 'none', // 🔼 viền dưới rõ hơn
+    borderRadius: '6px',
     textTransform: 'none',
     fontWeight: isExactMatch ? 'bold' : 'normal',
   };
 };
-
 
 const navStyleGroup = (paths, currentPath) => ({
   color: 'white',
