@@ -26,6 +26,7 @@ import { useNhatKy } from '../context/NhatKyContext';
 
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 
 export default function DanhSach() {
   const location = useLocation();
@@ -70,19 +71,6 @@ export default function DanhSach() {
   } = useClassData();
 
   const [fetchedClasses, setFetchedClasses] = useState({});
-
-  useEffect(() => {
-    fetchClassList({
-      namHoc,
-      khoi: 'K4',
-      getClassList,
-      setClassList,
-      setClassListForKhoi,
-      setSelectedClass,
-      location,
-      db,
-    });
-  }, [namHoc]);
 
   useEffect(() => {
     fetchStudents({
@@ -303,42 +291,58 @@ export default function DanhSach() {
         }}
         elevation={10}
       >
-        <Typography
-          variant="h5"
-          align="center"
-          gutterBottom
-          fontWeight="bold"
-          color="primary"
-          sx={{ mb: 4, borderBottom: '3px solid #1976d2', pb: 1 }}
-        >
-          DANH SÁCH HỌC SINH
-        </Typography>
+        <Box sx={{ position: 'relative', mb: 2 }}>
+          <Typography
+            variant="h5"
+            fontWeight="bold"
+            color="primary"
+            align="center"
+            sx={{ borderBottom: '3px solid #1976d2', pb: 1 }}
+          >
+            {selectedClass ? `DANH SÁCH LỚP ${selectedClass}` : 'DANH SÁCH LỚP'}
+          </Typography>
 
-        {/* Chọn lớp */}
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 1 }}>
-          <FormControl size="small" sx={{ width: 120 }}>
-            <InputLabel>Lớp</InputLabel>
-            <Select value={selectedClass} label="Lớp" onChange={handleClassChange}>
-              {classList.map(cls => (
-                <MenuItem key={cls} value={cls}>{cls}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          <IconButton
+            onClick={() => navigate('/chon-tai-khoan')}
+            sx={{
+              position: 'absolute',
+              top: '-4px', 
+              right: 0,
+              color: '#1976d2'
+            }}
+            aria-label="Chuyển tài khoản"
+          >
+            <AccountCircleIcon fontSize="medium" />
+          </IconButton>
         </Box>
 
         {/* Chọn chế độ xem */}
-        <Stack direction="row" spacing={2} justifyContent="center" sx={{ mt: 1, mb: 2 }}>
-          <FormControlLabel
-            value="diemdanh"
-            control={<Radio checked={viewMode === 'diemdanh'} onChange={() => setViewMode('diemdanh')} />}
-            label="Điểm danh"
-          />
-          <FormControlLabel
-            value="bantru"
-            control={<Radio checked={viewMode === 'bantru'} onChange={() => setViewMode('bantru')} />}
-            label="Bán trú"
-          />
-        </Stack>
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 1, mb: 2 }}>
+          <FormControl component="fieldset">
+            <Stack direction="row" spacing={4} alignItems="center">
+              <FormControlLabel
+                value="diemdanh"
+                control={
+                  <Radio
+                    checked={viewMode === 'diemdanh'}
+                    onChange={() => setViewMode('diemdanh')}
+                  />
+                }
+                label="Điểm danh"
+              />
+              <FormControlLabel
+                value="bantru"
+                control={
+                  <Radio
+                    checked={viewMode === 'bantru'}
+                    onChange={() => setViewMode('bantru')}
+                  />
+                }
+                label="Bán trú"
+              />
+            </Stack>
+          </FormControl>
+        </Box>
 
         {/* Tóm tắt học sinh vắng */}
           {viewMode !== 'bantru' && (

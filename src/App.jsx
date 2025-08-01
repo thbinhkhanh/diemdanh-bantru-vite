@@ -29,6 +29,8 @@ import { ClassListProvider } from './context/ClassListContext';
 import Navigation from './utils/Navigation';
 import PrivateRoute from './utils/PrivateRoute';
 import { Navigation_Route } from './utils/Navigation_Route';
+import SwitchAccount from './pages/SwitchAccount';
+
 const Admin = React.lazy(() => import('./Admin'));
 
 function App() {
@@ -55,6 +57,7 @@ function App() {
               <Route path="/quanly" element={<PrivateRoute><QuanLy /></PrivateRoute>} />
               <Route path="/nhatky" element={<PrivateRoute><NhatKyDiemDanhGV /></PrivateRoute>} />
               <Route path="/doimatkhau" element={<PrivateRoute><ChangePassword /></PrivateRoute>} />
+              <Route path="/chon-tai-khoan" element={<SwitchAccount />} /> 
               <Route path="/gioithieu" element={<About />} />
               <Route path="/huongdan" element={<HuongDan />} />
               <Route path="/chucnang" element={<About />} />

@@ -144,8 +144,7 @@ export default function Login() {
 
       setSession(userKey);
       const newKhoi = userKey.split(".")[0];
-      //navigate(`/lop${newKhoi}`);
-      navigate(`/lop${newKhoi}`, { state: { lop: userKey } }); // ví dụ: lop: '1.5'
+      navigate(`/lop${newKhoi}`);
       return;
     }
 
