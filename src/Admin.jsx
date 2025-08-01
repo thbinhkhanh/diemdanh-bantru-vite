@@ -6,7 +6,6 @@ import {
   Tabs, Tab, Checkbox, FormGroup
 } from "@mui/material";
 import LockResetIcon from "@mui/icons-material/LockReset";
-
 import Banner from "./pages/Banner";
 import { useNavigate } from "react-router-dom";
 import { db } from "./firebase";
@@ -88,6 +87,8 @@ export default function Admin({ onCancel }) {
   const [restoreProgress, setRestoreProgress] = useState(0);
   const [alertMessage, setAlertMessage] = useState("");
   const [alertSeverity, setAlertSeverity] = useState("info");
+  const [message, setMessage] = useState("");
+  const [severity, setSeverity] = useState("info"); // "success", "error", "warning", "info"
 
   // 🛠️ Xử lý form chọn
   const handleDeleteCheckboxChange = (key) => {
@@ -205,6 +206,104 @@ export default function Admin({ onCancel }) {
     setNewPassword("");
   };
 
+  //Tạo dữ liệu năm học mới
+
+  const handleInitNewYearData = async () => {
+    const confirmed = window.confirm(`⚠️ Bạn có chắc muốn khởi tạo dữ liệu cho năm ${selectedYear}?`);
+    if (!confirmed) return;
+
+    const danhSachDocs = ["K1", "K2", "K3", "K4", "K5", "TRUONG"];
+
+    try {
+      for (const docName of danhSachDocs) {
+        await setDoc(doc(db, `DANHSACH_${selectedYear}`, docName), { list: "" });
+      }
+
+      await setDoc(doc(db, `BANTRU_${selectedYear}`, "init"), { temp: "" });
+      alert(`✅ Đã khởi tạo dữ liệu cho năm học ${selectedYear}`);
+    } catch (err) {
+      console.error("❌ Lỗi khi khởi tạo dữ liệu:", err);
+      alert("❌ Không thể khởi tạo dữ liệu năm mới!");
+    }
+  };
+
+  const [namHoc, setNamHoc] = useState('');
+  useEffect(() => {
+    const fetchNamHoc = async () => {
+      try {
+        const docSnap = await getDoc(doc(db, 'YEAR', 'NAMHOC'));
+        if (docSnap.exists()) {
+          setNamHoc(docSnap.data().value || 'UNKNOWN');
+        }
+      } catch (err) {
+        console.error('Lỗi khi tải năm học:', err.message);
+        setNamHoc('UNKNOWN');
+      }
+    };
+    fetchNamHoc();
+  }, []);
+
+  //Tạo tài khoản người dùng
+
+  const createClassUserAccounts = async () => {
+    if (!namHoc || namHoc === 'UNKNOWN') {
+      alert('❌ Không có năm học hợp lệ!');
+      return;
+    }
+
+    try {
+      const truongRef = doc(db, `CLASSLIST_${namHoc}`, "TRUONG");
+      const truongSnap = await getDoc(truongRef);
+
+      if (!truongSnap.exists()) {
+        setMessage("❌ Không tìm thấy document TRUONG.");
+        setSeverity("error");
+        return;
+      }
+
+      const classList = truongSnap.data().list;
+      if (!Array.isArray(classList)) {
+        setMessage("❌ Dữ liệu list không hợp lệ.");
+        setSeverity("error");
+        return;
+      }
+
+      let successCount = 0;
+      let failList = [];
+
+      for (let i = 0; i < classList.length; i++) {
+        const className = classList[i];
+        const accountRef = doc(db, "ACCOUNT", className);
+
+        try {
+          await setDoc(accountRef, {
+            username: className,
+            password: "123",
+          });
+          successCount++;
+        } catch (err) {
+          failList.push(className);
+        }
+
+        // 👉 Cập nhật tiến trình
+        setProgress(Math.round(((i + 1) / classList.length) * 100));
+      }
+
+      // ✅ Hiển thị kết quả
+      setMessage(`✅ Tạo xong! ${successCount} lớp thành công. ${failList.length} lớp lỗi.`);
+      setSeverity("success");
+    } catch (error) {
+      console.error("❌ Lỗi xử lý:", error);
+      setMessage("❌ Có lỗi xảy ra.");
+      setSeverity("error");
+    } finally {
+      // ⏳ Ẩn tiến trình sau vài giây
+      setTimeout(() => setProgress(0), 3000);
+    }
+  };
+
+
+
   return (
     <Box sx={{ minHeight: "100vh", backgroundColor: "#e3f2fd" }}>
       <Banner title="QUẢN TRỊ HỆ THỐNG" />
@@ -291,11 +390,33 @@ export default function Admin({ onCancel }) {
 
               <Button
                 variant="contained"
-                onClick={handleInitNewYearData}
-                sx={{ backgroundColor: '#303f9f', '&:hover': { backgroundColor: '#2e7d32' } }}
+                onClick={createClassUserAccounts}
+                sx={{ backgroundColor: '#303f9f', '&:hover': { backgroundColor: '#2e7d32' }, mb: 2 }}
               >
                 🆕 Tạo tài khoản người dùng
               </Button>
+
+              {/* Tiến trình tạo tài khoản */}
+              {progress > 0 && (
+                <Box sx={{ mt: 2 }}>
+                  <LinearProgress
+                    variant="determinate"
+                    value={progress}
+                    sx={{ height: 10, borderRadius: 5 }}
+                  />
+                  <Typography variant="caption" align="center" display="block" mt={0.5}>
+                    Đang tạo tài khoản... {progress}%
+                  </Typography>
+                </Box>
+              )}
+
+              {/* 📢 Thông báo kết quả */}
+              {message && (
+                <Alert severity={severity} onClose={() => setMessage("")} sx={{ mb: 2 }}>
+                  {message}
+                </Alert>
+              )}
+
             </Stack>
           )}
 
