@@ -15,6 +15,7 @@ import { doc, getDoc } from "firebase/firestore";
 import { db } from "./firebase";
 import { useNavigate, useLocation } from "react-router-dom";
 import Banner from "./pages/Banner";
+import { useAdmin } from './context/AdminContext';
 
 const CLASS_BY_KHOI = {
   K1: ["1.1", "1.2", "1.3", "1.4", "1.5", "1.6"],
@@ -37,6 +38,7 @@ export default function Login() {
   const [classList, setClassList] = useState([]);
   const [selectedUsername, setSelectedUsername] = useState("");
   const [roleUsername, setRoleUsername] = useState("yte");
+  const { setIsManager } = useAdmin();
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -129,6 +131,7 @@ export default function Login() {
     const userKey = username.toUpperCase();
     const isLopAccount = /^([1-5])\.\d$/.test(userKey);
 
+    // 👉 TÀI KHOẢN LỚP
     if (isLopAccount) {
       if (!realPassword || password !== realPassword) {
         alert("❌ Sai mật khẩu.");
@@ -136,11 +139,15 @@ export default function Login() {
       }
 
       setSession(userKey);
-        const newKhoi = userKey.split(".")[0];
-        navigate(`/lop${newKhoi}`, { state: { lop: userKey } });
-        return;
-      }
+      setIsManager(false);                 // 👉 Đây là tài khoản lớp
+      localStorage.setItem("lop", userKey); // ✅ Ghi nhớ để dùng sau reload
 
+      const newKhoi = userKey.split(".")[0];
+      navigate(`/lop${newKhoi}`, { state: { lop: userKey } });
+      return;
+    }
+
+    // 👉 TÀI KHOẢN QUẢN LÝ
     try {
       const docSnap = await getDoc(doc(db, "ACCOUNT", userKey));
       if (!docSnap.exists()) {
@@ -155,11 +162,15 @@ export default function Login() {
       }
 
       setSession(userKey);
-      if (userKey === "ADMIN") {        
+      setIsManager(true); // 👉 Lưu vào context: đây là tài khoản quản lý
+
+      // 👉 Tài khoản ADMIN
+      if (userKey === "ADMIN") {
         navigate("/admin");
         return;
       }
 
+      // 👉 Chuyển hướng nếu có target cụ thể
       if (redirectTo) {
         localStorage.removeItem("redirectTarget");
         localStorage.removeItem("classIdTarget");
@@ -168,8 +179,9 @@ export default function Login() {
         return;
       }
 
+      // 👉 Điều hướng theo tab mặc định của từng loại tài khoản
       const tabMap = { KETOAN: "thongke", BGH: "danhsach", YTE: "dulieu" };
-      const tab = tabMap[userKey] || "dulieu";      
+      const tab = tabMap[userKey] || "dulieu";
       navigate("/quanly", { state: { account: userKey, tab } });
 
     } catch (err) {
@@ -177,6 +189,7 @@ export default function Login() {
       alert("⚠️ Lỗi kết nối, vui lòng thử lại.");
     }
   };
+
 
   const handleBack = () => {
     navigate(-1);

@@ -23,14 +23,17 @@ import { useNavigate } from 'react-router-dom';
 import { useClassData } from '../context/ClassDataContext';
 import { useClassList } from '../context/ClassListContext';
 import { useNhatKy } from '../context/NhatKyContext';
+import { useAdmin } from '../context/AdminContext';
 
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 
+
 export default function DanhSach() {
   const location = useLocation();
   //const useNewVersion = location.state?.useNewVersion ?? false;
+  const { isManager } = useAdmin(); // ✅ Lấy từ context
 
   const [students, setStudents] = useState([]);
   const [originalRegistered, setOriginalRegistered] = useState({});
@@ -61,6 +64,8 @@ export default function DanhSach() {
   const absentStudents = students.filter(s => !s.diemDanh);
   const hasAbsent = absentStudents.length > 0;
 
+  const lop = location.state?.lop || localStorage.getItem('lop');
+
   //const { setMonthlyData } = useNhatKy();
   
   const {
@@ -71,6 +76,21 @@ export default function DanhSach() {
   } = useClassData();
 
   const [fetchedClasses, setFetchedClasses] = useState({});
+
+  useEffect(() => {
+    if (isManager) {
+      fetchClassList({
+        namHoc,
+        khoi: 'K4',
+        getClassList,
+        setClassList,
+        setClassListForKhoi,
+        setSelectedClass,
+        location,
+        db,
+      });
+    }
+  }, [namHoc, isManager]);
 
   useEffect(() => {
     fetchStudents({
@@ -282,6 +302,10 @@ export default function DanhSach() {
     whiteSpace: { xs: 'pre-wrap', sm: 'nowrap' },
   };
 
+  const title = isManager 
+    ? 'DANH SÁCH HỌC SINH'
+    : `DANH SÁCH LỚP ${lop}`;
+
   return (
     <Box sx={{ display: 'flex', justifyContent: 'center', mt: 1, backgroundColor: '#e3f2fd' }}>
       <Card
@@ -300,13 +324,28 @@ export default function DanhSach() {
         <Box sx={{ position: 'relative', mb: 2 }}>
           <Typography
             variant="h5"
+            align="center"
+            gutterBottom
             fontWeight="bold"
             color="primary"
-            align="center"
-            sx={{ borderBottom: '3px solid #1976d2', pb: 1 }}
+            sx={{ mb: 4, borderBottom: '3px solid #1976d2', pb: 1 }}
           >
-            {selectedClass ? `DANH SÁCH LỚP ${selectedClass}` : 'DANH SÁCH LỚP'}
+            {title}
           </Typography>
+
+          {/* Chọn lớp */}
+          {isManager && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+              <FormControl size="small" sx={{ width: 120 }}>
+                <InputLabel>Lớp</InputLabel>
+                <Select value={selectedClass} label="Lớp" onChange={handleClassChange}>
+                  {classList.map(cls => (
+                    <MenuItem key={cls} value={cls}>{cls}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Box>
+          )}
 
           <IconButton
             onClick={() => navigate('/chon-tai-khoan')}
