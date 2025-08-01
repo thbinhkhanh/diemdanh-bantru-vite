@@ -8,6 +8,8 @@ import {
   Card,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
+import { db } from "../firebase"; // chỉnh lại theo vị trí của bạn
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 
 export default function ChangePassword() {
   const [oldPassword, setOldPassword] = useState("");
@@ -23,6 +25,17 @@ export default function ChangePassword() {
       setUsername(storedAccount.toUpperCase());
     }
   }, []);
+
+  // Hàm cập nhật mật khẩu lên Firestore
+  const updatePasswordInFirestore = async (username, newPassword) => {
+    try {
+      const userDocRef = doc(db, "ACCOUNT", username);
+      await updateDoc(userDocRef, { password: newPassword });
+    } catch (error) {
+      console.error("🔥 Lỗi cập nhật mật khẩu trên Firestore:", error);
+      throw error;
+    }
+  };
 
   const handleChangePassword = async () => {
     const oldPw = oldPassword.trim();
@@ -40,20 +53,32 @@ export default function ChangePassword() {
     }
 
     try {
-      const storedPassword = localStorage.getItem(`password_${username}`);
-      if (storedPassword && storedPassword !== oldPw) {
+      // Lấy mật khẩu hiện tại trên Firestore
+      const userDocRef = doc(db, "ACCOUNT", username);
+      const docSnap = await getDoc(userDocRef);
+
+      if (!docSnap.exists()) {
+        setMessage("❌ Tài khoản không tồn tại trên hệ thống.");
+        return;
+      }
+
+      const currentPassword = docSnap.data().password || "";
+
+      if (currentPassword !== oldPw) {
         setMessage("❌ Mật khẩu cũ không đúng.");
         return;
       }
 
-      localStorage.setItem(`password_${username}`, newPw);
+      // Cập nhật mật khẩu mới lên Firestore
+      await updatePasswordInFirestore(username, newPw);
+
       setMessage("✅ Đổi mật khẩu thành công.");
       setOldPassword("");
       setNewPassword("");
       setConfirmPassword("");
     } catch (err) {
       console.error("🔥 Lỗi đổi mật khẩu:", err);
-      setMessage("⚠️ Đã có lỗi xảy ra.");
+      setMessage("⚠️ Đã có lỗi xảy ra khi đổi mật khẩu.");
     }
   };
 
@@ -62,8 +87,8 @@ export default function ChangePassword() {
     setNewPassword("");
     setConfirmPassword("");
     setMessage("");
-    navigate(-1); // Quay về trang trước (hoặc navigate("/") để về trang chính)
-    };
+    navigate(-1);
+  };
 
   return (
     <Box sx={{ minHeight: "100vh", backgroundColor: "#e3f2fd", py: 4 }}>
@@ -85,14 +110,14 @@ export default function ChangePassword() {
               <Typography
                 variant="h8"
                 sx={{
-                    color: "black", // ← màu đen
-                    textAlign: "center",
-                    fontWeight: "bold",
-                    mb: -1,
+                  color: "black",
+                  textAlign: "center",
+                  fontWeight: "bold",
+                  mb: -1,
                 }}
-                >
+              >
                 🧑 Tài khoản: {username}
-                </Typography>
+              </Typography>
             )}
 
             <TextField
@@ -142,14 +167,13 @@ export default function ChangePassword() {
                 onClick={handleCancel}
                 fullWidth
                 sx={{
-                    fontWeight: "bold",
-                    textTransform: "none",
-                    fontSize: "1rem",
+                  fontWeight: "bold",
+                  textTransform: "none",
+                  fontSize: "1rem",
                 }}
-                >
+              >
                 🔙 Quay lại
-                </Button>
-
+              </Button>
             </Stack>
 
             {message && (

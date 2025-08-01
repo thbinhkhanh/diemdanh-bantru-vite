@@ -90,6 +90,10 @@ export default function Admin({ onCancel }) {
   const [message, setMessage] = useState("");
   const [severity, setSeverity] = useState("info"); // "success", "error", "warning", "info"
 
+  const [showCreatePassword, setShowCreatePassword] = useState(false);
+  const [customUserPassword, setCustomUserPassword] = useState("");
+  const [actionType, setActionType] = useState(""); // "create" | "reset" | ""
+
   // 🛠️ Xử lý form chọn
   const handleDeleteCheckboxChange = (key) => {
     setDeleteCollections((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -245,13 +249,20 @@ export default function Admin({ onCancel }) {
 
   //Tạo tài khoản người dùng
 
-  const createClassUserAccounts = async () => {
-    if (!namHoc || namHoc === 'UNKNOWN') {
-      alert('❌ Không có năm học hợp lệ!');
+  const createClassUserAccounts = async (password) => {
+    if (!password || password.trim() === "") {
+      alert("❌ Vui lòng nhập mật khẩu hợp lệ!");
+      return;
+    }
+
+    if (!namHoc || namHoc === "UNKNOWN") {
+      alert("❌ Không có năm học hợp lệ!");
       return;
     }
 
     try {
+      setActionType("create"); // ✅ hiển thị thanh tiến trình tạo tài khoản
+
       const truongRef = doc(db, `CLASSLIST_${namHoc}`, "TRUONG");
       const truongSnap = await getDoc(truongRef);
 
@@ -278,31 +289,95 @@ export default function Admin({ onCancel }) {
         try {
           await setDoc(accountRef, {
             username: className,
-            password: "123",
+            password: password,
           });
           successCount++;
         } catch (err) {
           failList.push(className);
         }
 
-        // 👉 Cập nhật tiến trình
         setProgress(Math.round(((i + 1) / classList.length) * 100));
       }
 
-      // ✅ Hiển thị kết quả
-      setMessage(`✅ Tạo xong! ${successCount} lớp thành công. ${failList.length} lớp lỗi.`);
+      setMessage(`✅ Đã tạo xong tài khoản người dùng.`);
       setSeverity("success");
     } catch (error) {
       console.error("❌ Lỗi xử lý:", error);
       setMessage("❌ Có lỗi xảy ra.");
       setSeverity("error");
     } finally {
-      // ⏳ Ẩn tiến trình sau vài giây
-      setTimeout(() => setProgress(0), 3000);
+      setTimeout(() => {
+        setProgress(0);
+        setActionType(""); // ✅ reset lại sau 3s
+      }, 3000);
     }
   };
 
+  const resetClassUserPasswords = async (password) => {
+    if (!password || password.trim() === "") {
+      alert("❌ Vui lòng nhập mật khẩu hợp lệ!");
+      return;
+    }
 
+    if (!namHoc || namHoc === "UNKNOWN") {
+      alert("❌ Không có năm học hợp lệ!");
+      return;
+    }
+
+    const confirmed = window.confirm("⚠️ Bạn có chắc muốn đặt lại mật khẩu cho tất cả tài khoản lớp?");
+    if (!confirmed) return;
+
+    try {
+      setActionType("reset"); // ✅ để hiển thị "Đang reset mật khẩu..."
+
+      const truongRef = doc(db, `CLASSLIST_${namHoc}`, "TRUONG");
+      const truongSnap = await getDoc(truongRef);
+
+      if (!truongSnap.exists()) {
+        setMessage("❌ Không tìm thấy danh sách lớp.");
+        setSeverity("error");
+        return;
+      }
+
+      const classList = truongSnap.data().list;
+      if (!Array.isArray(classList)) {
+        setMessage("❌ Dữ liệu danh sách lớp không hợp lệ.");
+        setSeverity("error");
+        return;
+      }
+
+      let successCount = 0;
+      let failList = [];
+
+      for (let i = 0; i < classList.length; i++) {
+        const className = classList[i];
+        const accountRef = doc(db, "ACCOUNT", className);
+
+        try {
+          await setDoc(accountRef, {
+            password: password,
+          }, { merge: true });
+          successCount++;
+        } catch (err) {
+          failList.push(className);
+        }
+
+        setProgress(Math.round(((i + 1) / classList.length) * 100));
+      }
+
+      setMessage(`✅ Đã reset xong mật khẩu người dùng`);
+      setSeverity("success");
+    } catch (error) {
+      console.error("❌ Lỗi reset mật khẩu:", error);
+      setMessage("❌ Có lỗi xảy ra.");
+      setSeverity("error");
+    } finally {
+      setTimeout(() => {
+        setProgress(0);
+        setActionType(""); // ✅ reset lại sau khi xong
+      }, 3000);
+    }
+  };
 
   return (
     <Box sx={{ minHeight: "100vh", backgroundColor: "#e3f2fd" }}>
@@ -390,11 +465,52 @@ export default function Admin({ onCancel }) {
 
               <Button
                 variant="contained"
-                onClick={createClassUserAccounts}
+                onClick={() => {
+                  setShowCreatePassword(true);
+                  setCustomUserPassword(""); // reset field nếu đã từng nhập
+                }}
                 sx={{ backgroundColor: '#303f9f', '&:hover': { backgroundColor: '#2e7d32' }, mb: 2 }}
               >
-                🆕 Tạo tài khoản người dùng
+                🆕 Tài khoản người dùng
               </Button>
+
+              {showCreatePassword && (
+                <>
+                  <TextField
+                    label="🔑 Nhập mật khẩu mới"
+                    type="password"
+                    value={customUserPassword}
+                    size="small"
+                    onChange={(e) => setCustomUserPassword(e.target.value)}
+                  />
+                  
+                    <Button
+                      variant="contained"
+                      color="success"
+                      onClick={async () => {
+                        const confirmed = window.confirm("⚠️ Bạn có chắc muốn tạo tài khoản cho toàn bộ lớp?");
+                        if (!confirmed) return;
+                        await createClassUserAccounts(customUserPassword);
+                        setShowCreatePassword(false);
+                        setCustomUserPassword("");
+                      }}
+                    >
+                      ✅ Tạo tài khoản
+                    </Button>
+
+                    <Button
+                      variant="contained"
+                      color="warning"
+                      onClick={async () => {
+                        await resetClassUserPasswords(customUserPassword);
+                        setShowCreatePassword(false);
+                        setCustomUserPassword("");
+                      }}
+                    >
+                      🔁 Reset mật khẩu
+                    </Button>
+                </>
+              )}
 
               {/* Tiến trình tạo tài khoản */}
               {progress > 0 && (
@@ -405,7 +521,11 @@ export default function Admin({ onCancel }) {
                     sx={{ height: 10, borderRadius: 5 }}
                   />
                   <Typography variant="caption" align="center" display="block" mt={0.5}>
-                    Đang tạo tài khoản... {progress}%
+                    {actionType === "create"
+                      ? `Đang tạo tài khoản... ${progress}%`
+                      : actionType === "reset"
+                      ? `Đang reset mật khẩu... ${progress}%`
+                      : ""}
                   </Typography>
                 </Box>
               )}

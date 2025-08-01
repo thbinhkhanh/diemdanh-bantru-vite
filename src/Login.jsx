@@ -79,39 +79,33 @@ export default function Login() {
     const rememberedAccount = localStorage.getItem("rememberedAccount");
     const isLoggedIn = localStorage.getItem("loggedIn") === "true";
 
-    // Không tự redirect nếu đang có flag switchingClass
     if (rememberedAccount && isLoggedIn && !switchingClass) {
       const userKey = rememberedAccount.toUpperCase();
 
-      // ✅ Ưu tiên redirect rõ ràng nếu có
       if (redirectTo) {
-        localStorage.removeItem("redirectTarget");
+        localStorage.removeItem("redirectTarget");        
         navigate(redirectTo);
         return;
       }
 
-      // ✅ Nếu có classId (đã xác định lớp cần vào) → cho vào lớp
-      if (classId && /^lop[1-5]$/.test(classId)) {
+      if (classId && /^lop[1-5]$/.test(classId)) {        
         navigate(`/${classId}`);
         return;
       }
 
-      // ✅ Tài khoản lớp
       if (/^([1-5])\.\d$/.test(userKey)) {
-        const khoi = userKey.split(".")[0];
+        const khoi = userKey.split(".")[0];        
         navigate(`/lop${khoi}`);
         return;
       }
 
-      // ✅ Admin
       if (userKey === "ADMIN") {
         navigate("/admin");
         return;
       }
 
-      // ✅ Quản lý khác
       const tabMap = { KETOAN: "thongke", BGH: "danhsach", YTE: "dulieu" };
-      const tab = tabMap[userKey] || "dulieu";
+      const tab = tabMap[userKey] || "dulieu";      
       navigate("/quanly", { state: { account: userKey, tab } });
     }
   }, []);
@@ -135,7 +129,6 @@ export default function Login() {
     const userKey = username.toUpperCase();
     const isLopAccount = /^([1-5])\.\d$/.test(userKey);
 
-    // ✅ Nếu là tài khoản lớp: kiểm tra realPassword đã được lấy trước
     if (isLopAccount) {
       if (!realPassword || password !== realPassword) {
         alert("❌ Sai mật khẩu.");
@@ -143,13 +136,11 @@ export default function Login() {
       }
 
       setSession(userKey);
-      const newKhoi = userKey.split(".")[0];
-      //navigate(`/lop${newKhoi}`);
-      navigate(`/lop${newKhoi}`, { state: { lop: userKey } }); // ví dụ: lop: '1.5'
-      return;
-    }
+        const newKhoi = userKey.split(".")[0];
+        navigate(`/lop${newKhoi}`, { state: { lop: userKey } });
+        return;
+      }
 
-    // ✅ Nếu là tài khoản quản lý: kiểm tra trực tiếp từ Firestore
     try {
       const docSnap = await getDoc(doc(db, "ACCOUNT", userKey));
       if (!docSnap.exists()) {
@@ -164,14 +155,11 @@ export default function Login() {
       }
 
       setSession(userKey);
-
-      // ✅ Admin → /admin
-      if (userKey === "ADMIN") {
+      if (userKey === "ADMIN") {        
         navigate("/admin");
         return;
       }
 
-      // ✅ Có redirect → ưu tiên
       if (redirectTo) {
         localStorage.removeItem("redirectTarget");
         localStorage.removeItem("classIdTarget");
@@ -180,9 +168,8 @@ export default function Login() {
         return;
       }
 
-      // ✅ Tài khoản quản lý → vào /quanly
       const tabMap = { KETOAN: "thongke", BGH: "danhsach", YTE: "dulieu" };
-      const tab = tabMap[userKey] || "dulieu";
+      const tab = tabMap[userKey] || "dulieu";      
       navigate("/quanly", { state: { account: userKey, tab } });
 
     } catch (err) {
@@ -192,7 +179,7 @@ export default function Login() {
   };
 
   const handleBack = () => {
-    navigate(-1); // hoặc navigate("/") nếu muốn về trang chính
+    navigate(-1);
   };
 
   return (

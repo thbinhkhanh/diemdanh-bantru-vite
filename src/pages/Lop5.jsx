@@ -93,10 +93,17 @@ export default function DanhSach() {
 
   useEffect(() => {
     const lopFromState = location.state?.lop;
+    const rememberedAccount = localStorage.getItem("rememberedAccount");
+
     if (lopFromState) {
-      setSelectedClass(lopFromState); // ⬅️ cập nhật lớp dựa trên state khi quay lại
+      setSelectedClass(lopFromState);
+    } else if (/^\d\.\d$/.test(rememberedAccount)) {
+      setSelectedClass(rememberedAccount);
+    } else {
+    
     }
-  }, [location.state, setSelectedClass]);
+  }, [location.state]);
+
 
   useEffect(() => {
     setExpandedRowId(null);
@@ -138,14 +145,13 @@ export default function DanhSach() {
     const contextData = classData[selectedClass];
 
     if (Array.isArray(contextData) && contextData.length > 0) {
-      //console.log(`✅ Dùng lại dữ liệu lớp ${selectedClass} từ context`);
       setStudents(contextData);
 
       const initMap = {};
       contextData.forEach(s => (initMap[s.id] = s.registered));
       setOriginalRegistered(initMap);
     } else {
-      //console.log(`ℹ️ Không có dữ liệu lớp ${selectedClass} trong context`);
+      
     }
   }, [classData, selectedClass]);
 
