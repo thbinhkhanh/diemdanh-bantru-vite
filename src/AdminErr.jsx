@@ -99,38 +99,15 @@ export default function Admin({ onCancel }) {
 
   // 🔁 Xử lý logic gọi hàm tách riêng
   const handlePerformDelete = async () => {
-    await xoaDatabase({
-      selectedYear,
-      deleteCollections,
-      setDeleting,
-      setProgress,
-      setDeletingLabel,
-      setDeleteMessage,
-      setDeleteSeverity,
-      setDeleteSuccess,
-      setShowDeleteOptions,
-      setDeleteCollections,
-    });
+    await xoaDatabase({ selectedYear, deleteCollections, setDeleting, setProgress, setDeletingLabel, setDeleteMessage, setDeleteSeverity, setDeleteSuccess, setShowDeleteOptions, setDeleteCollections });
   };
 
   const handleResetDangKyBanTru = async () => {
-    await resetBanTru({
-      setResetProgress,
-      setResetMessage,
-      setResetSeverity,
-      setResetType,
-      setClassData,
-      getClassData,
-    });
+    await resetBanTru({ setResetProgress, setResetMessage, setResetSeverity, setResetType, setClassData, getClassData });
   };
 
   const handleResetDiemDanh = async () => {
-    await resetDiemDanh({
-      setResetProgress,
-      setResetMessage,
-      setResetSeverity,
-      setResetType,
-    });
+    await resetDiemDanh({ setResetProgress, setResetMessage, setResetSeverity, setResetType });
   };
 
   const handleBackupData = () => {

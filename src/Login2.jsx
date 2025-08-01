@@ -99,63 +99,73 @@ export default function Login() {
   }, [lopSo, isQuanLyLogin]);
 
   const handleLogin = async () => {
-    const username = (selectedUsername || roleUsername).trim();
-    const password = passwordInput.trim();
+  const username = (selectedUsername || roleUsername).trim();
+  const password = passwordInput.trim();
 
-    if (!username || !password) {
-      alert("⚠️ Vui lòng nhập tài khoản và mật khẩu.");
+  if (!username || !password) {
+    alert("⚠️ Vui lòng nhập tài khoản và mật khẩu.");
+    return;
+  }
+
+  const userKey = username.toUpperCase();
+  const isLopAccount = /^([1-5])\.\d$/.test(username);
+  if (userKey === "ADMIN") {
+    setSession(userKey);
+    navigate("/admin");
+    return;
+  }
+
+  if (isLopAccount && password === "1") {
+    setSession(userKey);
+    const newKhoi = username.split(".")[0];
+    navigate(`/lop${newKhoi}`);
+    return;
+  }
+
+  try {
+    const docSnap = await getDoc(doc(db, "ACCOUNT", userKey));
+    if (!docSnap.exists() || docSnap.data().password !== password) {
+      alert("❌ Sai mật khẩu.");
       return;
     }
 
-    const userKey = username.toUpperCase();
-    const isLopAccount = /^([1-5])\.\d$/.test(username);
+    setSession(userKey);
 
-    if (isLopAccount && password === "1") {
-      setSession(userKey);
-      const newKhoi = username.split(".")[0];
+    // ✅ Ưu tiên redirect cụ thể nếu có
+    if (redirectTo) {
+      localStorage.removeItem("redirectTarget");
+      navigate(redirectTo);
+      return;
+    }
+
+    // ✅ Nếu có classId → vào lớp
+    if (classId && /^lop[1-5]$/.test(classId)) {
+      navigate(`/${classId}`);
+      return;
+    }
+
+    // ✅ Nếu có lớp được chọn → vào lớp
+    if (selectedUsername) {
+      const newKhoi = selectedUsername.split(".")[0];
       navigate(`/lop${newKhoi}`);
       return;
     }
 
-    try {
-      const docSnap = await getDoc(doc(db, "ACCOUNT", userKey));
-      if (!docSnap.exists() || docSnap.data().password !== password) {
-        alert("❌ Sai mật khẩu.");
-        return;
-      }
+    // ✅ Nếu là admin → vào /admin
+    //if (userKey === "ADMIN") {
+    //  navigate("/admin");
+    //  return;
+    //}
 
-      setSession(userKey);
-
-      if (redirectTo) {
-        localStorage.removeItem("redirectTarget");
-        navigate(redirectTo);
-        return;
-      }
-
-      if (classId && /^lop[1-5]$/.test(classId)) {
-        navigate(`/${classId}`);
-        return;
-      }
-
-      if (selectedUsername) {
-        const newKhoi = selectedUsername.split(".")[0];
-        navigate(`/lop${newKhoi}`);
-        return;
-      }
-
-      if (userKey === "ADMIN") {
-        navigate("/admin");
-        return;
-      }
-
-      const tabMap = { KETOAN: "thongke", BGH: "danhsach", YTE: "dulieu" };
-      const tab = tabMap[userKey] || "dulieu";
-      navigate("/quanly", { state: { account: userKey, tab } });
-    } catch (err) {
-      console.error("⚠️ Lỗi đăng nhập:", err);
-      alert("⚠️ Lỗi kết nối, vui lòng thử lại.");
-    }
-  };
+    // ✅ Các quản lý khác → vào /quanly
+    const tabMap = { KETOAN: "thongke", BGH: "danhsach", YTE: "dulieu" };
+    const tab = tabMap[userKey] || "dulieu";
+    navigate("/quanly", { state: { account: userKey, tab } });
+  } catch (err) {
+    console.error("⚠️ Lỗi đăng nhập:", err);
+    alert("⚠️ Lỗi kết nối, vui lòng thử lại.");
+  }
+};
 
   return (
     <Box sx={{ minHeight: "100vh", backgroundColor: "#e3f2fd" }}>

@@ -126,31 +126,39 @@ export default function Login() {
 
       setSession(userKey);
 
+      // ✅ Nếu là ADMIN thì vào thẳng /admin
+      if (userKey === "ADMIN") {
+        navigate("/admin");
+        return;
+      }
+
+      // ✅ Nếu có redirect rõ ràng → ưu tiên
       if (redirectTo) {
         localStorage.removeItem("redirectTarget");
+        localStorage.removeItem("classIdTarget");
+        localStorage.removeItem("switchingClass");
         navigate(redirectTo);
         return;
       }
 
+      // ✅ Nếu có classId → vào lớp
       if (classId && /^lop[1-5]$/.test(classId)) {
         navigate(`/${classId}`);
         return;
       }
 
+      // ✅ Nếu có lớp được chọn → vào lớp
       if (selectedUsername) {
         const newKhoi = selectedUsername.split(".")[0];
         navigate(`/lop${newKhoi}`);
         return;
       }
 
-      if (userKey === "ADMIN") {
-        navigate("/admin");
-        return;
-      }
-
+      // ✅ Các quản lý khác → vào /quanly
       const tabMap = { KETOAN: "thongke", BGH: "danhsach", YTE: "dulieu" };
       const tab = tabMap[userKey] || "dulieu";
       navigate("/quanly", { state: { account: userKey, tab } });
+
     } catch (err) {
       console.error("⚠️ Lỗi đăng nhập:", err);
       alert("⚠️ Lỗi kết nối, vui lòng thử lại.");
