@@ -307,7 +307,7 @@ export default function DanhSach() {
     : `DANH SÁCH LỚP ${lop}`;
 
   return (
-    <Box sx={{ display: 'flex', justifyContent: 'center', mt: 1, backgroundColor: '#e3f2fd' }}>
+    <Box sx={{ display: 'flex', justifyContent: 'center', mt: 0, backgroundColor: '#e3f2fd' }}>
       <Card
         sx={{
           mt: 4,

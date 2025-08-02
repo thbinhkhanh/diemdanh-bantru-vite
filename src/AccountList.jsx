@@ -30,10 +30,10 @@ export default function AccountList() {
   }, []);
 
   const roleLabels = {
-    yte: "Y tế",
-    ketoan: "Kế toán",
+    yte: "Y TẾ",
+    ketoan: "KẾ TOÁN",
     bgh: "BGH",
-    admin: "Admin",
+    admin: "ADMIN",
   };
 
   return (
