@@ -93,6 +93,15 @@ export default function Admin({ onCancel }) {
   const [showCreatePassword, setShowCreatePassword] = useState(false);
   const [customUserPassword, setCustomUserPassword] = useState("");
   const [actionType, setActionType] = useState(""); // "create" | "reset" | ""
+  const [showResetPassword, setShowResetPassword] = useState(false);
+  const [showCreateDatabase, setShowCreateDatabase] = useState(false);
+  const [options, setOptions] = useState({
+    list: false,
+    meal: false,
+    attendance: false,
+    log: false
+  });
+
 
   // 🛠️ Xử lý form chọn
   const handleDeleteCheckboxChange = (key) => {
@@ -212,24 +221,38 @@ export default function Admin({ onCancel }) {
 
   //Tạo dữ liệu năm học mới
 
-  const handleInitNewYearData = async () => {
+  const createNewYearData = async (options) => {
     const confirmed = window.confirm(`⚠️ Bạn có chắc muốn khởi tạo dữ liệu cho năm ${selectedYear}?`);
     if (!confirmed) return;
 
-    const danhSachDocs = ["K1", "K2", "K3", "K4", "K5", "TRUONG"];
-
     try {
-      for (const docName of danhSachDocs) {
-        await setDoc(doc(db, `DANHSACH_${selectedYear}`, docName), { list: "" });
+      // Tạo collection DANHSACH nếu được chọn
+      if (options.list) {
+        await setDoc(doc(db, `DANHSACH_${selectedYear}`, ""), {});
       }
 
-      await setDoc(doc(db, `BANTRU_${selectedYear}`, "init"), { temp: "" });
+      // Tạo collection BANTRU nếu được chọn
+      if (options.meal) {
+        await setDoc(doc(db, `BANTRU_${selectedYear}`, ""), {});
+      }
+
+      // Tạo collection DIEMDANH nếu được chọn
+      if (options.attendance) {
+        await setDoc(doc(db, `DIEMDANH_${selectedYear}`, ""), {});
+      }
+
+      // Tạo collection NHATKYBANTRU nếu được chọn
+      if (options.log) {
+        await setDoc(doc(db, `NHATKYBANTRU_${selectedYear}`, ""), {});
+      }
+
       alert(`✅ Đã khởi tạo dữ liệu cho năm học ${selectedYear}`);
     } catch (err) {
       console.error("❌ Lỗi khi khởi tạo dữ liệu:", err);
       alert("❌ Không thể khởi tạo dữ liệu năm mới!");
     }
   };
+
 
   const [namHoc, setNamHoc] = useState('');
   useEffect(() => {
@@ -453,40 +476,40 @@ export default function Admin({ onCancel }) {
 
           {tabIndex === 1 && (
             <Stack spacing={3} mt={3} sx={{ maxWidth: 300, mx: "auto", width: "100%" }}>
-              <Divider> <Typography fontWeight="bold">👤 Database & Account</Typography> </Divider>
-              
-              <Button
-                variant="contained"
-                onClick={handleInitNewYearData}
-                sx={{ backgroundColor: '#303f9f', '&:hover': { backgroundColor: '#2e7d32' } }}
-              >
-                🆕 Tạo Database năm mới
-              </Button>
+              <Divider>
+                <Typography fontWeight="bold">👤 Database & Account</Typography>
+              </Divider>
 
-              <Button
-                variant="contained"
-                onClick={() => {
-                  setShowCreatePassword(true);
-                  setCustomUserPassword(""); // reset field nếu đã từng nhập
-                }}
-                sx={{ backgroundColor: '#303f9f', '&:hover': { backgroundColor: '#2e7d32' }, mb: 2 }}
-              >
-                🆕 Tài khoản người dùng
-              </Button>
+              {/* Nút tạo tài khoản người dùng */}
+              {!showResetPassword && !showCreateDatabase && (
+                <Button
+                  variant="contained"
+                  onClick={() => {
+                    setShowCreatePassword(true);
+                    setShowResetPassword(false);
+                    setShowCreateDatabase(false);
+                    setCustomUserPassword("");
+                  }}
+                >
+                  🆕 TÀI KHOẢN NGƯỜI DÙNG
+                </Button>
+              )}
 
+              {/* Nhóm tạo tài khoản */}
               {showCreatePassword && (
                 <>
                   <TextField
-                    label="🔑 Nhập mật khẩu mới"
+                    label="🔑 Nhập mật khẩu tài khoản"
                     type="password"
                     value={customUserPassword}
                     size="small"
                     onChange={(e) => setCustomUserPassword(e.target.value)}
                   />
-                  
+                  <Box sx={{ display: "flex", gap: 1 }}>
                     <Button
                       variant="contained"
                       color="success"
+                      sx={{ flex: 63 }}
                       onClick={async () => {
                         const confirmed = window.confirm("⚠️ Bạn có chắc muốn tạo tài khoản cho toàn bộ lớp?");
                         if (!confirmed) return;
@@ -495,24 +518,240 @@ export default function Admin({ onCancel }) {
                         setCustomUserPassword("");
                       }}
                     >
-                      ✅ Tạo tài khoản
+                      ✅ TẠO TÀI KHOẢN
                     </Button>
 
                     <Button
-                      variant="contained"
-                      color="warning"
-                      onClick={async () => {
-                        await resetClassUserPasswords(customUserPassword);
+                      variant="outlined"
+                      color="secondary"
+                      sx={{
+                        flex: 35,
+                        fontWeight: "bold",
+                        textTransform: "none",
+                        fontSize: "1rem"
+                      }}
+                      onClick={() => {
                         setShowCreatePassword(false);
                         setCustomUserPassword("");
                       }}
                     >
-                      🔁 Reset mật khẩu
+                      ❌ HỦY
                     </Button>
+                  </Box>
                 </>
               )}
 
-              {/* Tiến trình tạo tài khoản */}
+              {/* Nút reset mật khẩu */}
+              {!showCreatePassword && !showCreateDatabase && (
+                <Button
+                  variant="contained"
+                  onClick={() => {
+                    setShowResetPassword(true);
+                    setShowCreatePassword(false);
+                    setShowCreateDatabase(false);
+                    setCustomUserPassword("");
+                  }}
+                >
+                  🔁 RESET MẬT KHẨU
+                </Button>
+              )}
+
+              {/* Nhóm reset mật khẩu */}
+              {showResetPassword && (
+                <>
+                  <TextField
+                    label="🔑 Nhập mật khẩu mới"
+                    type="password"
+                    value={customUserPassword}
+                    size="small"
+                    onChange={(e) => setCustomUserPassword(e.target.value)}
+                  />
+
+                  <Box sx={{ display: "flex", gap: 1 }}>
+                    <Button
+                      variant="contained"
+                      color="warning"
+                      sx={{ width: "50%" }}
+                      onClick={async () => {
+                        const confirmed = window.confirm("⚠️ Bạn có chắc muốn reset mật khẩu cho toàn bộ lớp?");
+                        if (!confirmed) return;
+                        await resetClassUserPasswords(customUserPassword);
+                        setShowResetPassword(false);
+                        setCustomUserPassword("");
+                      }}
+                    >
+                      🔁 RESET
+                    </Button>
+
+                    <Button
+                      variant="outlined"
+                      color="secondary"
+                      sx={{
+                        width: "50%",
+                        fontWeight: "bold",
+                        textTransform: "none",
+                        fontSize: "1rem"
+                      }}
+                      onClick={() => {
+                        setShowResetPassword(false);
+                        setCustomUserPassword("");
+                      }}
+                    >
+                      ❌ HỦY
+                    </Button>
+                  </Box>
+                </>
+              )}
+
+              {/* Nút Tạo Database Năm Mới */}
+              {!showCreatePassword && !showResetPassword && !showCreateDatabase && (
+                <Button
+                  variant="contained"
+                  onClick={() => {
+                    setShowCreateDatabase(true);
+                    setShowCreatePassword(false);
+                    setShowResetPassword(false);
+                  }}
+                >
+                  🆕 TẠO DATABASE NĂM MỚI
+                </Button>
+              )}
+
+              {/* Nhóm tạo database */}
+              {showCreateDatabase && (
+                <>
+                  {/* Tiêu đề nhóm: giống nút ban đầu nhưng không phải button */}
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      bgcolor: "#1976d2", // màu xanh của nút contained
+                      color: "#fff",
+                      px: 2,
+                      py: 1.2,
+                      borderRadius: 1,
+                      fontSize: "0.9375rem", // giống nút MUI mặc định
+                      boxShadow: 1,
+                      justifyContent: "flex-start",
+                    }}
+                  >
+                    <span role="img" aria-label="new" style={{ marginRight: 8 }}>
+                      🆕
+                    </span>
+                    TẠO DATABASE NĂM MỚI
+                  </Box>
+
+                  <Stack spacing={2} mt={2}>
+                    <FormGroup>
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            checked={options.list}
+                            onChange={(e) =>
+                              setOptions((prev) => ({ ...prev, list: e.target.checked }))
+                            }
+                          />
+                        }
+                        label="Danh sách"
+                      />
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            checked={options.meal}
+                            onChange={(e) =>
+                              setOptions((prev) => ({ ...prev, meal: e.target.checked }))
+                            }
+                          />
+                        }
+                        label="Bán trú"
+                      />
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            checked={options.attendance}
+                            onChange={(e) =>
+                              setOptions((prev) => ({
+                                ...prev,
+                                attendance: e.target.checked,
+                              }))
+                            }
+                          />
+                        }
+                        label="Điểm danh"
+                      />
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            checked={options.log}
+                            onChange={(e) =>
+                              setOptions((prev) => ({ ...prev, log: e.target.checked }))
+                            }
+                          />
+                        }
+                        label="Nhật ký"
+                      />
+                    </FormGroup>
+
+                    <Box sx={{ display: "flex", gap: 1 }}>
+                      <Button
+                        variant="contained"
+                        color="success"
+                        sx={{ flex: 63 }}
+                        onClick={async () => {
+                          const { list, meal, attendance, log } = options;
+
+                          if (!list && !meal && !attendance && !log) {
+                            alert("⚠️ Vui lòng chọn ít nhất một mục để tạo database!");
+                            return;
+                          }
+
+                          const confirmed = window.confirm(
+                            "⚠️ Bạn có chắc muốn tạo dữ liệu năm mới?"
+                          );
+                          if (!confirmed) return;
+
+                          await createNewYearData(options);
+                          setShowCreateDatabase(false);
+                          setOptions({
+                            list: false,
+                            meal: false,
+                            attendance: false,
+                            log: false,
+                          });
+                        }}
+                      >
+                        ✅ TẠO DATABASE
+                      </Button>
+
+                      <Button
+                        variant="outlined"
+                        color="secondary"
+                        onClick={() => {
+                          setShowCreateDatabase(false);
+                          setOptions({
+                            list: false,
+                            meal: false,
+                            attendance: false,
+                            log: false,
+                          });
+                          setShowCreatePassword(false);
+                          setShowResetPassword(false);
+                        }}
+                        sx={{
+                          flex: 35,
+                          fontWeight: "bold",
+                          textTransform: "none",
+                          fontSize: "1rem",
+                        }}
+                      >
+                        ❌ HỦY
+                      </Button>
+                    </Box>
+                  </Stack>
+                </>
+              )}
+
+              {/* Tiến trình */}
               {progress > 0 && (
                 <Box sx={{ mt: 2 }}>
                   <LinearProgress
@@ -530,13 +769,12 @@ export default function Admin({ onCancel }) {
                 </Box>
               )}
 
-              {/* 📢 Thông báo kết quả */}
+              {/* Thông báo */}
               {message && (
                 <Alert severity={severity} onClose={() => setMessage("")} sx={{ mb: 2 }}>
                   {message}
                 </Alert>
               )}
-
             </Stack>
           )}
 
@@ -648,16 +886,26 @@ export default function Admin({ onCancel }) {
                     </Button>
 
                     <Button
-                      variant="contained"
-                      color="primary"
+                      variant="outlined"
+                      color="secondary"
                       fullWidth
-                      sx={{ width: "50%" }}
+                      sx={{
+                        width: "50%",              // giữ nguyên nếu bạn muốn chiếm 50% chiều ngang
+                        fontWeight: "bold",
+                        textTransform: "none",
+                        fontSize: "1rem"
+                      }}
                       onClick={() => {
                         setShowBackupOptions(false);
-                        setSelectedDataTypes({ danhsach: false, bantru: false, diemdan: false, nhatky: false });
+                        setSelectedDataTypes({
+                          danhsach: false,
+                          bantru: false,
+                          diemdan: false,
+                          nhatky: false
+                        });
                       }}
                     >
-                      ❌ Hủy
+                      ❌ HỦY
                     </Button>
                   </Stack>
                 </>
@@ -785,18 +1033,27 @@ export default function Admin({ onCancel }) {
                     </Button>
 
                     <Button
-                      variant="contained"
-                      color="primary"
+                      variant="outlined"
+                      color="secondary"
                       fullWidth
-                      sx={{ width: "50%" }}
+                      sx={{
+                        width: "50%",
+                        fontWeight: "bold",
+                        textTransform: "none",
+                        fontSize: "1rem"
+                      }}
                       onClick={() => {
                         setShowRestoreOptions(false);
                         setSelectedBackupFile(null);
-                        //setSelectedDataTypes({ danhsach: false, bantru: false, diemdan: false });
-                        setSelectedDataTypes({ danhsach: false, bantru: false, diemdan: false, nhatky: false });
+                        setSelectedDataTypes({
+                          danhsach: false,
+                          bantru: false,
+                          diemdan: false,
+                          nhatky: false
+                        });
                       }}
                     >
-                      ❌ Hủy
+                      ❌ HỦY
                     </Button>
                   </Stack>
                 </>
@@ -907,18 +1164,28 @@ export default function Admin({ onCancel }) {
                     >
                       ✅ Xóa dữ liệu
                     </Button>
-
                     <Button
-                      variant="contained"
-                      color="primary"
+                      variant="outlined"
+                      color="secondary"
                       fullWidth
-                      sx={{ width: "50%" }}
+                      sx={{
+                        width: "50%",
+                        fontWeight: "bold",
+                        textTransform: "none",
+                        fontSize: "1rem"
+                      }}
                       onClick={() => {
                         setShowDeleteOptions(false);
-                        setDeleteCollections({ danhsach: false, bantru: false, diemdan: false, nhatkybantru: false, xoaHocSinhBanTru: false });
+                        setDeleteCollections({
+                          danhsach: false,
+                          bantru: false,
+                          diemdan: false,
+                          nhatkybantru: false,
+                          xoaHocSinhBanTru: false
+                        });
                       }}
                     >
-                      ❌ Hủy
+                      ❌ HỦY
                     </Button>
                   </Stack>
 

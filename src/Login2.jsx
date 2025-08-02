@@ -139,9 +139,8 @@ export default function Login() {
       }
 
       setSession(userKey);
-      setIsManager(false); // 👉 Đây là tài khoản lớp
-      localStorage.setItem("lop", userKey); 
-      localStorage.setItem("isManager", "false"); // ✅ Ghi lại để dùng sau
+      setIsManager(false);                 // 👉 Đây là tài khoản lớp
+      localStorage.setItem("lop", userKey); // ✅ Ghi nhớ để dùng sau reload
 
       const newKhoi = userKey.split(".")[0];
       navigate(`/lop${newKhoi}`, { state: { lop: userKey } });
@@ -164,13 +163,14 @@ export default function Login() {
 
       setSession(userKey);
       setIsManager(true); // 👉 Lưu vào context: đây là tài khoản quản lý
-      localStorage.setItem("isManager", "true"); // ✅ Lưu vào localStorage
 
+      // 👉 Tài khoản ADMIN
       if (userKey === "ADMIN") {
         navigate("/admin");
         return;
       }
 
+      // 👉 Chuyển hướng nếu có target cụ thể
       if (redirectTo) {
         localStorage.removeItem("redirectTarget");
         localStorage.removeItem("classIdTarget");
@@ -179,6 +179,7 @@ export default function Login() {
         return;
       }
 
+      // 👉 Điều hướng theo tab mặc định của từng loại tài khoản
       const tabMap = { KETOAN: "thongke", BGH: "danhsach", YTE: "dulieu" };
       const tab = tabMap[userKey] || "dulieu";
       navigate("/quanly", { state: { account: userKey, tab } });
@@ -188,7 +189,6 @@ export default function Login() {
       alert("⚠️ Lỗi kết nối, vui lòng thử lại.");
     }
   };
-
 
 
   const handleBack = () => {

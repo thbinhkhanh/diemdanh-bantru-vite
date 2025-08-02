@@ -155,17 +155,17 @@ export default function NhatKyGV() {
   }
 
   return (
-    <Box sx={{ backgroundColor: '#e3f2fd', minHeight: '100vh', py: 4 }}>
+    <Box sx={{ backgroundColor: '#e3f2fd', minHeight: '100vh', py: 3 }}>
       <Box
         sx={{
           width: "100%",
           maxWidth: "750px",
           mx: "auto",
           px: { xs: 1, sm: 2 },
-          pt: 2,
+          //pt: 2,
         }}
       >
-        <Paper elevation={3} sx={{ p: { xs: 2, sm: 4 }, borderRadius: 2, mt: 6 }}>
+        <Paper elevation={3} sx={{ p: { xs: 2, sm: 4 }, borderRadius: 2, mt: 0 }}>
           <Typography
             variant="h5"
             fontWeight="bold"
