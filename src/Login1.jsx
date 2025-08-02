@@ -15,6 +15,7 @@ import { doc, getDoc } from "firebase/firestore";
 import { db } from "./firebase";
 import { useNavigate, useLocation } from "react-router-dom";
 import Banner from "./pages/Banner";
+import { useAdmin } from './context/AdminContext';
 
 const CLASS_BY_KHOI = {
   K1: ["1.1", "1.2", "1.3", "1.4", "1.5", "1.6"],
@@ -37,6 +38,7 @@ export default function Login() {
   const [classList, setClassList] = useState([]);
   const [selectedUsername, setSelectedUsername] = useState("");
   const [roleUsername, setRoleUsername] = useState("yte");
+  const { setIsManager } = useAdmin();
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -49,44 +51,63 @@ export default function Login() {
 
   const lopSo = classId?.replace(/\D/g, "") || "";
   const isQuanLyLogin = !classId;
+  const [realPassword, setRealPassword] = useState(null);
+
+  useEffect(() => {
+    const fetchPasswordForClass = async () => {
+      const userKey = selectedUsername?.toUpperCase();
+      if (!/^([1-5])\.\d$/.test(userKey)) {
+        setRealPassword(null);
+        return;
+      }
+
+      try {
+        const docSnap = await getDoc(doc(db, "ACCOUNT", userKey));
+        if (docSnap.exists()) {
+          setRealPassword(docSnap.data().password || null);
+        } else {
+          setRealPassword(null);
+        }
+      } catch (err) {
+        console.error("⚠️ Lỗi khi lấy mật khẩu lớp:", err);
+        setRealPassword(null);
+      }
+    };
+
+    fetchPasswordForClass();
+  }, [selectedUsername]);
 
   useEffect(() => {
     const rememberedAccount = localStorage.getItem("rememberedAccount");
     const isLoggedIn = localStorage.getItem("loggedIn") === "true";
 
-    // Không tự redirect nếu đang có flag switchingClass
     if (rememberedAccount && isLoggedIn && !switchingClass) {
       const userKey = rememberedAccount.toUpperCase();
 
-      // ✅ Ưu tiên redirect rõ ràng nếu có
       if (redirectTo) {
-        localStorage.removeItem("redirectTarget");
+        localStorage.removeItem("redirectTarget");        
         navigate(redirectTo);
         return;
       }
 
-      // ✅ Nếu có classId (đã xác định lớp cần vào) → cho vào lớp
-      if (classId && /^lop[1-5]$/.test(classId)) {
+      if (classId && /^lop[1-5]$/.test(classId)) {        
         navigate(`/${classId}`);
         return;
       }
 
-      // ✅ Tài khoản lớp
       if (/^([1-5])\.\d$/.test(userKey)) {
-        const khoi = userKey.split(".")[0];
+        const khoi = userKey.split(".")[0];        
         navigate(`/lop${khoi}`);
         return;
       }
 
-      // ✅ Admin
       if (userKey === "ADMIN") {
         navigate("/admin");
         return;
       }
 
-      // ✅ Quản lý khác
       const tabMap = { KETOAN: "thongke", BGH: "danhsach", YTE: "dulieu" };
-      const tab = tabMap[userKey] || "dulieu";
+      const tab = tabMap[userKey] || "dulieu";      
       navigate("/quanly", { state: { account: userKey, tab } });
     }
   }, []);
@@ -108,31 +129,48 @@ export default function Login() {
     }
 
     const userKey = username.toUpperCase();
-    const isLopAccount = /^([1-5])\.\d$/.test(username);
+    const isLopAccount = /^([1-5])\.\d$/.test(userKey);
 
-    if (isLopAccount && password === "1") {
-      setSession(userKey);
-      const newKhoi = username.split(".")[0];
-      navigate(`/lop${newKhoi}`);
-      return;
-    }
-
-    try {
-      const docSnap = await getDoc(doc(db, "ACCOUNT", userKey));
-      if (!docSnap.exists() || docSnap.data().password !== password) {
+    // 👉 TÀI KHOẢN LỚP
+    if (isLopAccount) {
+      if (!realPassword || password !== realPassword) {
         alert("❌ Sai mật khẩu.");
         return;
       }
 
       setSession(userKey);
+      setIsManager(false); // 👉 Đây là tài khoản lớp
+      localStorage.setItem("lop", userKey); 
+      localStorage.setItem("isManager", "false"); // ✅ Ghi lại để dùng sau
 
-      // ✅ Nếu là ADMIN thì vào thẳng /admin
+      const newKhoi = userKey.split(".")[0];
+      navigate(`/lop${newKhoi}`, { state: { lop: userKey } });
+      return;
+    }
+
+    // 👉 TÀI KHOẢN QUẢN LÝ
+    try {
+      const docSnap = await getDoc(doc(db, "ACCOUNT", userKey));
+      if (!docSnap.exists()) {
+        alert("❌ Tài khoản không tồn tại.");
+        return;
+      }
+
+      const data = docSnap.data();
+      if (data.password !== password) {
+        alert("❌ Sai mật khẩu.");
+        return;
+      }
+
+      setSession(userKey);
+      setIsManager(true); // 👉 Lưu vào context: đây là tài khoản quản lý
+      localStorage.setItem("isManager", "true"); // ✅ Lưu vào localStorage
+
       if (userKey === "ADMIN") {
         navigate("/admin");
         return;
       }
 
-      // ✅ Nếu có redirect rõ ràng → ưu tiên
       if (redirectTo) {
         localStorage.removeItem("redirectTarget");
         localStorage.removeItem("classIdTarget");
@@ -141,20 +179,6 @@ export default function Login() {
         return;
       }
 
-      // ✅ Nếu có classId → vào lớp
-      if (classId && /^lop[1-5]$/.test(classId)) {
-        navigate(`/${classId}`);
-        return;
-      }
-
-      // ✅ Nếu có lớp được chọn → vào lớp
-      if (selectedUsername) {
-        const newKhoi = selectedUsername.split(".")[0];
-        navigate(`/lop${newKhoi}`);
-        return;
-      }
-
-      // ✅ Các quản lý khác → vào /quanly
       const tabMap = { KETOAN: "thongke", BGH: "danhsach", YTE: "dulieu" };
       const tab = tabMap[userKey] || "dulieu";
       navigate("/quanly", { state: { account: userKey, tab } });
@@ -163,6 +187,12 @@ export default function Login() {
       console.error("⚠️ Lỗi đăng nhập:", err);
       alert("⚠️ Lỗi kết nối, vui lòng thử lại.");
     }
+  };
+
+
+
+  const handleBack = () => {
+    navigate(-1);
   };
 
   return (
@@ -222,15 +252,27 @@ export default function Login() {
               size="small"
               onKeyDown={(e) => e.key === "Enter" && handleLogin()}
             />
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={handleLogin}
-              fullWidth
-              sx={{ fontWeight: "bold", textTransform: "none", fontSize: "1rem" }}
-            >
-              🔐 Đăng nhập
-            </Button>
+            <Stack direction="row" spacing={2} width="100%">
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleLogin}
+                fullWidth
+                sx={{ fontWeight: "bold", textTransform: "none", fontSize: "1rem" }}
+              >
+                🔐 Đăng nhập
+              </Button>
+
+              <Button
+                variant="outlined"
+                color="secondary"
+                onClick={handleBack}
+                fullWidth
+                sx={{ fontWeight: "bold", textTransform: "none", fontSize: "1rem" }}
+              >
+                🔙 Quay lại
+              </Button>
+            </Stack>
           </Stack>
         </Card>
       </Box>
