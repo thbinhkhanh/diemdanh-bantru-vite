@@ -32,7 +32,7 @@ export default function AccountList() {
   const roleLabels = {
     yte: "Y tế",
     ketoan: "Kế toán",
-    bgh: "Ban Giám hiệu",
+    bgh: "BGH",
     admin: "Admin",
   };
 
