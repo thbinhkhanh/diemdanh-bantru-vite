@@ -66,7 +66,7 @@ function App() {
                 <Route path="/huongdan" element={<HuongDan />} />
                 <Route path="/chucnang" element={<About />} />
                 <Route path="/admin" element={
-                  <Suspense fallback={<div>Đang tải trang quản trị...</div>}>
+                  <Suspense>
                     <PrivateRoute><Admin /></PrivateRoute>
                   </Suspense>
                 } />
