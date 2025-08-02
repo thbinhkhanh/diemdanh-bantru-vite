@@ -97,7 +97,18 @@ export default function AccountList() {
                     return (
                         <TableRow key={item.id} sx={{ backgroundColor }}>
                             <TableCell align="center">{index + 1}</TableCell>
-                            <TableCell align="left">{item.hoTen || "—"}</TableCell> {/* HỌ VÀ TÊN */}
+                            <TableCell
+                                align="left"
+                                sx={{
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    maxWidth: 180, // tuỳ chỉnh độ rộng tối đa nếu cần
+                                }}
+                                >
+                                {item.hoTen || "—"}
+                                </TableCell>
+
                             <TableCell align="center">{displayName}</TableCell>
                             <TableCell align="center">{item.password}</TableCell>
                             <TableCell align="center">{lastUpdate}</TableCell>
