@@ -31,6 +31,7 @@ import Navigation from './utils/Navigation';
 import PrivateRoute from './utils/PrivateRoute';
 import { Navigation_Route } from './utils/Navigation_Route';
 import SwitchAccount from './pages/SwitchAccount';
+import AccountList from "./AccountList"; // 👈 Import trang mới
 
 const Admin = React.lazy(() => import('./Admin'));
 
@@ -50,6 +51,7 @@ function App() {
               <Routes>
                 <Route path="/" element={<Navigate to="/home" replace />} />
                 <Route path="/login" element={<Login />} />
+                <Route path="/accounts" element={<AccountList />} /> 
                 <Route path="/home" element={<Home handleProtectedNavigate={(path) => Navigation_Route(path, navigate, setActiveNavPath)} />} />
                 <Route path="/lop1" element={<PrivateRoute><Lop1 /></PrivateRoute>} />
                 <Route path="/lop2" element={<PrivateRoute><Lop2 /></PrivateRoute>} />

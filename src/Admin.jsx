@@ -347,9 +347,6 @@ export default function Admin({ onCancel }) {
       return;
     }
 
-    const confirmed = window.confirm("⚠️ Bạn có chắc muốn đặt lại mật khẩu cho tất cả tài khoản lớp?");
-    if (!confirmed) return;
-
     try {
       setActionType("reset"); // ✅ để hiển thị "Đang reset mật khẩu..."
 
@@ -705,9 +702,7 @@ export default function Admin({ onCancel }) {
                             return;
                           }
 
-                          const confirmed = window.confirm(
-                            "⚠️ Bạn có chắc muốn tạo dữ liệu năm mới?"
-                          );
+                          const confirmed = window.confirm("⚠️ Bạn có chắc muốn tạo dữ liệu năm mới?");
                           if (!confirmed) return;
 
                           await createNewYearData(options);
@@ -751,6 +746,17 @@ export default function Admin({ onCancel }) {
                 </>
               )}
 
+              {/* Nút chuyển hướng đến trang danh sách tài khoản */}
+              {!showCreatePassword && !showResetPassword && !showCreateDatabase && (
+                <Button
+                  variant="contained"
+                  color="info"
+                  onClick={() => navigate("/accounts")}
+                >
+                  📋 DANH SÁCH TÀI KHOẢN
+                </Button>
+              )}
+
               {/* Tiến trình */}
               {progress > 0 && (
                 <Box sx={{ mt: 2 }}>
@@ -777,6 +783,7 @@ export default function Admin({ onCancel }) {
               )}
             </Stack>
           )}
+
 
           {/* Tab 3: Backup & Restore */}
           {tabIndex === 2 && (
