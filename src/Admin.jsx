@@ -9,6 +9,7 @@ import LockResetIcon from "@mui/icons-material/LockReset";
 import Banner from "./pages/Banner";
 import { useNavigate } from "react-router-dom";
 import { db } from "./firebase";
+import { writeBatch } from "firebase/firestore";
 import { deleteField, doc, getDoc, setDoc } from "firebase/firestore";
 import { useClassData } from "./context/ClassDataContext";
 
@@ -16,6 +17,7 @@ import { useClassData } from "./context/ClassDataContext";
 import { xoaDatabase } from "./utils/xoaDatabase";
 import { resetBanTru } from "./utils/resetBanTru";
 import { resetDiemDanh } from "./utils/resetDiemDanh";
+import { updateTeacherNamesFromFile } from "./utils/excelHandlers";
 
 import {
   downloadBackupAsJSON,
@@ -95,6 +97,9 @@ export default function Admin({ onCancel }) {
   const [actionType, setActionType] = useState(""); // "create" | "reset" | ""
   const [showResetPassword, setShowResetPassword] = useState(false);
   const [showCreateDatabase, setShowCreateDatabase] = useState(false);
+  const [updateTeacherName, setUpdateTeacherName] = useState(false);
+  const [teacherProgress, setTeacherProgress] = useState(0);
+    
   const [options, setOptions] = useState({
     list: false,
     meal: false,
@@ -284,7 +289,8 @@ export default function Admin({ onCancel }) {
     }
 
     try {
-      setActionType("create"); // ✅ hiển thị thanh tiến trình tạo tài khoản
+      setActionType("create");
+      setProgress(0);
 
       const truongRef = doc(db, `CLASSLIST_${namHoc}`, "TRUONG");
       const truongSnap = await getDoc(truongRef);
@@ -302,27 +308,54 @@ export default function Admin({ onCancel }) {
         return;
       }
 
-      let successCount = 0;
-      let failList = [];
+      const newAccounts = [];
+      let skipCount = 0;
 
+      // ✅ Duyệt qua toàn bộ lớp, kiểm tra và gom tài khoản cần tạo
       for (let i = 0; i < classList.length; i++) {
         const className = classList[i];
         const accountRef = doc(db, "ACCOUNT", className);
-
-        try {
-          await setDoc(accountRef, {
-            username: className,
-            password: password,
-          });
-          successCount++;
-        } catch (err) {
-          failList.push(className);
+        const accountSnap = await getDoc(accountRef);
+        if (!accountSnap.exists()) {
+          newAccounts.push(className);
+        } else {
+          skipCount++;
         }
 
+        // ✅ Tiến trình dựa trên tổng số lớp
         setProgress(Math.round(((i + 1) / classList.length) * 100));
       }
 
-      setMessage(`✅ Đã tạo xong tài khoản người dùng.`);
+      // 🔄 Ghi đồng loạt theo từng nhóm 500
+      const BATCH_LIMIT = 500;
+      let successCount = 0;
+
+      for (let i = 0; i < newAccounts.length; i += BATCH_LIMIT) {
+        const batch = writeBatch(db);
+        const chunk = newAccounts.slice(i, i + BATCH_LIMIT);
+
+        chunk.forEach(className => {
+          const ref = doc(db, "ACCOUNT", className);
+          batch.set(ref, {
+            username: className,
+            password: password,
+          });
+        });
+
+        try {
+          await batch.commit();
+          successCount += chunk.length;
+        } catch (err) {
+          console.error("❌ Lỗi khi ghi batch:", err);
+        }
+
+        // ✅ Tiếp tục cập nhật tiến trình nếu cần (sát 100%)
+        const progressDone = classList.length + i + chunk.length;
+        const totalSteps = classList.length + newAccounts.length;
+        setProgress(Math.min(100, Math.round((progressDone / totalSteps) * 100)));
+      }
+
+      setMessage(`✅ Đã tạo ${successCount} tài khoản mới. 🚫 Bỏ qua ${skipCount} tài khoản đã tồn tại.`);
       setSeverity("success");
     } catch (error) {
       console.error("❌ Lỗi xử lý:", error);
@@ -331,7 +364,7 @@ export default function Admin({ onCancel }) {
     } finally {
       setTimeout(() => {
         setProgress(0);
-        setActionType(""); // ✅ reset lại sau 3s
+        setActionType("");
       }, 3000);
     }
   };
@@ -348,7 +381,7 @@ export default function Admin({ onCancel }) {
     }
 
     try {
-      setActionType("reset"); // ✅ để hiển thị "Đang reset mật khẩu..."
+      setActionType("reset");
 
       const truongRef = doc(db, `CLASSLIST_${namHoc}`, "TRUONG");
       const truongSnap = await getDoc(truongRef);
@@ -366,27 +399,41 @@ export default function Admin({ onCancel }) {
         return;
       }
 
+      const BATCH_LIMIT = 500;
       let successCount = 0;
       let failList = [];
 
-      for (let i = 0; i < classList.length; i++) {
-        const className = classList[i];
-        const accountRef = doc(db, "ACCOUNT", className);
+      for (let i = 0; i < classList.length; i += BATCH_LIMIT) {
+        const batch = writeBatch(db);
+        const chunk = classList.slice(i, i + BATCH_LIMIT);
+
+        chunk.forEach(className => {
+          const accountRef = doc(db, "ACCOUNT", className);
+          batch.set(accountRef, {
+            password: password,
+            date: deleteField()
+          }, { merge: true });
+        });
 
         try {
-          await setDoc(accountRef, {
-            password: password,
-          }, { merge: true });
-          successCount++;
+          await batch.commit();
+          successCount += chunk.length;
         } catch (err) {
-          failList.push(className);
+          console.error("❌ Lỗi ghi batch:", err);
+          failList.push(...chunk);
         }
 
-        setProgress(Math.round(((i + 1) / classList.length) * 100));
+        const processed = Math.min(classList.length, i + chunk.length);
+        setProgress(Math.round((processed / classList.length) * 100));
       }
 
-      setMessage(`✅ Đã reset xong mật khẩu người dùng`);
-      setSeverity("success");
+      if (failList.length > 0) {
+        setMessage(`⚠️ Đã reset ${successCount} tài khoản. ${failList.length} bị lỗi.`);
+        setSeverity("warning");
+      } else {
+        setMessage(`✅ Đã reset xong mật khẩu cho ${successCount} tài khoản (và xóa field "date").`);
+        setSeverity("success");
+      }
     } catch (error) {
       console.error("❌ Lỗi reset mật khẩu:", error);
       setMessage("❌ Có lỗi xảy ra.");
@@ -394,7 +441,7 @@ export default function Admin({ onCancel }) {
     } finally {
       setTimeout(() => {
         setProgress(0);
-        setActionType(""); // ✅ reset lại sau khi xong
+        setActionType("");
       }, 3000);
     }
   };
@@ -492,7 +539,7 @@ export default function Admin({ onCancel }) {
                 </Button>
               )}
 
-              {/* Nhóm tạo tài khoản */}
+              {/* Nhóm tạo tài khoản hoặc cập nhật giáo viên */}
               {showCreatePassword && (
                 <>
                   <TextField
@@ -501,21 +548,58 @@ export default function Admin({ onCancel }) {
                     value={customUserPassword}
                     size="small"
                     onChange={(e) => setCustomUserPassword(e.target.value)}
+                    fullWidth
+                    sx={{ mb: 1 }}
                   />
+
+                  <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+                    <input
+                      type="checkbox"
+                      checked={updateTeacherName}
+                      onChange={(e) => setUpdateTeacherName(e.target.checked)}
+                      style={{ marginRight: 8 }}
+                      id="updateTeacherName"
+                    />
+                    <label htmlFor="updateTeacherName">Cập nhật danh sách giáo viên</label>
+                  </Box>
+
                   <Box sx={{ display: "flex", gap: 1 }}>
                     <Button
                       variant="contained"
-                      color="success"
+                      color={updateTeacherName ? "primary" : "success"}
                       sx={{ flex: 63 }}
                       onClick={async () => {
-                        const confirmed = window.confirm("⚠️ Bạn có chắc muốn tạo tài khoản cho toàn bộ lớp?");
-                        if (!confirmed) return;
-                        await createClassUserAccounts(customUserPassword);
-                        setShowCreatePassword(false);
-                        setCustomUserPassword("");
+                        if (updateTeacherName) {
+                          const input = document.createElement("input");
+                          input.type = "file";
+                          input.accept = ".xlsx, .xls";
+                          input.onchange = async (e) => {
+                            const file = e.target.files[0];
+                            if (!file) return;
+
+                            const confirmed = window.confirm("⚠️ Bạn có chắc muốn cập nhật tên giáo viên vào tài khoản?");
+                            if (!confirmed) return;
+
+                            setActionType("update");
+                            await updateTeacherNamesFromFile(file, setTeacherProgress, setMessage, setSeverity, setUpdateTeacherName);
+                            //setShowCreatePassword(false);
+                            setCustomUserPassword("");
+                            //setUpdateTeacherName(false);
+                          };
+                          input.click();
+                        } else {
+                          const confirmed = window.confirm("⚠️ Bạn có chắc muốn tạo tài khoản cho toàn bộ lớp?");
+                          if (!confirmed) return;
+
+                          setActionType("create");
+                          await createClassUserAccounts(customUserPassword);
+                          setShowCreatePassword(false);
+                          setCustomUserPassword("");
+                          setUpdateTeacherName(false);
+                        }
                       }}
                     >
-                      ✅ TẠO TÀI KHOẢN
+                      {updateTeacherName ? "📤 CẬP NHẬT" : "✅ TẠO TÀI KHOẢN"}
                     </Button>
 
                     <Button
@@ -530,6 +614,7 @@ export default function Admin({ onCancel }) {
                       onClick={() => {
                         setShowCreatePassword(false);
                         setCustomUserPassword("");
+                        setUpdateTeacherName(false);
                       }}
                     >
                       ❌ HỦY
@@ -572,6 +657,8 @@ export default function Admin({ onCancel }) {
                       onClick={async () => {
                         const confirmed = window.confirm("⚠️ Bạn có chắc muốn reset mật khẩu cho toàn bộ lớp?");
                         if (!confirmed) return;
+
+                        setActionType("reset");
                         await resetClassUserPasswords(customUserPassword);
                         setShowResetPassword(false);
                         setCustomUserPassword("");
@@ -617,17 +704,16 @@ export default function Admin({ onCancel }) {
               {/* Nhóm tạo database */}
               {showCreateDatabase && (
                 <>
-                  {/* Tiêu đề nhóm: giống nút ban đầu nhưng không phải button */}
                   <Box
                     sx={{
                       display: "flex",
                       alignItems: "center",
-                      bgcolor: "#1976d2", // màu xanh của nút contained
+                      bgcolor: "#1976d2",
                       color: "#fff",
                       px: 2,
                       py: 1.2,
                       borderRadius: 1,
-                      fontSize: "0.9375rem", // giống nút MUI mặc định
+                      fontSize: "0.9375rem",
                       boxShadow: 1,
                       justifyContent: "flex-start",
                     }}
@@ -644,9 +730,7 @@ export default function Admin({ onCancel }) {
                         control={
                           <Checkbox
                             checked={options.list}
-                            onChange={(e) =>
-                              setOptions((prev) => ({ ...prev, list: e.target.checked }))
-                            }
+                            onChange={(e) => setOptions((prev) => ({ ...prev, list: e.target.checked }))}
                           />
                         }
                         label="Danh sách"
@@ -655,9 +739,7 @@ export default function Admin({ onCancel }) {
                         control={
                           <Checkbox
                             checked={options.meal}
-                            onChange={(e) =>
-                              setOptions((prev) => ({ ...prev, meal: e.target.checked }))
-                            }
+                            onChange={(e) => setOptions((prev) => ({ ...prev, meal: e.target.checked }))}
                           />
                         }
                         label="Bán trú"
@@ -666,12 +748,7 @@ export default function Admin({ onCancel }) {
                         control={
                           <Checkbox
                             checked={options.attendance}
-                            onChange={(e) =>
-                              setOptions((prev) => ({
-                                ...prev,
-                                attendance: e.target.checked,
-                              }))
-                            }
+                            onChange={(e) => setOptions((prev) => ({ ...prev, attendance: e.target.checked }))}
                           />
                         }
                         label="Điểm danh"
@@ -680,9 +757,7 @@ export default function Admin({ onCancel }) {
                         control={
                           <Checkbox
                             checked={options.log}
-                            onChange={(e) =>
-                              setOptions((prev) => ({ ...prev, log: e.target.checked }))
-                            }
+                            onChange={(e) => setOptions((prev) => ({ ...prev, log: e.target.checked }))}
                           />
                         }
                         label="Nhật ký"
@@ -707,12 +782,7 @@ export default function Admin({ onCancel }) {
 
                           await createNewYearData(options);
                           setShowCreateDatabase(false);
-                          setOptions({
-                            list: false,
-                            meal: false,
-                            attendance: false,
-                            log: false,
-                          });
+                          setOptions({ list: false, meal: false, attendance: false, log: false });
                         }}
                       >
                         ✅ TẠO DATABASE
@@ -723,12 +793,7 @@ export default function Admin({ onCancel }) {
                         color="secondary"
                         onClick={() => {
                           setShowCreateDatabase(false);
-                          setOptions({
-                            list: false,
-                            meal: false,
-                            attendance: false,
-                            log: false,
-                          });
+                          setOptions({ list: false, meal: false, attendance: false, log: false });
                           setShowCreatePassword(false);
                           setShowResetPassword(false);
                         }}
@@ -746,18 +811,14 @@ export default function Admin({ onCancel }) {
                 </>
               )}
 
-              {/* Nút chuyển hướng đến trang danh sách tài khoản */}
+              {/* Nút chuyển đến danh sách tài khoản */}
               {!showCreatePassword && !showResetPassword && !showCreateDatabase && (
-                <Button
-                  variant="contained"
-                  color="info"
-                  onClick={() => navigate("/accounts")}
-                >
+                <Button variant="contained" color="info" onClick={() => navigate("/accounts")}>
                   📋 DANH SÁCH TÀI KHOẢN
                 </Button>
               )}
 
-              {/* Tiến trình */}
+              {/* Tiến trình tạo/reset tài khoản */}
               {progress > 0 && (
                 <Box sx={{ mt: 2 }}>
                   <LinearProgress
@@ -775,6 +836,20 @@ export default function Admin({ onCancel }) {
                 </Box>
               )}
 
+              {/* Tiến trình cập nhật giáo viên */}
+              {teacherProgress > 0 && teacherProgress < 100 && (
+                <Box sx={{ mt: 2 }}>
+                  <LinearProgress
+                    variant="determinate"
+                    value={teacherProgress}
+                    sx={{ height: 10, borderRadius: 5 }}
+                  />
+                  <Typography variant="caption" align="center" display="block" mt={0.5}>
+                    Đang cập nhật giáo viên... {teacherProgress}%
+                  </Typography>
+                </Box>
+              )}
+
               {/* Thông báo */}
               {message && (
                 <Alert severity={severity} onClose={() => setMessage("")} sx={{ mb: 2 }}>
@@ -783,6 +858,7 @@ export default function Admin({ onCancel }) {
               )}
             </Stack>
           )}
+
 
 
           {/* Tab 3: Backup & Restore */}

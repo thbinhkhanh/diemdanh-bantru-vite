@@ -34,7 +34,7 @@ export default function AccountList() {
     ketoan: "Kế toán",
     bgh: "Ban Giám hiệu",
     admin: "Admin",
-    };
+  };
 
   return (
     <Box sx={{ display: 'flex', justifyContent: 'center', mt: 0, backgroundColor: '#e3f2fd', minHeight: '100vh' }}>
@@ -42,7 +42,7 @@ export default function AccountList() {
         sx={{
           mt: 4,
           p: { xs: 2, sm: 3, md: 4 },
-          maxWidth: 470,
+          maxWidth: 700,
           width: '100%',
           borderRadius: 4,
           boxShadow: '0 8px 30px rgba(0,0,0,0.15)',
@@ -63,7 +63,7 @@ export default function AccountList() {
           <Table size="small" sx={{ border: '1px solid #ccc' }}>
             <TableHead>
               <TableRow sx={{ backgroundColor: '#1976d2' }}>
-                {['STT', 'USERNAME', 'PASSWORD'].map((label, idx) => (
+                {['STT', 'HỌ VÀ TÊN', 'TÀI KHOẢN', 'MẬT KHẨU', 'NGÀY CẬP NHẬT'].map((label, idx) => (
                   <TableCell key={idx} align="center" sx={{ color: '#fff', fontWeight: 'bold' }}>
                     {label}
                   </TableCell>
@@ -73,25 +73,34 @@ export default function AccountList() {
             <TableBody>
                 {accounts.length === 0 ? (
                     <TableRow>
-                    <TableCell colSpan={3} align="center" sx={{ fontStyle: 'italic' }}>
+                    <TableCell colSpan={4} align="center" sx={{ fontStyle: 'italic' }}>
                         Không có tài khoản nào
                     </TableCell>
                     </TableRow>
                 ) : (
                     accounts.map((item, index) => {
-                    const isManager = ['yte', 'ketoan', 'bgh', 'admin'].includes(item.username?.toLowerCase());
-                    const displayName = roleLabels[item.username?.toLowerCase()] || item.username;
+                    const username = item.username || "";
+                    const isManager = ['yte', 'ketoan', 'bgh', 'admin'].includes(username.toLowerCase());
+                    const displayName = roleLabels[username.toLowerCase()] || username;
+                    const lastUpdate = item.date || "—";
+
+                    const classKey = username.split(".")[0]; // "1" từ "1.1"
+                    const classNumber = parseInt(classKey, 10);
+                    const isEvenClass = !isNaN(classNumber) && classNumber % 2 === 0;
+
+                    const backgroundColor = isManager
+                        ? "#fffde7" // màu quản lý
+                        : isEvenClass
+                        ? "#e1f5fe" // xanh nhạt cho khối chẵn
+                        : "#ffffff"; // trắng cho khối lẻ
 
                     return (
-                        <TableRow
-                        key={item.id}
-                        sx={{
-                            backgroundColor: isManager ? '#f1fbfd' : 'inherit',
-                        }}
-                        >
-                        <TableCell align="center">{index + 1}</TableCell>
-                        <TableCell align="center">{displayName}</TableCell>
-                        <TableCell align="center">{item.password}</TableCell>
+                        <TableRow key={item.id} sx={{ backgroundColor }}>
+                            <TableCell align="center">{index + 1}</TableCell>
+                            <TableCell align="left">{item.hoTen || "—"}</TableCell> {/* HỌ VÀ TÊN */}
+                            <TableCell align="center">{displayName}</TableCell>
+                            <TableCell align="center">{item.password}</TableCell>
+                            <TableCell align="center">{lastUpdate}</TableCell>
                         </TableRow>
                     );
                     })

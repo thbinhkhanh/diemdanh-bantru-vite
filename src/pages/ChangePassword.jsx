@@ -8,7 +8,7 @@ import {
   Card,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import { db } from "../firebase"; // chỉnh lại theo vị trí của bạn
+import { db } from "../firebase";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 
 export default function ChangePassword() {
@@ -17,20 +17,53 @@ export default function ChangePassword() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [message, setMessage] = useState("");
   const [username, setUsername] = useState("");
+  const [lastUpdated, setLastUpdated] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
     const storedAccount = localStorage.getItem("account");
     if (storedAccount) {
-      setUsername(storedAccount.toUpperCase());
+      const username = storedAccount.toUpperCase();
+      setUsername(username);
+
+      const fetchUpdateDate = async () => {
+        try {
+          const userDocRef = doc(db, "ACCOUNT", username);
+          const docSnap = await getDoc(userDocRef);
+          if (docSnap.exists()) {
+            const dateString = docSnap.data().date;
+            if (dateString) {
+              setLastUpdated(dateString);
+            }
+          }
+        } catch (error) {
+          console.error("❌ Lỗi khi lấy ngày cập nhật:", error);
+        }
+      };
+
+      fetchUpdateDate();
     }
   }, []);
 
-  // Hàm cập nhật mật khẩu lên Firestore
   const updatePasswordInFirestore = async (username, newPassword) => {
     try {
       const userDocRef = doc(db, "ACCOUNT", username);
-      await updateDoc(userDocRef, { password: newPassword });
+
+      // 👉 Lấy ngày giờ hiện tại theo giờ Việt Nam, định dạng dd-mm-yyyy
+      const now = new Date();
+      const options = {
+        timeZone: "Asia/Ho_Chi_Minh",
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      };
+      const vietnamDate = new Intl.DateTimeFormat("en-GB", options).format(now);
+      const formattedDate = vietnamDate.replace(/\//g, "-");
+
+      await updateDoc(userDocRef, {
+        password: newPassword,
+        date: formattedDate, // ✅ Lưu chuỗi dạng "02-08-2025"
+      });
     } catch (error) {
       console.error("🔥 Lỗi cập nhật mật khẩu trên Firestore:", error);
       throw error;
@@ -53,7 +86,6 @@ export default function ChangePassword() {
     }
 
     try {
-      // Lấy mật khẩu hiện tại trên Firestore
       const userDocRef = doc(db, "ACCOUNT", username);
       const docSnap = await getDoc(userDocRef);
 
@@ -69,13 +101,25 @@ export default function ChangePassword() {
         return;
       }
 
-      // Cập nhật mật khẩu mới lên Firestore
       await updatePasswordInFirestore(username, newPw);
 
       setMessage("✅ Đổi mật khẩu thành công.");
       setOldPassword("");
       setNewPassword("");
       setConfirmPassword("");
+
+      // 👉 Cập nhật lại ngày cuối sau khi đổi mật khẩu
+      const now = new Date();
+      const options = {
+        timeZone: "Asia/Ho_Chi_Minh",
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      };
+      const formatted = new Intl.DateTimeFormat("en-GB", options)
+        .format(now)
+        .replace(/\//g, "-");
+      setLastUpdated(formatted);
     } catch (err) {
       console.error("🔥 Lỗi đổi mật khẩu:", err);
       setMessage("⚠️ Đã có lỗi xảy ra khi đổi mật khẩu.");
@@ -107,17 +151,32 @@ export default function ChangePassword() {
             </Typography>
 
             {username && (
-              <Typography
-                variant="h8"
-                sx={{
-                  color: "black",
-                  textAlign: "center",
-                  fontWeight: "bold",
-                  mb: -1,
-                }}
-              >
-                🧑 Tài khoản: {username}
-              </Typography>
+              <>
+                <Typography
+                  variant="body1"
+                  sx={{
+                    color: "black",
+                    textAlign: "center",
+                    fontWeight: "bold",
+                    mb: -1,
+                  }}
+                >
+                  🧑 Tài khoản: {username}
+                </Typography>
+
+                {lastUpdated && (
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: "gray",
+                      fontStyle: "italic",
+                      textAlign: "center",
+                    }}
+                  >
+                    🕒 Cập nhật lần cuối: {lastUpdated}
+                  </Typography>
+                )}
+              </>
             )}
 
             <TextField
