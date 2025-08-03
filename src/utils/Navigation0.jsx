@@ -6,6 +6,13 @@ import { navStyle, navStyleGroup } from '../utils/navStyle';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
+} from '@mui/material';
+
 export default function Navigation() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -14,6 +21,7 @@ export default function Navigation() {
   const [showLogoPopup, setShowLogoPopup] = useState(false);
   const [activeNavPath, setActiveNavPath] = useState('/home');
   const [anchorElAccount, setAnchorElAccount] = useState(null);
+  const [openConfirm, setOpenConfirm] = useState(false);
 
   useEffect(() => {
     const mainPath = '/' + location.pathname.split('/')[1];
@@ -41,8 +49,7 @@ export default function Navigation() {
     ['loggedIn', 'account', 'loginRole', 'redirectTarget', 'isAdmin', 'rememberedAccount'].forEach(k =>
       localStorage.removeItem(k)
     );
-    window.location.href = '/home'; // hard reload
-    //navigate('/home'); // ✅ chuyển trang mềm, không reload    
+    window.location.href = '/home';
   };
 
   const handleProtectedNavigate = (path) => {
@@ -61,7 +68,6 @@ export default function Navigation() {
             setActiveNavPath(path);
             navigate(path);
           } else {
-            // 🛠 Thêm delay tránh giật khi chuyển lớp
             setTimeout(() => {
               navigate('/login', {
                 state: {
@@ -80,7 +86,6 @@ export default function Navigation() {
         return;
       }
 
-      // ❌ Nếu chưa đăng nhập ➜ đi login
       setTimeout(() => {
         navigate('/login', {
           state: {
@@ -92,7 +97,6 @@ export default function Navigation() {
       return;
     }
 
-    // 👉 Nếu vào trang quản lý
     if (path === '/quanly') {
       if (!isLoggedIn) {
         setTimeout(() => {
@@ -103,18 +107,7 @@ export default function Navigation() {
 
       const isClassAccount = /^\d+\.\d+$/.test(loginRole);
       if (isClassAccount) {
-        const confirmSwitch = window.confirm(
-          '⚠️ Bạn đang sử dụng tài khoản lớp.\n\nBạn có muốn đăng nhập tài khoản quản lý không?'
-        );
-        if (confirmSwitch) {
-          // Không logout — chỉ điều hướng đến login với redirectTo
-          navigate('/login', {
-            state: {
-              redirectTo: '/quanly',
-              switchingClass: true // tùy chọn để tránh redirect lại trong useEffect
-            }
-          });
-        }
+        setOpenConfirm(true);
         return;
       }
 
@@ -123,7 +116,6 @@ export default function Navigation() {
       return;
     }
 
-    // 👉 Các đường dẫn khác
     if (isLoggedIn) {
       setActiveNavPath(path);
       navigate(path);
@@ -149,6 +141,35 @@ export default function Navigation() {
 
   return (
     <>
+      <Dialog open={openConfirm} onClose={() => setOpenConfirm(false)}>
+        <DialogTitle>Thông báo</DialogTitle>
+        <DialogContent>
+          ⚠️ Bạn đang sử dụng tài khoản lớp.
+          <br />
+          Bạn có muốn đăng nhập tài khoản quản lý không?
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => {
+              setOpenConfirm(false);
+              navigate('/login', {
+                state: {
+                  redirectTo: '/quanly',
+                  switchingClass: true
+                }
+              });
+            }}
+            color="primary"
+            variant="contained"
+          >
+            Đồng ý
+          </Button>
+          <Button onClick={() => setOpenConfirm(false)} color="secondary">
+            Hủy
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Popup logo fullscreen */}
       {showLogoPopup && (
         <div
