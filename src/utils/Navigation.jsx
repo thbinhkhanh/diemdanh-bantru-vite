@@ -102,19 +102,28 @@ export default function Navigation() {
       }
 
       const isClassAccount = /^\d+\.\d+$/.test(loginRole);
-      if (isClassAccount) {
-        const confirmSwitch = window.confirm(
-          '⚠️ Bạn đang sử dụng tài khoản lớp.\n\nBạn có muốn đăng nhập tài khoản quản lý không?'
-        );
-        if (confirmSwitch) {
-          // Không logout — chỉ điều hướng đến login với redirectTo
+      if (path === '/quanly') {
+        if (!isLoggedIn) {
+          setTimeout(() => {
+            navigate('/login', { state: { redirectTo: path } });
+          }, 300);
+          return;
+        }
+
+        const isClassAccount = /^\d+\.\d+$/.test(loginRole);
+        if (isClassAccount) {
+          // 👉 Không hỏi xác nhận nữa, chuyển thẳng đến Login
           navigate('/login', {
             state: {
               redirectTo: '/quanly',
-              switchingClass: true // tùy chọn để tránh redirect lại trong useEffect
-            }
+              switchingClass: true, // đánh dấu là đang chuyển từ tài khoản lớp
+            },
           });
+          return;
         }
+
+        setActiveNavPath(path);
+        navigate(path);
         return;
       }
 
