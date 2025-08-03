@@ -14,6 +14,8 @@ import {
 import { db } from "../firebase";
 import { getDoc, doc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
+//import { useClassList } from "../context/ClassListContext";
+import { useTeacherAccount } from "../context/TeacherAccountContext";
 
 const setSession = (userKey) => {
   localStorage.setItem("loggedIn", "true");
@@ -46,23 +48,71 @@ export default function SwitchAccount() {
   const [accounts, setAccounts] = useState([]);
   const [selectedKhoi, setSelectedKhoi] = useState("");
   const [teacherName, setTeacherName] = useState("");
+  //const { classLists, setClassListForKhoi } = useClassList();
+  const { teacherAccounts, setAccountsForKhoi } = useTeacherAccount();
+
   const navigate = useNavigate();
 
   const fetchTeacher = async (userKey) => {
     if (!/^([1-5])\.\d$/.test(userKey)) {
       setTeacherName("");
+      console.log("🚫 Không phải tài khoản lớp.");
+      return;
+    }
+
+    const khoiKey = `K${userKey.split(".")[0]}`;
+    const cachedList = teacherAccounts[khoiKey] || [];
+
+    const cachedTeacher = cachedList.find((item) => item.username === userKey);
+
+    if (cachedTeacher && cachedTeacher.hoTen) {
+      setTeacherName(cachedTeacher.hoTen);
+      console.log(`✅ Tên giáo viên '${userKey}' lấy từ context:`, cachedTeacher.hoTen);
       return;
     }
 
     try {
       const docSnap = await getDoc(doc(db, "ACCOUNT", userKey));
       if (docSnap.exists()) {
-        setTeacherName(docSnap.data()?.hoTen || "");
+        const data = docSnap.data();
+        const hoTen = data?.hoTen || "";
+        setTeacherName(hoTen);
+        console.log(`📡 Tên giáo viên '${userKey}' lấy từ Firestore:`, hoTen);
+
+        const khoiClassList = CLASS_BY_KHOI[khoiKey] || [];
+
+        const enrichedList = await Promise.all(
+          khoiClassList.map(async (className) => {
+            const docRef = doc(db, "ACCOUNT", className);
+            try {
+              const snap = await getDoc(docRef);
+              const accData = snap.exists() ? snap.data() : {};
+              return {
+                username: className,
+                hoTen: accData?.hoTen || "",
+                password: accData?.password || "",
+                khoi: khoiKey,
+              };
+            } catch (err) {
+              console.warn(`⚠️ Lỗi khi tải lớp '${className}':`, err);
+              return {
+                username: className,
+                hoTen: "",
+                password: "",
+                khoi: khoiKey,
+              };
+            }
+          })
+        );
+
+        setAccountsForKhoi(khoiKey, enrichedList);
+        console.log(`📦 Lưu toàn bộ lớp khối ${khoiKey} vào context.`);
       } else {
         setTeacherName("");
+        console.log(`❌ Tài khoản '${userKey}' không tồn tại trong Firestore.`);
       }
     } catch (err) {
-      console.error("⚠️ Lỗi lấy tên giáo viên:", err);
+      console.error("🚨 Lỗi lấy tên giáo viên từ Firestore:", err);
       setTeacherName("");
     }
   };
@@ -121,15 +171,13 @@ export default function SwitchAccount() {
       return;
     }
 
-    try {
-      const docSnap = await getDoc(doc(db, "ACCOUNT", userKey));
-      if (!docSnap.exists()) {
-        setMessage("❌ Tài khoản không tồn tại.");
-        return;
-      }
+    const khoiKey = `K${userKey.split(".")[0]}`;
+    const accountsInKhoi = teacherAccounts[khoiKey] || [];
 
-      const storedPassword = docSnap.data().password;
-      if (storedPassword !== passwordInput) {
+    const matched = accountsInKhoi.find((acc) => acc.username === userKey);
+
+    if (matched) {
+      if (matched.password !== passwordInput) {
         setMessage("❌ Sai mật khẩu.");
         return;
       }
@@ -137,12 +185,45 @@ export default function SwitchAccount() {
       setSession(userKey);
       setMessage("✅ Đăng nhập thành công.");
 
-      const khoi = userKey.split(".")[0];
       setTimeout(() => {
-        navigate(`/lop${khoi}`, { state: { lop: userKey } });
+        navigate(`/lop${khoiKey.slice(1)}`, { state: { lop: userKey } });
+      }, 500);
+      return;
+    }
+
+    // 🔁 Nếu chưa có trong context thì fetch từ Firestore và lưu lại
+    try {
+      const docSnap = await getDoc(doc(db, "ACCOUNT", userKey));
+      if (!docSnap.exists()) {
+        setMessage("❌ Tài khoản không tồn tại.");
+        return;
+      }
+
+      const data = docSnap.data();
+      if (data.password !== passwordInput) {
+        setMessage("❌ Sai mật khẩu.");
+        return;
+      }
+
+      const updatedAccount = {
+        username: userKey,
+        hoTen: data.hoTen || "",
+        password: data.password || "",
+        khoi: khoiKey,
+      };
+
+      // 👉 Lưu lại vào context
+      const updatedKhoiList = [...accountsInKhoi, updatedAccount];
+      setAccountsForKhoi(khoiKey, updatedKhoiList);
+
+      setSession(userKey);
+      setMessage("✅ Đăng nhập thành công.");
+
+      setTimeout(() => {
+        navigate(`/lop${khoiKey.slice(1)}`, { state: { lop: userKey } });
       }, 500);
     } catch (err) {
-      console.error("🔥 Lỗi chuyển tài khoản:", err);
+      console.error("🔥 Lỗi kết nối khi xác thực tài khoản:", err);
       setMessage("⚠️ Lỗi kết nối.");
     }
   };

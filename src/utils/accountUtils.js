@@ -65,9 +65,14 @@ export const createClassUserAccounts = async ({
 
       chunk.forEach(className => {
         const ref = doc(db, "ACCOUNT", className);
+        const khoiSo = className.split(".")[0]; // "2.3" -> "2"
+        const khoi = `K${khoiSo}`;              // -> "K2"
+
         batch.set(ref, {
           username: className,
           password: password,
+          hoTen: "",
+          khoi: khoi,
         });
       });
 

@@ -16,6 +16,8 @@ import { db } from "./firebase";
 import { useNavigate, useLocation } from "react-router-dom";
 import Banner from "./pages/Banner";
 import { useAdmin } from './context/AdminContext';
+//import { useClassList } from './context/ClassListContext'; // ⬅️ Import context
+import { useTeacherAccount } from "./context/TeacherAccountContext";
 
 const CLASS_BY_KHOI = {
   K1: ["1.1", "1.2", "1.3", "1.4", "1.5", "1.6"],
@@ -41,6 +43,7 @@ export default function Login() {
   const [realPassword, setRealPassword] = useState(null);
   const [teacherName, setTeacherName] = useState("");
 
+  const { teacherAccounts, setAccountsForKhoi } = useTeacherAccount();
   const { setIsManager } = useAdmin();
   const navigate = useNavigate();
   const location = useLocation();
@@ -54,7 +57,6 @@ export default function Login() {
   const lopSo = classId?.replace(/\D/g, "") || "";
   const isQuanLyLogin = !classId;
 
-  // Set classList và lớp đầu tiên
   useEffect(() => {
     if (!lopSo || isQuanLyLogin) return;
     const danhSach = CLASS_BY_KHOI[`K${lopSo}`] || [];
@@ -62,7 +64,6 @@ export default function Login() {
     setSelectedUsername(danhSach.includes(selectedUsername) ? selectedUsername : danhSach[0] || "");
   }, [lopSo, isQuanLyLogin]);
 
-  // Tự động set lại realPassword khi đổi lớp
   useEffect(() => {
     const fetchPasswordForClass = async () => {
       const userKey = selectedUsername?.toUpperCase();
@@ -89,36 +90,74 @@ export default function Login() {
     }
   }, [selectedUsername]);
 
-  // 🔍 Tự động lấy tên giáo viên khi lớp thay đổi hoặc ban đầu
   useEffect(() => {
-    const fetchTeacherName = async () => {
-      const userKey = selectedUsername?.toUpperCase();
-      const isLopAccount = /^([1-5])\.\d$/.test(userKey);
-      if (!isLopAccount) {
-        setTeacherName("");
-        return;
-      }
+    const userKey = selectedUsername?.toUpperCase();
+    const isLopAccount = /^([1-5])\.\d$/.test(userKey);
+    if (!isLopAccount) {
+      setTeacherName("");
+      console.log("🚫 Không phải tài khoản lớp, bỏ qua.");
+      return;
+    }
 
+    const khoiKey = `K${userKey.split(".")[0]}`;
+    const khoiAccountList = teacherAccounts[khoiKey] || [];
+
+    const matched = khoiAccountList.find((item) => item.username === userKey);
+    if (matched && matched.hoTen) {
+      setTeacherName(matched.hoTen);
+      console.log(`✅ Giáo viên '${userKey}' lấy từ context:`, matched.hoTen);
+      return;
+    }
+
+    const fetchTeacherNameAndKhoi = async () => {
       try {
         const docSnap = await getDoc(doc(db, "ACCOUNT", userKey));
         if (docSnap.exists()) {
           const data = docSnap.data();
-          setTeacherName(data?.hoTen || "");
+          const name = data?.hoTen || "";
+          setTeacherName(name);
+          console.log(`📡 Giáo viên '${userKey}' lấy từ Firestore:`, name);
+
+          const khoiLopList = CLASS_BY_KHOI[khoiKey] || [];
+          const enrichedList = await Promise.all(
+            khoiLopList.map(async (lopName) => {
+              const lopKey = lopName.toUpperCase();
+              try {
+                const docSnap = await getDoc(doc(db, "ACCOUNT", lopKey));
+                const lopData = docSnap.exists() ? docSnap.data() : {};
+                return {
+                  username: lopKey,
+                  hoTen: lopData?.hoTen || "",
+                  password: lopData?.password || "",
+                  khoi: khoiKey,
+                };
+              } catch (err) {
+                console.warn(`⚠️ Lỗi tải lớp ${lopKey}:`, err);
+                return {
+                  username: lopKey,
+                  hoTen: "",
+                  password: "",
+                  khoi: khoiKey,
+                };
+              }
+            })
+          );
+
+          setAccountsForKhoi(khoiKey, enrichedList);
+          console.log(`📦 Toàn bộ danh sách lớp của ${khoiKey} đã lưu vào context`);
         } else {
+          console.log(`❌ Không tìm thấy tài khoản '${userKey}' trong Firestore.`);
           setTeacherName("");
         }
       } catch (err) {
-        console.error("⚠️ Lỗi lấy tên giáo viên:", err);
+        console.error("🚨 Lỗi kết nối khi tải giáo viên từ Firestore:", err);
         setTeacherName("");
       }
     };
 
-    if (selectedUsername) {
-      fetchTeacherName();
-    }
-  }, [selectedUsername]);
+    fetchTeacherNameAndKhoi();
+  }, [selectedUsername, teacherAccounts, setAccountsForKhoi]);
 
-  // Tự động đăng nhập nếu đã lưu tài khoản
   useEffect(() => {
     const rememberedAccount = localStorage.getItem("rememberedAccount");
     const isLoggedIn = localStorage.getItem("loggedIn") === "true";
@@ -155,7 +194,7 @@ export default function Login() {
   }, []);
 
   const handleLogin = async () => {
-    const username = (selectedUsername || roleUsername).trim();
+    const username = (selectedUsername || roleUsername).trim().toUpperCase();
     const password = passwordInput.trim();
 
     if (!username || !password) {
@@ -163,12 +202,20 @@ export default function Login() {
       return;
     }
 
-    const userKey = username.toUpperCase();
+    const userKey = username;
     const isLopAccount = /^([1-5])\.\d$/.test(userKey);
 
-    // 👉 TÀI KHOẢN LỚP
     if (isLopAccount) {
-      if (!realPassword || password !== realPassword) {
+      const khoiKey = `K${userKey.split(".")[0]}`;
+      const accountsInKhoi = teacherAccounts[khoiKey] || [];
+      const matched = accountsInKhoi.find((acc) => acc.username === userKey);
+
+      if (!matched) {
+        alert("❌ Tài khoản không tồn tại trong khối.");
+        return;
+      }
+
+      if (matched.password !== password) {
         alert("❌ Sai mật khẩu.");
         return;
       }
@@ -178,12 +225,10 @@ export default function Login() {
       localStorage.setItem("lop", userKey);
       localStorage.setItem("isManager", "false");
 
-      const newKhoi = userKey.split(".")[0];
-      navigate(`/lop${newKhoi}`, { state: { lop: userKey } });
+      navigate(`/lop${khoiKey.slice(1)}`, { state: { lop: userKey } });
       return;
     }
 
-    // 👉 TÀI KHOẢN QUẢN LÝ
     try {
       const docSnap = await getDoc(doc(db, "ACCOUNT", userKey));
       if (!docSnap.exists()) {
@@ -259,30 +304,30 @@ export default function Login() {
               </FormControl>
             ) : (
               <Stack spacing={2} width="100%">
-  <TextField
-    label="Giáo viên"
-    value={teacherName}
-    size="small"
-    fullWidth
-    InputProps={{ readOnly: true }}
-  />
+                <TextField
+                  label="Giáo viên"
+                  value={teacherName}
+                  size="small"
+                  fullWidth
+                  InputProps={{ readOnly: true }}
+                />
 
-  <FormControl size="small" fullWidth>
-    <InputLabel id="username-label">Lớp</InputLabel>
-    <Select
-      labelId="username-label"
-      value={selectedUsername}
-      onChange={(e) => setSelectedUsername(e.target.value)}
-      label="Lớp"
-    >
-      {classList.map((lop) => (
-        <MenuItem key={lop} value={lop}>
-          {lop}
-        </MenuItem>
-      ))}
-    </Select>
-  </FormControl>
-</Stack>
+                <FormControl size="small" fullWidth>
+                  <InputLabel id="username-label">Lớp</InputLabel>
+                  <Select
+                    labelId="username-label"
+                    value={selectedUsername}
+                    onChange={(e) => setSelectedUsername(e.target.value)}
+                    label="Lớp"
+                  >
+                    {classList.map((lop) => (
+                      <MenuItem key={lop} value={lop}>
+                        {lop}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Stack>
 
             )}
 

@@ -18,6 +18,7 @@ import { xoaDatabase } from "./utils/xoaDatabase";
 import { resetBanTru } from "./utils/resetBanTru";
 import { resetDiemDanh } from "./utils/resetDiemDanh";
 import { updateTeacherNamesFromFile } from "./utils/excelHandlers";
+import { createClassUserAccounts, resetClassUserPasswords } from "@/utils/accountUtils";
 
 import {
   downloadBackupAsJSON,
@@ -276,174 +277,28 @@ export default function Admin({ onCancel }) {
   }, []);
 
   //Tạo tài khoản người dùng
-
-  const createClassUserAccounts = async (password) => {
-    if (!password || password.trim() === "") {
-      alert("❌ Vui lòng nhập mật khẩu hợp lệ!");
-      return;
-    }
-
-    if (!namHoc || namHoc === "UNKNOWN") {
-      alert("❌ Không có năm học hợp lệ!");
-      return;
-    }
-
-    try {
-      setActionType("create");
-      setProgress(0);
-
-      const truongRef = doc(db, `CLASSLIST_${namHoc}`, "TRUONG");
-      const truongSnap = await getDoc(truongRef);
-
-      if (!truongSnap.exists()) {
-        setMessage("❌ Không tìm thấy document TRUONG.");
-        setSeverity("error");
-        return;
-      }
-
-      const classList = truongSnap.data().list;
-      if (!Array.isArray(classList)) {
-        setMessage("❌ Dữ liệu list không hợp lệ.");
-        setSeverity("error");
-        return;
-      }
-
-      const newAccounts = [];
-      let skipCount = 0;
-
-      // ✅ Duyệt qua toàn bộ lớp, kiểm tra và gom tài khoản cần tạo
-      for (let i = 0; i < classList.length; i++) {
-        const className = classList[i];
-        const accountRef = doc(db, "ACCOUNT", className);
-        const accountSnap = await getDoc(accountRef);
-        if (!accountSnap.exists()) {
-          newAccounts.push(className);
-        } else {
-          skipCount++;
-        }
-
-        // ✅ Tiến trình dựa trên tổng số lớp
-        setProgress(Math.round(((i + 1) / classList.length) * 100));
-      }
-
-      // 🔄 Ghi đồng loạt theo từng nhóm 500
-      const BATCH_LIMIT = 500;
-      let successCount = 0;
-
-      for (let i = 0; i < newAccounts.length; i += BATCH_LIMIT) {
-        const batch = writeBatch(db);
-        const chunk = newAccounts.slice(i, i + BATCH_LIMIT);
-
-        chunk.forEach(className => {
-          const ref = doc(db, "ACCOUNT", className);
-          batch.set(ref, {
-            username: className,
-            password: password,
-          });
-        });
-
-        try {
-          await batch.commit();
-          successCount += chunk.length;
-        } catch (err) {
-          console.error("❌ Lỗi khi ghi batch:", err);
-        }
-
-        // ✅ Tiếp tục cập nhật tiến trình nếu cần (sát 100%)
-        const progressDone = classList.length + i + chunk.length;
-        const totalSteps = classList.length + newAccounts.length;
-        setProgress(Math.min(100, Math.round((progressDone / totalSteps) * 100)));
-      }
-
-      setMessage(`✅ Đã tạo ${successCount} tài khoản mới. 🚫 Bỏ qua ${skipCount} tài khoản đã tồn tại.`);
-      setSeverity("success");
-    } catch (error) {
-      console.error("❌ Lỗi xử lý:", error);
-      setMessage("❌ Có lỗi xảy ra.");
-      setSeverity("error");
-    } finally {
-      setTimeout(() => {
-        setProgress(0);
-        setActionType("");
-      }, 3000);
-    }
+  const handleCreateAccounts = async (customPassword) => {
+    await createClassUserAccounts({
+      db,
+      password: customPassword,
+      namHoc,
+      setActionType,
+      setProgress,
+      setMessage,
+      setSeverity,
+    });
   };
 
-  const resetClassUserPasswords = async (password) => {
-    if (!password || password.trim() === "") {
-      alert("❌ Vui lòng nhập mật khẩu hợp lệ!");
-      return;
-    }
-
-    if (!namHoc || namHoc === "UNKNOWN") {
-      alert("❌ Không có năm học hợp lệ!");
-      return;
-    }
-
-    try {
-      setActionType("reset");
-
-      const truongRef = doc(db, `CLASSLIST_${namHoc}`, "TRUONG");
-      const truongSnap = await getDoc(truongRef);
-
-      if (!truongSnap.exists()) {
-        setMessage("❌ Không tìm thấy danh sách lớp.");
-        setSeverity("error");
-        return;
-      }
-
-      const classList = truongSnap.data().list;
-      if (!Array.isArray(classList)) {
-        setMessage("❌ Dữ liệu danh sách lớp không hợp lệ.");
-        setSeverity("error");
-        return;
-      }
-
-      const BATCH_LIMIT = 500;
-      let successCount = 0;
-      let failList = [];
-
-      for (let i = 0; i < classList.length; i += BATCH_LIMIT) {
-        const batch = writeBatch(db);
-        const chunk = classList.slice(i, i + BATCH_LIMIT);
-
-        chunk.forEach(className => {
-          const accountRef = doc(db, "ACCOUNT", className);
-          batch.set(accountRef, {
-            password: password,
-            date: deleteField()
-          }, { merge: true });
-        });
-
-        try {
-          await batch.commit();
-          successCount += chunk.length;
-        } catch (err) {
-          console.error("❌ Lỗi ghi batch:", err);
-          failList.push(...chunk);
-        }
-
-        const processed = Math.min(classList.length, i + chunk.length);
-        setProgress(Math.round((processed / classList.length) * 100));
-      }
-
-      if (failList.length > 0) {
-        setMessage(`⚠️ Đã reset ${successCount} tài khoản. ${failList.length} bị lỗi.`);
-        setSeverity("warning");
-      } else {
-        setMessage(`✅ Đã reset xong mật khẩu cho ${successCount} tài khoản (và xóa field "date").`);
-        setSeverity("success");
-      }
-    } catch (error) {
-      console.error("❌ Lỗi reset mật khẩu:", error);
-      setMessage("❌ Có lỗi xảy ra.");
-      setSeverity("error");
-    } finally {
-      setTimeout(() => {
-        setProgress(0);
-        setActionType("");
-      }, 3000);
-    }
+  const handleResetPasswords = async (customPassword) => {
+    await resetClassUserPasswords({
+      db,
+      password: customPassword,
+      namHoc,
+      setActionType,
+      setProgress,
+      setMessage,
+      setSeverity,
+    });
   };
 
   return (
@@ -592,7 +447,7 @@ export default function Admin({ onCancel }) {
                           if (!confirmed) return;
 
                           setActionType("create");
-                          await createClassUserAccounts(customUserPassword);
+                          await handleCreateAccounts(customUserPassword);
                           setShowCreatePassword(false);
                           setCustomUserPassword("");
                           setUpdateTeacherName(false);
@@ -658,8 +513,8 @@ export default function Admin({ onCancel }) {
                         const confirmed = window.confirm("⚠️ Bạn có chắc muốn reset mật khẩu cho toàn bộ lớp?");
                         if (!confirmed) return;
 
-                        setActionType("reset");
-                        await resetClassUserPasswords(customUserPassword);
+                        setActionType("reset");                        
+                        await handleResetPasswords(customUserPassword);
                         setShowResetPassword(false);
                         setCustomUserPassword("");
                       }}

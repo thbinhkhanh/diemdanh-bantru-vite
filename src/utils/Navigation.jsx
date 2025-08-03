@@ -42,6 +42,7 @@ export default function Navigation() {
       localStorage.removeItem(k)
     );
     window.location.href = '/home'; // hard reload
+    //navigate('/home'); // ✅ chuyển trang mềm, không reload    
   };
 
   const handleProtectedNavigate = (path) => {
