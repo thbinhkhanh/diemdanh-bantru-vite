@@ -95,7 +95,6 @@ export default function Login() {
     const isLopAccount = /^([1-5])\.\d$/.test(userKey);
     if (!isLopAccount) {
       setTeacherName("");
-      console.log("🚫 Không phải tài khoản lớp, bỏ qua.");
       return;
     }
 
@@ -105,7 +104,6 @@ export default function Login() {
     const matched = khoiAccountList.find((item) => item.username === userKey);
     if (matched && matched.hoTen) {
       setTeacherName(matched.hoTen);
-      console.log(`✅ Giáo viên '${userKey}' lấy từ context:`, matched.hoTen);
       return;
     }
 
@@ -116,7 +114,6 @@ export default function Login() {
           const data = docSnap.data();
           const name = data?.hoTen || "";
           setTeacherName(name);
-          console.log(`📡 Giáo viên '${userKey}' lấy từ Firestore:`, name);
 
           const khoiLopList = CLASS_BY_KHOI[khoiKey] || [];
           const enrichedList = await Promise.all(
@@ -143,10 +140,8 @@ export default function Login() {
             })
           );
 
-          setAccountsForKhoi(khoiKey, enrichedList);
-          console.log(`📦 Toàn bộ danh sách lớp của ${khoiKey} đã lưu vào context`);
+          setAccountsForKhoi(khoiKey, enrichedList);          
         } else {
-          console.log(`❌ Không tìm thấy tài khoản '${userKey}' trong Firestore.`);
           setTeacherName("");
         }
       } catch (err) {

@@ -16,6 +16,8 @@ import { db } from "./firebase";
 import { useNavigate, useLocation } from "react-router-dom";
 import Banner from "./pages/Banner";
 import { useAdmin } from './context/AdminContext';
+//import { useClassList } from './context/ClassListContext'; // ⬅️ Import context
+import { useTeacherAccount } from "./context/TeacherAccountContext";
 
 const CLASS_BY_KHOI = {
   K1: ["1.1", "1.2", "1.3", "1.4", "1.5", "1.6"],
@@ -38,8 +40,11 @@ export default function Login() {
   const [classList, setClassList] = useState([]);
   const [selectedUsername, setSelectedUsername] = useState("");
   const [roleUsername, setRoleUsername] = useState("yte");
-  const { setIsManager } = useAdmin();
+  const [realPassword, setRealPassword] = useState(null);
+  const [teacherName, setTeacherName] = useState("");
 
+  const { teacherAccounts, setAccountsForKhoi } = useTeacherAccount();
+  const { setIsManager } = useAdmin();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -51,7 +56,13 @@ export default function Login() {
 
   const lopSo = classId?.replace(/\D/g, "") || "";
   const isQuanLyLogin = !classId;
-  const [realPassword, setRealPassword] = useState(null);
+
+  useEffect(() => {
+    if (!lopSo || isQuanLyLogin) return;
+    const danhSach = CLASS_BY_KHOI[`K${lopSo}`] || [];
+    setClassList(danhSach);
+    setSelectedUsername(danhSach.includes(selectedUsername) ? selectedUsername : danhSach[0] || "");
+  }, [lopSo, isQuanLyLogin]);
 
   useEffect(() => {
     const fetchPasswordForClass = async () => {
@@ -74,8 +85,73 @@ export default function Login() {
       }
     };
 
-    fetchPasswordForClass();
+    if (selectedUsername) {
+      fetchPasswordForClass();
+    }
   }, [selectedUsername]);
+
+  useEffect(() => {
+    const userKey = selectedUsername?.toUpperCase();
+    const isLopAccount = /^([1-5])\.\d$/.test(userKey);
+    if (!isLopAccount) {
+      setTeacherName("");
+      return;
+    }
+
+    const khoiKey = `K${userKey.split(".")[0]}`;
+    const khoiAccountList = teacherAccounts[khoiKey] || [];
+
+    const matched = khoiAccountList.find((item) => item.username === userKey);
+    if (matched && matched.hoTen) {
+      setTeacherName(matched.hoTen);
+      return;
+    }
+
+    const fetchTeacherNameAndKhoi = async () => {
+      try {
+        const docSnap = await getDoc(doc(db, "ACCOUNT", userKey));
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          const name = data?.hoTen || "";
+          setTeacherName(name);
+
+          const khoiLopList = CLASS_BY_KHOI[khoiKey] || [];
+          const enrichedList = await Promise.all(
+            khoiLopList.map(async (lopName) => {
+              const lopKey = lopName.toUpperCase();
+              try {
+                const docSnap = await getDoc(doc(db, "ACCOUNT", lopKey));
+                const lopData = docSnap.exists() ? docSnap.data() : {};
+                return {
+                  username: lopKey,
+                  hoTen: lopData?.hoTen || "",
+                  password: lopData?.password || "",
+                  khoi: khoiKey,
+                };
+              } catch (err) {
+                console.warn(`⚠️ Lỗi tải lớp ${lopKey}:`, err);
+                return {
+                  username: lopKey,
+                  hoTen: "",
+                  password: "",
+                  khoi: khoiKey,
+                };
+              }
+            })
+          );
+
+          setAccountsForKhoi(khoiKey, enrichedList);          
+        } else {
+          setTeacherName("");
+        }
+      } catch (err) {
+        console.error("🚨 Lỗi kết nối khi tải giáo viên từ Firestore:", err);
+        setTeacherName("");
+      }
+    };
+
+    fetchTeacherNameAndKhoi();
+  }, [selectedUsername, teacherAccounts, setAccountsForKhoi]);
 
   useEffect(() => {
     const rememberedAccount = localStorage.getItem("rememberedAccount");
@@ -85,18 +161,18 @@ export default function Login() {
       const userKey = rememberedAccount.toUpperCase();
 
       if (redirectTo) {
-        localStorage.removeItem("redirectTarget");        
+        localStorage.removeItem("redirectTarget");
         navigate(redirectTo);
         return;
       }
 
-      if (classId && /^lop[1-5]$/.test(classId)) {        
+      if (classId && /^lop[1-5]$/.test(classId)) {
         navigate(`/${classId}`);
         return;
       }
 
       if (/^([1-5])\.\d$/.test(userKey)) {
-        const khoi = userKey.split(".")[0];        
+        const khoi = userKey.split(".")[0];
         navigate(`/lop${khoi}`);
         return;
       }
@@ -107,20 +183,13 @@ export default function Login() {
       }
 
       const tabMap = { KETOAN: "thongke", BGH: "danhsach", YTE: "dulieu" };
-      const tab = tabMap[userKey] || "dulieu";      
+      const tab = tabMap[userKey] || "dulieu";
       navigate("/quanly", { state: { account: userKey, tab } });
     }
   }, []);
 
-  useEffect(() => {
-    if (!lopSo || isQuanLyLogin) return;
-    const danhSach = CLASS_BY_KHOI[`K${lopSo}`] || [];
-    setClassList(danhSach);
-    setSelectedUsername(danhSach.includes(selectedUsername) ? selectedUsername : danhSach[0] || "");
-  }, [lopSo, isQuanLyLogin]);
-
   const handleLogin = async () => {
-    const username = (selectedUsername || roleUsername).trim();
+    const username = (selectedUsername || roleUsername).trim().toUpperCase();
     const password = passwordInput.trim();
 
     if (!username || !password) {
@@ -128,27 +197,33 @@ export default function Login() {
       return;
     }
 
-    const userKey = username.toUpperCase();
+    const userKey = username;
     const isLopAccount = /^([1-5])\.\d$/.test(userKey);
 
-    // 👉 TÀI KHOẢN LỚP
     if (isLopAccount) {
-      if (!realPassword || password !== realPassword) {
+      const khoiKey = `K${userKey.split(".")[0]}`;
+      const accountsInKhoi = teacherAccounts[khoiKey] || [];
+      const matched = accountsInKhoi.find((acc) => acc.username === userKey);
+
+      if (!matched) {
+        alert("❌ Tài khoản không tồn tại trong khối.");
+        return;
+      }
+
+      if (matched.password !== password) {
         alert("❌ Sai mật khẩu.");
         return;
       }
 
       setSession(userKey);
-      setIsManager(false); // 👉 Đây là tài khoản lớp
-      localStorage.setItem("lop", userKey); 
-      localStorage.setItem("isManager", "false"); // ✅ Ghi lại để dùng sau
+      setIsManager(false);
+      localStorage.setItem("lop", userKey);
+      localStorage.setItem("isManager", "false");
 
-      const newKhoi = userKey.split(".")[0];
-      navigate(`/lop${newKhoi}`, { state: { lop: userKey } });
+      navigate(`/lop${khoiKey.slice(1)}`, { state: { lop: userKey } });
       return;
     }
 
-    // 👉 TÀI KHOẢN QUẢN LÝ
     try {
       const docSnap = await getDoc(doc(db, "ACCOUNT", userKey));
       if (!docSnap.exists()) {
@@ -163,8 +238,8 @@ export default function Login() {
       }
 
       setSession(userKey);
-      setIsManager(true); // 👉 Lưu vào context: đây là tài khoản quản lý
-      localStorage.setItem("isManager", "true"); // ✅ Lưu vào localStorage
+      setIsManager(true);
+      localStorage.setItem("isManager", "true");
 
       if (userKey === "ADMIN") {
         navigate("/admin");
@@ -182,14 +257,11 @@ export default function Login() {
       const tabMap = { KETOAN: "thongke", BGH: "danhsach", YTE: "dulieu" };
       const tab = tabMap[userKey] || "dulieu";
       navigate("/quanly", { state: { account: userKey, tab } });
-
     } catch (err) {
       console.error("⚠️ Lỗi đăng nhập:", err);
       alert("⚠️ Lỗi kết nối, vui lòng thử lại.");
     }
   };
-
-
 
   const handleBack = () => {
     navigate(-1);
@@ -197,7 +269,7 @@ export default function Login() {
 
   return (
     <Box sx={{ minHeight: "100vh", backgroundColor: "#e3f2fd" }}>
-      <Banner title={isQuanLyLogin ? "HỆ THỐNG QUẢN LÝ" : "ĐIỂM DANH"} />
+      <Banner title={isQuanLyLogin ? "HỆ THỐNG QUẢN LÝ" : `ĐIỂM DANH`} />
       <Box sx={{ width: { xs: "95%", sm: 400 }, mx: "auto", mt: 4 }}>
         <Card elevation={10} sx={{ p: 3, borderRadius: 4 }}>
           <Stack spacing={3} alignItems="center">
@@ -226,21 +298,32 @@ export default function Login() {
                 </Select>
               </FormControl>
             ) : (
-              <FormControl fullWidth size="small">
-                <InputLabel id="username-label">Chọn lớp</InputLabel>
-                <Select
-                  labelId="username-label"
-                  value={selectedUsername}
-                  onChange={(e) => setSelectedUsername(e.target.value)}
-                  label="Chọn lớp"
-                >
-                  {classList.map((lop) => (
-                    <MenuItem key={lop} value={lop}>
-                      {lop}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+              <Stack spacing={2} width="100%">
+                <TextField
+                  label="Giáo viên"
+                  value={teacherName}
+                  size="small"
+                  fullWidth
+                  InputProps={{ readOnly: true }}
+                />
+
+                <FormControl size="small" fullWidth>
+                  <InputLabel id="username-label">Lớp</InputLabel>
+                  <Select
+                    labelId="username-label"
+                    value={selectedUsername}
+                    onChange={(e) => setSelectedUsername(e.target.value)}
+                    label="Lớp"
+                  >
+                    {classList.map((lop) => (
+                      <MenuItem key={lop} value={lop}>
+                        {lop}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Stack>
+
             )}
 
             <TextField
@@ -252,6 +335,7 @@ export default function Login() {
               size="small"
               onKeyDown={(e) => e.key === "Enter" && handleLogin()}
             />
+
             <Stack direction="row" spacing={2} width="100%">
               <Button
                 variant="contained"
@@ -262,7 +346,6 @@ export default function Login() {
               >
                 🔐 Đăng nhập
               </Button>
-
               <Button
                 variant="outlined"
                 color="secondary"

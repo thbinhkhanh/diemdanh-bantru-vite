@@ -48,7 +48,6 @@ export default function SwitchAccount() {
   const [accounts, setAccounts] = useState([]);
   const [selectedKhoi, setSelectedKhoi] = useState("");
   const [teacherName, setTeacherName] = useState("");
-  //const { classLists, setClassListForKhoi } = useClassList();
   const { teacherAccounts, setAccountsForKhoi } = useTeacherAccount();
 
   const navigate = useNavigate();
@@ -56,7 +55,6 @@ export default function SwitchAccount() {
   const fetchTeacher = async (userKey) => {
     if (!/^([1-5])\.\d$/.test(userKey)) {
       setTeacherName("");
-      console.log("🚫 Không phải tài khoản lớp.");
       return;
     }
 
@@ -67,7 +65,6 @@ export default function SwitchAccount() {
 
     if (cachedTeacher && cachedTeacher.hoTen) {
       setTeacherName(cachedTeacher.hoTen);
-      console.log(`✅ Tên giáo viên '${userKey}' lấy từ context:`, cachedTeacher.hoTen);
       return;
     }
 
@@ -77,10 +74,7 @@ export default function SwitchAccount() {
         const data = docSnap.data();
         const hoTen = data?.hoTen || "";
         setTeacherName(hoTen);
-        console.log(`📡 Tên giáo viên '${userKey}' lấy từ Firestore:`, hoTen);
-
         const khoiClassList = CLASS_BY_KHOI[khoiKey] || [];
-
         const enrichedList = await Promise.all(
           khoiClassList.map(async (className) => {
             const docRef = doc(db, "ACCOUNT", className);
@@ -104,12 +98,9 @@ export default function SwitchAccount() {
             }
           })
         );
-
         setAccountsForKhoi(khoiKey, enrichedList);
-        console.log(`📦 Lưu toàn bộ lớp khối ${khoiKey} vào context.`);
       } else {
         setTeacherName("");
-        console.log(`❌ Tài khoản '${userKey}' không tồn tại trong Firestore.`);
       }
     } catch (err) {
       console.error("🚨 Lỗi lấy tên giáo viên từ Firestore:", err);
@@ -117,7 +108,6 @@ export default function SwitchAccount() {
     }
   };
 
-  // Khi component mount
   useEffect(() => {
     const current = localStorage.getItem("account")?.trim();
 

@@ -32,7 +32,7 @@ import Navigation from './utils/Navigation';
 import PrivateRoute from './utils/PrivateRoute';
 import { Navigation_Route } from './utils/Navigation_Route';
 import SwitchAccount from './pages/SwitchAccount';
-import AccountList from "./AccountList"; // 👈 Import trang mới
+import AccountList from "./AccountList"; 
 
 const Admin = React.lazy(() => import('./Admin'));
 

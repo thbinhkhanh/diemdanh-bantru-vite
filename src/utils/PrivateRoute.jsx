@@ -23,10 +23,10 @@ function PrivateRoute({ children }) {
     }
 
     // ❌ Không cho phép truy cập quản lý
-    if (currentPath === "/quanly") {
-      alert("⚠️ Tài khoản lớp không thể truy cập chức năng Quản lý.");
-      return <Navigate to="/home" replace />;
-    }
+    //if (currentPath === "/quanly") {
+    //  alert("⚠️ Tài khoản lớp không thể truy cập chức năng Quản lý.");
+    //  return <Navigate to="/home" replace />;
+    //}
   }
 
   // ✅ Mọi tài khoản hợp lệ còn lại (quản lý) sẽ được phép truy cập
