@@ -14,6 +14,8 @@ export default function Navigation() {
   const [showLogoPopup, setShowLogoPopup] = useState(false);
   const [activeNavPath, setActiveNavPath] = useState('/home');
   const [anchorElAccount, setAnchorElAccount] = useState(null);
+  const [anchorElHelp, setAnchorElHelp] = useState(null);
+
 
   useEffect(() => {
     const mainPath = '/' + location.pathname.split('/')[1];
@@ -239,45 +241,39 @@ export default function Navigation() {
             </Button>
           ))}
 
-          <Button
-            onClick={(e) => {
-              handleMenuOpen(e);
-              if (location.pathname === '/login') {
-                navigate('/home');
-              }
-            }}
-            style={navStyleGroup(['/huongdan', '/chucnang'], location.pathname)}
-          >
-            Trợ giúp
-          </Button>
-
-          <Menu
-            anchorEl={anchorEl}
-            open={Boolean(anchorEl)}
-            onClose={handleMenuClose}
-            anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-            transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-          >
-            <MenuItem
-              onClick={() => {
-                handleMenuClose();
-                navigate('/huongdan');
-              }}
-              sx={{ fontSize: '14px' }}
+          <>
+            <Button
+              onClick={(e) => setAnchorElHelp(e.currentTarget)}
+              style={navStyleGroup(['/huongdan', '/chucnang'], location.pathname)}
             >
-              Hướng dẫn sử dụng
-            </MenuItem>
-
-            <MenuItem
-              onClick={() => {
-                handleMenuClose();
-                navigate('/chucnang');
-              }}
-              sx={{ fontSize: '14px' }}
+              Trợ giúp
+            </Button>
+            <Menu
+              anchorEl={anchorElHelp}
+              open={Boolean(anchorElHelp)}
+              onClose={() => setAnchorElHelp(null)}
             >
-              Giới thiệu chức năng
-            </MenuItem>
-          </Menu>
+              <MenuItem
+                onClick={() => {
+                  setAnchorElHelp(null);
+                  navigate('/huongdan');
+                }}
+                sx={{ fontSize: '14px' }}
+              >
+                Hướng dẫn sử dụng
+              </MenuItem>
+
+              <MenuItem
+                onClick={() => {
+                  setAnchorElHelp(null);
+                  navigate('/chucnang');
+                }}
+                sx={{ fontSize: '14px' }}
+              >
+                Giới thiệu chức năng
+              </MenuItem>
+            </Menu>
+          </>
 
           <Menu anchorEl={anchorEl} open={!!anchorEl} onClose={handleMenuClose}>
             <MenuItem onClick={() => { handleMenuClose(); navigate('/huongdan'); }} sx={{ fontSize: '14px' }}>Hướng dẫn sử dụng</MenuItem>
