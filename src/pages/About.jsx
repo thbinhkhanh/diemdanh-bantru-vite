@@ -9,6 +9,9 @@ import {
   Box,
 } from "@mui/material";
 import InfoIcon from "@mui/icons-material/Info";
+import TodayIcon from "@mui/icons-material/Today";
+import EventNoteIcon from "@mui/icons-material/EventNote";
+
 
 export default function About() {
   return (
@@ -41,15 +44,15 @@ export default function About() {
           <InfoIcon sx={{ fontSize: 32, mr: 1 }} />
           <Box>
             <Typography variant="h6" fontWeight="bold">
-              🏫 ỨNG DỤNG QUẢN LÝ BÁN TRÚ – ĐIỂM DANH
+              GIỚI THIỆU CHỨC NĂNG
             </Typography>
             <Typography variant="body2">
-              Trường Tiểu học Bình Khánh
+              Dành cho cán bộ, giáo viên và phụ huynh
             </Typography>
           </Box>
         </Box>
       </Container>
-
+        
       {/* Nội dung chính */}
       <Container
         sx={{
@@ -58,9 +61,23 @@ export default function About() {
           width: { xs: "98%", sm: "90%", md: "850px" },
           mx: "auto",
         }}
+        
       >
+        
         <Card elevation={3} sx={{ borderRadius: 3, p: 2 }}>
           <CardContent>
+            {/* Tiêu đề lớn dưới khung xanh */}
+            <Typography
+              variant="h5"
+              align="center"
+              fontWeight="bold"
+              sx={{ mt: 0, mb: 2, color: "#1976d2" }}
+            >
+              ỨNG DỤNG QUẢN LÝ BÁN TRÚ - ĐIỂM DANH
+            </Typography>
+
+            <Divider sx={{ my: 2 }} />
+
             <Typography variant="body1" paragraph>
               Ứng dụng được phát triển nhằm hỗ trợ giáo viên và nhà trường trong công tác quản lý học sinh bán trú, cập nhật số liệu chuyên cần, thực hiện thống kê – báo cáo một cách nhanh chóng và chính xác.
             </Typography>
@@ -70,7 +87,10 @@ export default function About() {
             {/* CHỨC NĂNG CHÍNH */}
             <Typography variant="h6" fontWeight="bold" sx={{ mt: 3 }}>🧾 CHỨC NĂNG CHÍNH</Typography>
             <Box sx={{ mt: 2 }}>
-              <Typography variant="subtitle1" fontWeight="bold">🔷 ĐIỂM DANH</Typography>
+              <Box display="flex" alignItems="center" sx={{ mt: 3 }}>
+                <TodayIcon sx={{ fontSize: 24, mr: 1, color: "#1976d2" }} />
+                <Typography variant="h6" fontWeight="bold">ĐIỂM DANH</Typography>
+              </Box>
 
               <Box sx={{ pl: 2 }}>
                 <Typography fontWeight="bold" sx={{ color: '#d84315', mt: 1 }}>🔶 Chuyên cần</Typography>
@@ -90,14 +110,17 @@ export default function About() {
             <Divider sx={{ my: 2 }} />
 
             {/* QUẢN LÝ DỮ LIỆU NGÀY */}
-            <Typography variant="h6" fontWeight="bold" sx={{ mt: 3 }}>🗓️ QUẢN LÝ DỮ LIỆU NGÀY</Typography>
+            <Box display="flex" alignItems="center" sx={{ mt: 3 }}>
+              <EventNoteIcon sx={{ fontSize: 24, mr: 1, color: "#1976d2" }} />
+              <Typography variant="h6" fontWeight="bold">QUẢN LÝ DỮ LIỆU NGÀY</Typography>
+            </Box>
+
             <Box sx={{ pl: 2 }}>
               <Typography paragraph>
                 📌 <strong>Chốt số liệu trong ngày</strong><br />
                 <Box sx={{ pl: 2 }}>
-                  • Ghi nhận đầy đủ tình trạng chuyên cần và bán trú trong ngày hiện tại.<br />
-                  • Tự động tổng hợp dữ liệu theo tháng và năm.<br />
-                  • Lọc theo lớp để kiểm tra nhanh danh sách học sinh.
+                  • Ghi nhận danh sách học sinh ăn bán trú trong ngày hiện tại.<br />
+                  • Tự động thống kê số liệu bán trú trong ngày theo lớp, khối, toàn trường.<br />
                 </Box>
               </Typography>
               <Typography paragraph>
@@ -105,10 +128,10 @@ export default function About() {
                 <Box sx={{ pl: 2 }}>
                   • Hiển thị nhanh:<br />
                   <Box sx={{ pl: 2 }}>
-                    o 📍 Sĩ số học sinh: đi học, nghỉ phép, nghỉ không phép.<br />
-                    o 🍽️ Trạng thái ăn bán trú: có / không.
+                    o 📍 Thống kê chuyên cần: nghỉ phép, nghỉ không phép theo ngày bất kì.<br />
+                    o 🍽️ Thống kê số liệu bán trú theo ngày bất kì.<br />
                   </Box>
-                  • Lọc theo lớp, hiển thị chi tiết từng học sinh.
+                  • Lọc theo lớp, Khối, toàn trường.
                 </Box>
               </Typography>
             </Box>
@@ -119,23 +142,11 @@ export default function About() {
             <Typography variant="h6" fontWeight="bold" sx={{ mt: 3 }}>📖 NHẬT KÝ ĐIỂM DANH</Typography>
             <Box sx={{ pl: 2 }}>
               <Typography paragraph>
-                ✅ <strong>Mô tả</strong><br />
-                <Box sx={{ pl: 2 }}>
-                  • Tra cứu lịch sử điểm danh chuyên cần theo: ngày, tháng, năm.
-                </Box>
-              </Typography>
-              <Typography paragraph>
-                🔍 <strong>Tính năng chính</strong><br />
+                🔍 <strong>Tra cứu lịch sử điểm danh chuyên cần:</strong><br />
                 <Box sx={{ pl: 2 }}>
                   • Lọc dữ liệu theo ngày, tháng, năm và theo khối/lớp.<br />
-                  • Hiển thị: họ tên học sinh, lớp, có phép/không phép, lý do vắng, số ngày nghỉ.
-                </Box>
-              </Typography>
-              <Typography paragraph>
-                📁 <strong>Chức năng bổ sung</strong><br />
-                <Box sx={{ pl: 2 }}>
-                  • Xuất Excel: Tải xuống báo cáo nhanh.<br />
-                  • Cảnh báo rõ ràng nếu không có dữ liệu phù hợp.
+                  • Hiển thị: họ tên học sinh, lớp, có phép/không phép, lý do vắng, số ngày nghỉ.<br />
+                  • Hỗ trợ xuất báo cáo dưới dạng Excel.
                 </Box>
               </Typography>
             </Box>
@@ -146,20 +157,19 @@ export default function About() {
             <Typography variant="h6" fontWeight="bold" sx={{ mt: 3 }}>📅 THỐNG KÊ THEO THÁNG</Typography>
             <Box sx={{ pl: 2 }}>
               <Typography paragraph>
-                📆 <strong>Chuyên cần</strong><br />
+                🔶 <strong>Chuyên cần</strong><br />
                 <Box sx={{ pl: 2 }}>
                   • Lọc theo tháng và lớp.<br />
-                  • Hiển thị tổng số buổi học sinh vắng mặt.<br />
-                  • Cho phép xuất báo cáo Excel.
+                  • Hiển thị tổng số buổi học sinh vắng mặt và chi tiết (ngày vắng, có phép, không phép).<br />
+                  • Hỗ trợ xuất báo cáo dưới dạng Excel.
                 </Box>
               </Typography>
               <Typography paragraph>
-                🍱 <strong>Bán trú</strong><br />
+                🔶 <strong>Bán trú</strong><br />
                 <Box sx={{ pl: 2 }}>
-                  • Thống kê tổng số ngày học sinh ăn bán trú.<br />
                   • Lọc theo tháng và lớp.<br />
-                  • Nút Hiện ngày: Xem chi tiết từng ngày.<br />
-                  • Nút Xuất Excel: Tải báo cáo nhanh.
+                  • Thống kê tổng số ngày học sinh ăn bán trú và chi tiết ngày ăn bán trú.<br />
+                  • Hỗ trợ xuất báo cáo dưới dạng Excel.
                 </Box>
               </Typography>
             </Box>
@@ -170,20 +180,19 @@ export default function About() {
             <Typography variant="h6" fontWeight="bold" sx={{ mt: 3 }}>📆 THỐNG KÊ THEO NĂM</Typography>
             <Box sx={{ pl: 2 }}>
               <Typography paragraph>
-                📅 <strong>Chuyên cần</strong><br />
+                🔶 <strong>Chuyên cần</strong><br />
                 <Box sx={{ pl: 2 }}>
-                  • Hiển thị tổng số buổi có mặt trong cả năm học.<br />
                   • Lọc theo năm học và lớp học.<br />
+                  • Hiển thị tổng số buổi vắng (có phép, không phép ở từng tháng) trong cả năm học.<br />
                   • Hỗ trợ xuất báo cáo dưới dạng Excel.
                 </Box>
               </Typography>
               <Typography paragraph>
-                🍱 <strong>Bán trú</strong><br />
+                🔶 <strong>Bán trú</strong><br />
                 <Box sx={{ pl: 2 }}>
-                  • Bảng tổng số lần ăn bán trú của từng học sinh trong năm.<br />
-                  • Tự động tổng hợp từ các tháng.<br />
-                  • Nút Hiện tháng: Xem lại chi tiết theo tháng.<br />
-                  • Xuất toàn bộ dữ liệu sang Excel.
+                  • Lọc theo năm học và lớp học.<br />
+                  • Bảng tổng số lần ăn bán trú của từng học sinh ở từng tháng trong năm.<br />
+                  • Hỗ trợ xuất báo cáo dưới dạng Excel.
                 </Box>
               </Typography>
             </Box>
@@ -194,10 +203,9 @@ export default function About() {
             <Typography variant="h6" fontWeight="bold" sx={{ mt: 3 }}>🛠️ CHỈNH SỬA DỮ LIỆU</Typography>
             <Box sx={{ pl: 2 }}>
               <Typography paragraph>
-                🔧 <strong>Điều chỉnh điểm danh & suất ăn</strong><br />
+                🔧 <strong>Điều chỉnh suất ăn bán trú</strong><br />
                 <Box sx={{ pl: 2 }}>
-                  • Sửa lại trạng thái chuyên cần hoặc đăng ký bán trú cho bất kỳ ngày nào.<br />
-                  • Thêm, xoá học sinh trong danh sách ăn hoặc điểm danh.<br />
+                  • Sửa lại trạng thái đăng ký suất ăn bán trú ở bất kỳ ngày nào.<br />
                   • Hệ thống sẽ cập nhật bảng thống kê tự động.
                 </Box>
               </Typography>
@@ -209,7 +217,7 @@ export default function About() {
             <Typography variant="h6" fontWeight="bold" sx={{ mt: 3 }}>🗑️ XÓA DỮ LIỆU THEO NGÀY</Typography>
             <Box sx={{ pl: 2 }}>
               <Typography paragraph>
-                • Cho phép xóa dữ liệu bán trú đã chốt trong một ngày bất kỳ.<br />
+                • Cho phép xóa dữ liệu bán trú (cả lớp, toàn trường) đã chốt trong một ngày bất kỳ.<br />
                 • Sau khi xóa, các thống kê tháng/năm sẽ tự động cập nhật.
               </Typography>
             </Box>
@@ -221,8 +229,8 @@ export default function About() {
             <Box sx={{ pl: 2 }}>
               <Typography paragraph>
                 • 🗓️ Theo ngày: Tổng hợp sĩ số và suất ăn theo từng lớp trong một ngày.<br />
-                • 📅 Theo tháng: Chi tiết số buổi học và số ngày ăn bán trú.<br />
-                • 📚 Theo năm: Thống kê tổng số ngày học / ăn của toàn bộ học sinh.
+                • 📅 Theo tháng: Chi tiết số ngày vắng và số ngày ăn bán trú.<br />
+                • 📚 Theo năm: Thống kê tổng số ngày vắng / ăn của toàn bộ học sinh.
               </Typography>
             </Box>
 
@@ -233,8 +241,8 @@ export default function About() {
             <Box sx={{ pl: 2 }}>
               <Typography paragraph>
                 • 📥 Cập nhật danh sách: Thêm hoặc xoá học sinh bán trú.<br />
-                • 📋 Lập danh sách đăng ký: Chọn học sinh theo lớp.<br />
-                • 📤 Tải danh sách: Nhập dữ liệu từ file Excel.
+                • 📋 Lập danh sách đăng ký: Lập danh sách học sinh bán trú theo lớp.<br />
+                • 📤 Tải danh sách: Nhập dữ liệu học sinh toàn trường từ file Excel.
               </Typography>
             </Box>
 
@@ -246,9 +254,9 @@ export default function About() {
               <Typography paragraph>
                 • 📥 Sao lưu dữ liệu: Tải toàn bộ hệ thống về máy (.JSON / .Excel).<br />
                 • 🔁 Phục hồi dữ liệu: Nhập lại dữ liệu từ bản sao lưu.<br />
-                • 🗑️ Xóa toàn bộ dữ liệu: Làm trống toàn hệ thống điểm danh.<br />
-                • 🆕 Khởi tạo năm học mới: Tạo dữ liệu mới, không xoá dữ liệu cũ.<br />
-                • 📂 Xem dữ liệu cũ: Truy cập lại thông tin bán trú của các năm trước.
+                • 🗑️ Xóa toàn bộ dữ liệu: Làm trống toàn hệ thống điểm danh/bán trú.<br />
+                • 🆕 Khởi tạo năm học mới: Tạo dữ liệu mới, tạo tài khoản lớp (không xoá dữ liệu cũ).<br />
+                • 📂 Xem dữ liệu cũ: Truy cập lại thông tin điểm danh, bán trú của các năm trước.
               </Typography>
             </Box>
 
@@ -262,7 +270,7 @@ export default function About() {
               </Link>
             </Typography>
             <Typography variant="body2" align="right" color="text.secondary">
-              📅 Phiên bản: 2.0.0 — 🛠️ Cập nhật lần cuối: 21/06/2025
+              📅 Phiên bản: 2.0.0 — 🛠️ Cập nhật lần cuối: 01/08/2025
             </Typography>
             <Typography variant="body2" align="center" color="text.secondary" sx={{ mt: 3 }}>
               © 2025 – Trường Tiểu học Bình Khánh
