@@ -246,10 +246,39 @@ export default function Navigation() {
                 navigate('/home');
               }
             }}
-            style={navStyleGroup(['/gioithieu', '/huongdan', '/chucnang'], location.pathname)}
+            style={navStyleGroup(['/huongdan', '/chucnang'], location.pathname)}
           >
             Trợ giúp
           </Button>
+
+          <Menu
+            anchorEl={anchorEl}
+            open={Boolean(anchorEl)}
+            onClose={handleMenuClose}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+            transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+          >
+            <MenuItem
+              onClick={() => {
+                handleMenuClose();
+                navigate('/huongdan');
+              }}
+              sx={{ fontSize: '14px' }}
+            >
+              Hướng dẫn sử dụng
+            </MenuItem>
+
+            <MenuItem
+              onClick={() => {
+                handleMenuClose();
+                navigate('/chucnang');
+              }}
+              sx={{ fontSize: '14px' }}
+            >
+              Giới thiệu chức năng
+            </MenuItem>
+          </Menu>
+
           <Menu anchorEl={anchorEl} open={!!anchorEl} onClose={handleMenuClose}>
             <MenuItem onClick={() => { handleMenuClose(); navigate('/huongdan'); }} sx={{ fontSize: '14px' }}>Hướng dẫn sử dụng</MenuItem>
             <MenuItem onClick={() => { handleMenuClose(); navigate('/chucnang'); }} sx={{ fontSize: '14px' }}>Giới thiệu chức năng</MenuItem>

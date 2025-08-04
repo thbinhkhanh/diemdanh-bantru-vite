@@ -150,7 +150,9 @@ export default function QuanLy() {
       functions: [
         { code: 'CAPNHAT', label: 'CẬP NHẬT DANH SÁCH', icon: <ManageAccountsIcon fontSize="large" />, color: '#303f9f' },
         { code: 'LAPDS', label: 'LẬP DANH SÁCH LỚP', icon: <FormatListBulletedIcon fontSize="large" />, color: '#c2185b' },
-        { code: 'TAIDS', label: 'TẢI DANH SÁCH LÊN', icon: <FileUploadIcon fontSize="large" />, color: '#00796b' },
+        ...(loginRole === 'ADMIN'
+          ? [{ code: 'TAIDS', label: 'TẢI DANH SÁCH LÊN', icon: <FileUploadIcon fontSize="large" />, color: '#00796b' }]
+          : []),
         { code: 'NHATKY_BT', label: 'LỊCH SỬ ĐĂNG KÝ', icon: <MenuBookIcon fontSize="large" />, color: '#ff6f00' },
       ],
     },
