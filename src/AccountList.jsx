@@ -72,31 +72,89 @@ export default function AccountList() {
         DANH SÁCH TÀI KHOẢN
       </Typography>
 
-      <TableContainer component={Paper}>
-        <Table size="small" sx={{ border: '1px solid #ccc' }}>
+      <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
+        <Table
+          size="small"
+          sx={{
+            border: '1px solid #ccc',
+            minWidth: 700,
+            '& th, & td': {
+              whiteSpace: 'nowrap',
+              borderRight: '1px solid #ddd',
+            },
+          }}
+        >
           <TableHead>
             <TableRow sx={{ backgroundColor: '#1976d2' }}>
-              <TableCell align="center" sx={{ color: '#fff', fontWeight: 'bold' }}>STT</TableCell>
-              <TableCell align="center" sx={{ color: '#fff', fontWeight: 'bold' }}>HỌ VÀ TÊN</TableCell>
-              <TableCell align="center" sx={{ color: '#fff', fontWeight: 'bold' }}>TÀI KHOẢN</TableCell>
               <TableCell
                 align="center"
                 sx={{
                   color: '#fff',
                   fontWeight: 'bold',
-                  width: 140,
-                  whiteSpace: 'nowrap',
+                  position: 'sticky',
+                  left: 0,
+                  backgroundColor: '#1976d2',
+                  zIndex: 2,
+                  minWidth: 30,
+                  maxWidth: 30,
                 }}
               >
-                MẬT KHẨU
+                STT
               </TableCell>
               <TableCell
                 align="center"
                 sx={{
                   color: '#fff',
                   fontWeight: 'bold',
-                  width: 140,
+                  position: 'sticky',
+                  left: 60,
+                  backgroundColor: '#1976d2',
+                  zIndex: 2,
+                  minWidth: 150,
+                  maxWidth: 150,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                HỌ VÀ TÊN
+              </TableCell>
+              <TableCell
+                align="center"
+                sx={{
+                  color: '#fff',
+                  fontWeight: 'bold',
+                  minWidth: 60,
+                  maxWidth: 60,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
+                }}
+              >
+                TÀI KHOẢN
+              </TableCell>
+
+              <TableCell
+                align="center"
+                sx={{
+                  color: '#fff',
+                  fontWeight: 'bold',
+                  minWidth: 60,
+                  maxWidth: 60,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                MẬT KHẨU
+              </TableCell>
+
+              <TableCell
+                align="center"
+                sx={{
+                  color: '#fff',
+                  fontWeight: 'bold',
+                  minWidth: 90,
+                  maxWidth: 90,
                 }}
               >
                 NGÀY CẬP NHẬT
@@ -114,7 +172,9 @@ export default function AccountList() {
             ) : (
               accounts.map((item, index) => {
                 const username = item.username || '';
-                const isManager = ['yte', 'ketoan', 'bgh', 'admin'].includes(username.toLowerCase());
+                const isManager = ['yte', 'ketoan', 'bgh', 'admin'].includes(
+                  username.toLowerCase()
+                );
                 const displayName = roleLabels[username.toLowerCase()] || username;
                 const lastUpdate = item.date || '—';
 
@@ -130,39 +190,41 @@ export default function AccountList() {
 
                 return (
                   <TableRow key={item.id} sx={{ backgroundColor }}>
-                    <TableCell align="center">{index + 1}</TableCell>
-
+                    <TableCell
+                      align="center"
+                      sx={{
+                        position: 'sticky',
+                        left: 0,
+                        backgroundColor,
+                        zIndex: 1,
+                        minWidth: 30,
+                      }}
+                    >
+                      {index + 1}
+                    </TableCell>
                     <TableCell
                       align="left"
                       sx={{
+                        position: 'sticky',
+                        left: 60,
+                        backgroundColor,
+                        zIndex: 1,
+                        minWidth: 130,
+                        maxWidth: 130,
+                        overflowX: 'auto',
                         whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        maxWidth: 180,
+                        '&::-webkit-scrollbar': { height: 4 },
                       }}
                     >
                       {item.hoTen || '—'}
                     </TableCell>
-
                     <TableCell align="center">{displayName}</TableCell>
-
+                    <TableCell align="center">{item.password}</TableCell>
                     <TableCell
                       align="center"
                       sx={{
-                        width: 140,
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                      }}
-                    >
-                      {item.password}
-                    </TableCell>
-
-                    <TableCell
-                      align="center"
-                      sx={{
-                        width: 140,
-                        whiteSpace: 'nowrap',
+                        minWidth: 60,
+                        maxWidth: 60,
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                       }}
@@ -177,7 +239,6 @@ export default function AccountList() {
         </Table>
       </TableContainer>
 
-      {/* Nút Quay lại */}
       <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
         <Button
           onClick={() => {
