@@ -22,6 +22,7 @@ export default function About() {
         px: 0,
       }}
     >
+      {/* Tiêu đề khung xanh */}
       <Container
         sx={{
           mt: { xs: "10px", sm: "10px" },
@@ -50,7 +51,8 @@ export default function About() {
           </Box>
         </Box>
       </Container>
-
+        
+      {/* Nội dung chính */}
       <Container
         sx={{
           mt: 3,
@@ -58,9 +60,12 @@ export default function About() {
           width: { xs: "98%", sm: "90%", md: "850px" },
           mx: "auto",
         }}
+        
       >
+        
         <Card elevation={3} sx={{ borderRadius: 3, p: 2 }}>
           <CardContent>
+            {/* Tiêu đề lớn dưới khung xanh */}
             <Typography
               variant="h5"
               align="center"
@@ -78,6 +83,7 @@ export default function About() {
 
             <Divider sx={{ my: 2 }} />
 
+            {/* CHỨC NĂNG CHÍNH */}
             <Typography variant="h6" fontWeight="bold" sx={{ mt: 3 }}>🧾 CHỨC NĂNG CHÍNH</Typography>
             <Box sx={{ mt: 2 }}>
               <Box display="flex" alignItems="center" sx={{ mt: 3 }}>
@@ -86,11 +92,15 @@ export default function About() {
               </Box>
 
               <Box sx={{ pl: 2 }}>
-
+                <Typography fontWeight="bold" sx={{ color: '#d84315', mt: 1 }}>🔶 Chuyên cần</Typography>
                 <ul style={{ paddingLeft: '2rem' }}>
                   <li>✅ <strong>Điểm danh hàng ngày:</strong> Giáo viên thực hiện điểm danh chuyên cần đầu mỗi buổi học.</li>
                   <li>🔄 <strong>Cập nhật trạng thái:</strong> Ghi nhận tình trạng đi học, nghỉ phép, nghỉ không phép.</li>
                   <li>📆 <strong>Lịch sử điểm danh:</strong> Xem lại thông tin chuyên cần theo từng học sinh, từng ngày.</li>
+                </ul>
+
+                <Typography fontWeight="bold" sx={{ color: '#d84315', mt: 2 }}>🔶 Bán trú</Typography>
+                <ul style={{ paddingLeft: '2rem' }}>
                   <li>🍱 <strong>Ghi nhận danh sách học sinh ăn bán trú</strong> trong ngày hiện tại.</li>
                 </ul>
               </Box>
@@ -98,6 +108,7 @@ export default function About() {
 
             <Divider sx={{ my: 2 }} />
 
+            {/* QUẢN LÝ DỮ LIỆU NGÀY */}
             <Box display="flex" alignItems="center" sx={{ mt: 3 }}>
               <EventNoteIcon sx={{ fontSize: 24, mr: 1, color: "#1976d2" }} />
               <Typography variant="h6" fontWeight="bold">QUẢN LÝ DỮ LIỆU NGÀY</Typography>
@@ -126,6 +137,7 @@ export default function About() {
 
             <Divider sx={{ my: 2 }} />
 
+            {/* NHẬT KÝ ĐIỂM DANH */}
             <Typography variant="h6" fontWeight="bold" sx={{ mt: 3 }}>📖 NHẬT KÝ ĐIỂM DANH</Typography>
             <Box sx={{ pl: 2 }}>
               <Typography paragraph>
@@ -140,30 +152,53 @@ export default function About() {
 
             <Divider sx={{ my: 2 }} />
 
+            {/* THỐNG KÊ THEO THÁNG */}
             <Typography variant="h6" fontWeight="bold" sx={{ mt: 3 }}>📅 THỐNG KÊ THEO THÁNG</Typography>
             <Box sx={{ pl: 2 }}>
               <Typography paragraph>
-                • Lọc theo tháng và lớp.<br />
-                • Thống kê tổng số buổi vắng (có phép, không phép) và chi tiết ngày vắng.<br />
-                • Thống kê tổng số ngày ăn bán trú và chi tiết từng ngày.<br />
-                • Hỗ trợ xuất báo cáo dưới dạng Excel.
+                🔶 <strong>Chuyên cần</strong><br />
+                <Box sx={{ pl: 2 }}>
+                  • Lọc theo tháng và lớp.<br />
+                  • Hiển thị tổng số buổi học sinh vắng mặt và chi tiết (ngày vắng, có phép, không phép).<br />
+                  • Hỗ trợ xuất báo cáo dưới dạng Excel.
+                </Box>
+              </Typography>
+              <Typography paragraph>
+                🔶 <strong>Bán trú</strong><br />
+                <Box sx={{ pl: 2 }}>
+                  • Lọc theo tháng và lớp.<br />
+                  • Thống kê tổng số ngày học sinh ăn bán trú và chi tiết ngày ăn bán trú.<br />
+                  • Hỗ trợ xuất báo cáo dưới dạng Excel.
+                </Box>
               </Typography>
             </Box>
 
             <Divider sx={{ my: 2 }} />
 
+            {/* THỐNG KÊ THEO NĂM */}
             <Typography variant="h6" fontWeight="bold" sx={{ mt: 3 }}>📆 THỐNG KÊ THEO NĂM</Typography>
             <Box sx={{ pl: 2 }}>
               <Typography paragraph>
-                • Lọc theo năm học và lớp học.<br />
-                • Tổng hợp số buổi vắng (có phép, không phép) của từng học sinh theo tháng.<br />
-                • Thống kê tổng số lần ăn bán trú của từng học sinh theo tháng.<br />
-                • Hỗ trợ xuất báo cáo dưới dạng Excel.
+                🔶 <strong>Chuyên cần</strong><br />
+                <Box sx={{ pl: 2 }}>
+                  • Lọc theo năm học và lớp học.<br />
+                  • Hiển thị tổng số buổi vắng (có phép, không phép ở từng tháng) trong cả năm học.<br />
+                  • Hỗ trợ xuất báo cáo dưới dạng Excel.
+                </Box>
+              </Typography>
+              <Typography paragraph>
+                🔶 <strong>Bán trú</strong><br />
+                <Box sx={{ pl: 2 }}>
+                  • Lọc theo năm học và lớp học.<br />
+                  • Bảng tổng số lần ăn bán trú của từng học sinh ở từng tháng trong năm.<br />
+                  • Hỗ trợ xuất báo cáo dưới dạng Excel.
+                </Box>
               </Typography>
             </Box>
 
             <Divider sx={{ my: 2 }} />
 
+            {/* CHỈNH SỬA DỮ LIỆU */}
             <Typography variant="h6" fontWeight="bold" sx={{ mt: 3 }}>🛠️ CHỈNH SỬA DỮ LIỆU</Typography>
             <Box sx={{ pl: 2 }}>
               <Typography paragraph>
@@ -177,6 +212,7 @@ export default function About() {
 
             <Divider sx={{ my: 2 }} />
 
+            {/* XÓA DỮ LIỆU THEO NGÀY */}
             <Typography variant="h6" fontWeight="bold" sx={{ mt: 3 }}>🗑️ XÓA DỮ LIỆU THEO NGÀY</Typography>
             <Box sx={{ pl: 2 }}>
               <Typography paragraph>
@@ -187,17 +223,19 @@ export default function About() {
 
             <Divider sx={{ my: 2 }} />
 
+            {/* BÁO CÁO & THỐNG KÊ */}
             <Typography variant="h6" fontWeight="bold" sx={{ mt: 3 }}>📈 BÁO CÁO & THỐNG KÊ</Typography>
             <Box sx={{ pl: 2 }}>
               <Typography paragraph>
-                • 🗓️ Theo ngày: Tổng hợp sĩ số và suất ăn theo từng lớp.<br />
+                • 🗓️ Theo ngày: Tổng hợp sĩ số và suất ăn theo từng lớp trong một ngày.<br />
                 • 📅 Theo tháng: Chi tiết số ngày vắng và số ngày ăn bán trú.<br />
-                • 📚 Theo năm: Thống kê tổng số ngày vắng và ăn bán trú của học sinh toàn trường.
+                • 📚 Theo năm: Thống kê tổng số ngày vắng / ăn của toàn bộ học sinh.
               </Typography>
             </Box>
 
             <Divider sx={{ my: 2 }} />
 
+            {/* DANH SÁCH HỌC SINH */}
             <Typography variant="h6" fontWeight="bold" sx={{ mt: 3 }}>👥 DANH SÁCH HỌC SINH</Typography>
             <Box sx={{ pl: 2 }}>
               <Typography paragraph>
@@ -209,6 +247,7 @@ export default function About() {
 
             <Divider sx={{ my: 2 }} />
 
+            {/* CƠ SỞ DỮ LIỆU */}
             <Typography variant="h6" fontWeight="bold" sx={{ mt: 3 }}>🗄️ CƠ SỞ DỮ LIỆU</Typography>
             <Box sx={{ pl: 2 }}>
               <Typography paragraph>
@@ -222,6 +261,7 @@ export default function About() {
 
             <Divider sx={{ my: 4 }} />
 
+            {/* Footer */}
             <Typography variant="body1" paragraph>
               📩 Góp ý, phản hồi:{" "}
               <Link href="mailto:thbinhkhanh@gmail.com" color="primary" underline="hover">
