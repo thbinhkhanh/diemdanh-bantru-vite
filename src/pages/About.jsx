@@ -88,10 +88,9 @@ export default function About() {
               <Box sx={{ pl: 2 }}>
 
                 <ul style={{ paddingLeft: '2rem' }}>
-                  <li>✅ <strong>Điểm danh hàng ngày:</strong> Giáo viên thực hiện điểm danh chuyên cần đầu mỗi buổi học.</li>
-                  <li>🔄 <strong>Cập nhật trạng thái:</strong> Ghi nhận tình trạng đi học, nghỉ phép, nghỉ không phép.</li>
+                  <li>✅ <strong>Điểm danh bán trú:</strong> Ghi nhận danh sách học sinh ăn bán trú trong ngày hiện tại.</li>
+                  <li>🔄 <strong>Điểm danh chuyên cần:</strong> Ghi nhận tình trạng đi học, nghỉ có phép/không phép.</li>
                   <li>📆 <strong>Lịch sử điểm danh:</strong> Xem lại thông tin chuyên cần theo từng học sinh, từng ngày.</li>
-                  <li>🍱 <strong>Ghi nhận danh sách học sinh ăn bán trú</strong> trong ngày hiện tại.</li>
                 </ul>
               </Box>
             </Box>
@@ -119,7 +118,7 @@ export default function About() {
                     o 📍 Thống kê chuyên cần: nghỉ phép, nghỉ không phép theo ngày bất kì.<br />
                     o 🍽️ Thống kê số liệu bán trú theo ngày bất kì.<br />
                   </Box>
-                  • Lọc theo lớp, Khối, toàn trường.
+                  • Lọc theo lớp, khối, toàn trường.
                 </Box>
               </Typography>
             </Box>
@@ -132,7 +131,7 @@ export default function About() {
                 🔍 <strong>Tra cứu lịch sử điểm danh chuyên cần:</strong><br />
                 <Box sx={{ pl: 2 }}>
                   • Lọc dữ liệu theo ngày, tháng, năm và theo khối/lớp.<br />
-                  • Hiển thị: họ tên học sinh, lớp, có phép/không phép, lý do vắng, số ngày nghỉ.<br />
+                  • Hiển thị: họ tên học sinh, lớp, có phép/không phép, lý do vắng.<br />
                   • Hỗ trợ xuất báo cáo dưới dạng Excel.
                 </Box>
               </Typography>
@@ -144,7 +143,7 @@ export default function About() {
             <Box sx={{ pl: 2 }}>
               <Typography paragraph>
                 • Lọc theo tháng và lớp.<br />
-                • Thống kê tổng số buổi vắng (có phép, không phép) và chi tiết ngày vắng.<br />
+                • Thống kê tổng số buổi vắng (có phép/không phép) và chi tiết ngày vắng.<br />
                 • Thống kê tổng số ngày ăn bán trú và chi tiết từng ngày.<br />
                 • Hỗ trợ xuất báo cáo dưới dạng Excel.
               </Typography>
@@ -156,7 +155,7 @@ export default function About() {
             <Box sx={{ pl: 2 }}>
               <Typography paragraph>
                 • Lọc theo năm học và lớp học.<br />
-                • Tổng hợp số buổi vắng (có phép, không phép) của từng học sinh theo tháng.<br />
+                • Tổng hợp số buổi vắng (có phép/không phép) của từng học sinh theo tháng.<br />
                 • Thống kê tổng số lần ăn bán trú của từng học sinh theo tháng.<br />
                 • Hỗ trợ xuất báo cáo dưới dạng Excel.
               </Typography>
