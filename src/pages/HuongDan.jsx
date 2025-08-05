@@ -65,136 +65,136 @@ export default function HuongDan() {
   );
 
   return (
-    <Box
+  <Box
+    sx={{
+      minHeight: "100vh",
+      background: "linear-gradient(to bottom, #e3f2fd, #bbdefb)",
+      py: 0,
+      px: 0,
+    }}
+  >
+    <Container
       sx={{
-        minHeight: "100vh",
-        background: "linear-gradient(to bottom, #e3f2fd, #bbdefb)",
-        py: 0,
-        px: 0,
+        mt: { xs: '10px', sm: '10px' },
+        width: { xs: "98%", sm: "90%", md: "850px" },
       }}
     >
-      <Container
+      <Box
         sx={{
-          mt: { xs: '10px', sm: '10px' },
-          width: { xs: "98%", sm: "90%", md: "850px" },
+          backgroundColor: "#2196f3",
+          color: "#fff",
+          borderRadius: 2,
+          py: 2,
+          px: 3,
+          display: "flex",
+          alignItems: "center",
         }}
       >
-        <Box
-          sx={{
-            backgroundColor: "#2196f3",
-            color: "#fff",
-            borderRadius: 2,
-            py: 2,
-            px: 3,
-            display: "flex",
-            alignItems: "center",
-          }}
-        >
-          <InfoIcon sx={{ fontSize: 32, mr: 1 }} />
-          <Box>
-            <Typography variant="h6" fontWeight="bold">
-              HƯỚNG DẪN SỬ DỤNG
-            </Typography>
-            <Typography variant="body2">
-              Hướng dẫn thao tác với hình ảnh minh họa
-            </Typography>
-          </Box>
+        <InfoIcon sx={{ fontSize: 32, mr: 1 }} />
+        <Box>
+          <Typography variant="h6" fontWeight="bold">
+            HƯỚNG DẪN SỬ DỤNG
+          </Typography>
+          <Typography variant="body2">
+            Hướng dẫn thao tác với hình ảnh minh họa
+          </Typography>
         </Box>
-      </Container>
+      </Box>
+    </Container>
 
-      <Container
-        sx={{
-          mt: 3,
-          mb: 4,
-          width: { xs: "98%", sm: "90%", md: "850px" },
-          mx: "auto",
-        }}
-      >
-        <Card elevation={3} sx={{ borderRadius: 3, p: 2 }}>
-          <CardContent>
-            <Typography
-              variant="h6"
-              color="primary"
-              fontWeight="bold"
-              align="center"
-              sx={{
-                mb: 2,
-                fontSize: { xs: "1.2rem", sm: "1.5rem", md: "1.8rem" },
-              }}
-            >
-              ỨNG DỤNG QUẢN LÝ BÁN TRÚ
-            </Typography>
+    <Container
+      sx={{
+        mt: 3,
+        mb: 4,
+        width: { xs: "98%", sm: "90%", md: "850px" },
+        mx: "auto",
+      }}
+    >
+      <Card elevation={3} sx={{ borderRadius: 3, p: 2 }}>
+        <CardContent>
+          <Typography
+            variant="h6"
+            color="primary"
+            fontWeight="bold"
+            align="center"
+            sx={{
+              mb: 2,
+              fontSize: { xs: "1.2rem", sm: "1.5rem", md: "1.8rem" },
+            }}
+          >
+            ỨNG DỤNG QUẢN LÝ BÁN TRÚ
+          </Typography>
 
-            <Divider sx={{ my: 2 }} />
+          <Divider sx={{ my: 2 }} />
 
-            <div>
-              {renderItem("0", "📝 0. Điểm danh", (
+          <div>
+            {renderItem("1", "📝 1. Điểm danh", (
+              <GroupDetails
+                groupKey="group-1"
+                items={[
+                  {
+                    title: "✅ 1.1 Điểm danh bán trú",
+                    content: (
+                      <ul>
+                        <li>
+                          B1: Tại Trang chủ, chọn biểu tượng Khối hoặc chọn Khối từ thanh menu.<br /><br />
+                          <img src="/images/H01_B1.png" alt="B1" style={{ width: "100%", maxWidth: "480px", height: "auto", display: "block", margin: "0 auto" }} /><br />
+                        </li>
+                        <li>
+                          B2: <b>Đăng nhập:</b> Chọn lớp, nhập mật khẩu rồi chọn <b>Đăng nhập</b><br /><br />
+                          <img src="/images/H01_B2.png" alt="B2" style={{ width: "100%", maxWidth: "480px", height: "auto", display: "block", margin: "0 auto" }} /><br />
+                        </li>
+                        <li>
+                          B3: Chọn <b>Bán trú, </b>hệ thống hiển thị danh sách học sinh bán trú.<br /><br />
+                          <img src="/images/H01_B3.png" alt="B3" style={{ width: "100%", maxWidth: "480px", height: "auto", display: "block", margin: "0 auto" }} /><br />
+                        </li>
+                        <li>B4: Tick học sinh để đánh dấu có ăn bán trú.</li>
+                        <li>👉 Mọi thay đổi được tự động lưu.</li>
+                      </ul>
+                    )
+                  },
+                  {
+                    title: "🏫 1.2 Điểm danh chuyên cần",
+                    content: (
+                      <ul>
+                        <li>B1: Chọn <b>Điểm danh</b><br /><br /><img src="/images/H02_B1.png" alt="B1" style={{ width: "100%", maxWidth: "480px", height: "auto", display: "block", margin: "0 auto" }} /></li><br />
+                        <li>B2: Tick học sinh để đánh dấu nghỉ học, chọn có phép/không phép, nhập lý do nghỉ.<br /> </li>
+                        <li>👉 Mọi thay đổi được tự động lưu.</li>
+                      </ul>
+                    )
+                  },
+                  {
+                    title: "🏫 1.3 Nhật ký điểm danh",
+                    content: (
+                      <ul>
+                        <li>B1: Chọn <b>Nhật ký điểm danh</b><br /><br/><img src="/images/H03_B1.png" alt="B1" style={{ width: "100%", maxWidth: "480px", height: "auto", display: "block", margin: "0 auto" }} /></li><br />
+                        <li>B2: Tại đây, có thể xem lại học sinh đã vắng trong ngày, trong tháng.<br /><br /><img src="/images/H03_B2.png" alt="B2" style={{ width: "100%", maxWidth: "480px", height: "auto", display: "block", margin: "0 auto" }} /></li>
+                      </ul>
+                    )
+                  },
+                  {
+                    title: "🏫 1.4 Chuyển đổi tài khoản",
+                    content: (
+                      <ul>
+                        <li> Để điểm danh thay cho lớp bất kỳ, có thể thực hiện như sau:</li>
+                        <br />
+                        <li> B1: Chọn biểu tượng <b>chuyển đổi tài khoản</b> <br/><br /><img src="/images/H04_B1.png" alt="B1" style={{ width: "100%", maxWidth: "480px", height: "auto", display: "block", margin: "0 auto" }} /></li><br />
+                        <li> B2: Chọn <b>Khối</b>, <b>Lớp</b> muốn điểm danh thay, nhập mật khẩu rồi bấm <b>Đăng nhập</b><br /><br /><img src="/images/H04_B2.png" alt="B2" style={{ width: "100%", maxWidth: "480px", height: "auto", display: "block", margin: "0 auto" }} /></li><br />
+                        <li> B3: Điểm danh bình thường<br /><br /><img src="/images/H04_B3.png" alt="B2" style={{ width: "100%", maxWidth: "480px", height: "auto", display: "block", margin: "0 auto" }} /></li>
+                      </ul>
+                    )
+                  },
+                ]}
+              />
+            ))}
+
+
+              {renderItem("2", "🗓️ 2. Quản lý dữ liệu ngày", (
                 <GroupDetails
-                  groupKey="group-0"
+                  groupKey="group-2"
                   items={[
                     {
-                      title: "✅ 0.1 Điểm danh bán trú",
-                      content: (
-                        <ul>
-                          <li>
-                            B1: Tại Trang chủ, chọn biểu tượng Khối hoặc chọn Khối từ thanh menu.<br /><br />
-                            <img src="/images/H01_B1.png" alt="B1" style={{ width: "100%", maxWidth: "480px", height: "auto", display: "block", margin: "0 auto" }} /><br />
-                          </li>
-                          <li>
-                            B2: Chọn lớp, nhập mật khẩu để đăng nhập.<br /><br />
-                            <img src="/images/H01_B2.png" alt="B2" style={{ width: "100%", maxWidth: "480px", height: "auto", display: "block", margin: "0 auto" }} /><br />
-                          </li>
-                          <li>
-                            B3: Chọn <b>Bán trú, </b>hệ thống hiển thị danh sách học sinh bán trú.<br /><br />
-                            <img src="/images/H01_B3.png" alt="B3" style={{ width: "100%", maxWidth: "480px", height: "auto", display: "block", margin: "0 auto" }} /><br />
-                          </li>
-                          <li>B4: Tick học sinh để đánh dấu có ăn bán trú.</li>
-                          <li>👉 Mọi thay đổi được tự động lưu.</li>
-                        </ul>
-                      )
-                    },
-                    {
-                      title: "🏫 0.2 Điểm danh chuyên cần",
-                      content: (
-                        <ul>
-                          <li> B1: Chọn <b>Điểm danh</b><br /><br /><img src="/images/H02_B1.png" alt="B1" style={{ width: "100%", maxWidth: "480px", height: "auto", display: "block", margin: "0 auto" }} /></li><br />
-                          <li> B2: Tick học sinh để đánh dấu nghỉ học, chọn có phép/không phép, nhập lý do nghỉ.<br /> </li>
-                          <li>👉 Mọi thay đổi được tự động lưu.</li>
-                        </ul>
-                      )
-                    },
-                    {
-                      title: "🏫 0.3 Nhật ký điểm danh",
-                      content: (
-                        <ul>
-                          <li> B1: Chọn <b>Nhật ký điểm danh</b><br /><br/><img src="/images/H03_B1.png" alt="B1" style={{ width: "100%", maxWidth: "480px", height: "auto", display: "block", margin: "0 auto" }} /></li><br />
-                          <li> B2: Tại đây, có thể xem lại học sinh đã vắng trong ngày, trong tháng.<br /><br /><img src="/images/H03_B2.png" alt="B2" style={{ width: "100%", maxWidth: "480px", height: "auto", display: "block", margin: "0 auto" }} /></li>
-                        </ul>
-                      )
-                    },
-                    {
-                      title: "🏫 0.4 Chuyển đổi tài khoản",
-                      content: (
-                        <ul>
-                          <li> Để điểm danh thay cho lớp bất kỳ, có thể thực hiện như sau:</li>
-                          <br />
-                          <li> B1: Chọn biểu tượng <b>chuyển đổi tài khoản</b> <br/><br /><img src="/images/H04_B1.png" alt="B1" style={{ width: "100%", maxWidth: "480px", height: "auto", display: "block", margin: "0 auto" }} /></li><br />
-                          <li> B2: Chọn <b>Khối</b>, <b>Lớp</b> muốn điểm danh thay, nhập mật khẩu rồi bấm <b>Đăng nhập</b><br /><br /><img src="/images/H04_B2.png" alt="B2" style={{ width: "100%", maxWidth: "480px", height: "auto", display: "block", margin: "0 auto" }} /></li><br />
-                          <li> B3: Điểm danh bình thường<br /><br /><img src="/images/H04_B3.png" alt="B2" style={{ width: "100%", maxWidth: "480px", height: "auto", display: "block", margin: "0 auto" }} /></li>
-                        </ul>
-                      )
-                    },                          
-                  ]}
-                />
-              ))}
-
-
-              {renderItem("1", "🗓️ 1. Quản lý dữ liệu ngày", (
-                <GroupDetails
-                  groupKey="group-1"
-                  items={[
-                    {
-                      title: "📌 1.1 Chốt số liệu",
+                      title: "📌 2.1 Chốt số liệu",
                       content: (
                         <ul>
                           <li>B1: Chọn menu <b>Quản lý</b></li>
@@ -206,30 +206,30 @@ export default function HuongDan() {
                       )
                     },
                     {
-                      title: "📊 1.2 Số liệu trong ngày",
+                      title: "📊 2.2 Số liệu trong ngày",
                       content: (
                         <ul>
                           <li>B1: Chọn menu <b>Quản lý</b></li>
                           <li>B2: Đăng nhập bằng tài khoản <b>Y tế</b></li>
-                          <li>B3: Chọn biểu tượng <b>Số liệu trong ngày</b><br /><br /><img src="/images/H11_B3.png" alt="" style={{ width: "100%", maxWidth: "480px", height: "auto", display: "block", margin: "0 auto" }}  /></li>
+                          <li>B3: Chọn biểu tượng <b>Số liệu trong ngày</b><br /><br /><img src="/images/H11_B3.png" alt="" style={{ width: "100%", maxWidth: "480px", height: "auto", display: "block", margin: "0 auto" }}  /></li><br />
+                          <li>B4: Chọn biểu tượng <b>Số liệu trong ngày</b><br /><br /><img src="/images/H11_B3b.png" alt="" style={{ width: "100%", maxWidth: "480px", height: "auto", display: "block", margin: "0 auto" }}  /></li>
                         </ul>
                       )
                     },
                     {
-                      title: "🛠️ 1.3 Điều chỉnh suất ăn",
+                      title: "🛠️ 2.3 Điều chỉnh suất ăn",
                       content: (
                         <ul>
                           <li>B1: Chọn menu <b>Quản lý</b></li>
                           <li>B2: Đăng nhập bằng tài khoản <b>Y tế</b></li>
-                          <li>B3: Chọn biểu tượng <b>Điều chỉnh suất ăn</b><br /><br /><img src="/images/H11_B3.png" alt="" style={{ width: "100%", maxWidth: "480px", height: "auto", display: "block", margin: "0 auto" }}  /></li><br />
-                          <li>B4: Chọn lớp</li>
-                          <li>B5: Chọn ngày<br /><br /><img src="/images/H13_B5.png" alt="" style={{ width: "100%", maxWidth: "480px", height: "auto", display: "block", margin: "0 auto" }}  /></li><br />
-                          <li>B6: Tick học sinh và <b>Cập nhật</b></li>
+                          <li>B3: Chọn biểu tượng <b>Điều chỉnh suất ăn</b><br /><br /><img src="/images/H11_B3.png" alt="" style={{ width: "100%", maxWidth: "480px", height: "auto", display: "block", margin: "0 auto" }}  /></li><br />              
+                          <li>B4: Chọn lớp, chọn ngày<br /><br /><img src="/images/H13_B4.png" alt="" style={{ width: "100%", maxWidth: "480px", height: "auto", display: "block", margin: "0 auto" }}  /></li><br />
+                          <li>B5: Tick học sinh và <b>Cập nhật</b></li>
                         </ul>
                       )
                     },
                     {
-                      title: "🗑️ 1.4 Xóa dữ liệu theo ngày",
+                      title: "🗑️ 2.4 Xóa dữ liệu theo ngày",
                       content: (
                         <ul>
                           <li>B1: Chọn menu <b>Quản lý</b></li>
@@ -237,7 +237,7 @@ export default function HuongDan() {
                           <li>B3: Chọn biểu tượng <b>Xóa dữ liệu ngày</b><br /><br /><img src="/images/H11_B3.png" alt="" style={{ width: "100%", maxWidth: "480px", height: "auto", display: "block", margin: "0 auto" }}  /></li><br />
                           <li>B4: Chọn ngày cần xóa</li>   
                           <li>B5: Chọn ngày<br /><br /><img src="/images/H14_B5.png" alt="" style={{ width: "100%", maxWidth: "480px", height: "auto", display: "block", margin: "0 auto" }}  /></li><br />                       
-                          <li>B6: Chọn xóa <b>Toàn trường </b>hay <b>Chọn lớp</b> bất kỳ, nhấn <b>Thực hiện</b></li>
+                          <li>B6: Chọn xóa <b>Toàn trường</b> hay <b>Chọn lớp</b> bất kỳ, nhấn <b>Thực hiện</b></li>
                         </ul>
                       )
                     }
@@ -245,12 +245,12 @@ export default function HuongDan() {
                 />
               ))}
 
-              {renderItem("2", "📈 2. Thống kê", (
+              {renderItem("3", "📈 3. Thống kê", (
                 <GroupDetails
-                  groupKey="group-2"
+                  groupKey="group-3"
                   items={[
                     {
-                      title: "🗓️ 2.1 Thống kê theo ngày",
+                      title: "🗓️ 3.1 Thống kê theo ngày",
                       content: (
                         <ul>
                           <li>B1: Chọn menu <b>Quản lý</b></li>                          
@@ -262,7 +262,7 @@ export default function HuongDan() {
                       )
                     },
                     {
-                      title: "📊 2.2 Chi tiết từng tháng",
+                      title: "📊 3.2 Chi tiết từng tháng",
                       content: (
                         <ul>
                           <li>B1: Chọn menu <b>Quản lý</b></li>
@@ -274,7 +274,7 @@ export default function HuongDan() {
                       )
                     },
                     {
-                      title: "📚 2.3 Tổng hợp cả năm",
+                      title: "📚 3.3 Tổng hợp cả năm",
                       content: (
                         <ul>
                           <li>B1: Chọn menu <b>Quản lý</b></li>
@@ -289,12 +289,12 @@ export default function HuongDan() {
                 />
               ))}
 
-              {renderItem("3", "👥 3. Danh sách học sinh", (
+              {renderItem("4", "👥 4. Danh sách học sinh", (
                 <GroupDetails
-                  groupKey="group-3"
+                  groupKey="group-4"
                   items={[
                     {
-                      title: "📅 3.1 Cập nhật danh sách",
+                      title: "📅 4.1 Cập nhật danh sách",
                       content: (
                         <ul>
                           <li>B1: Chọn menu <b>Quản lý</b></li>                          
@@ -306,7 +306,7 @@ export default function HuongDan() {
                       )
                     },
                     {
-                      title: "📋 3.2 Lập danh sách",
+                      title: "📋 4.2 Lập danh sách",
                       content: (
                         <ul>
                           <li>B1: Chọn menu <b>Quản lý</b></li>
@@ -319,20 +319,20 @@ export default function HuongDan() {
                       )
                     },
                     {
-                      title: "📄 3.3 Tải danh sách lên",
+                      title: "📄 4.3 Tải danh sách lên",
                       content: (
                         <ul>
                           <li>B1: Chọn menu <b>Quản lý</b></li>
                           <li>B2: Đăng nhập bằng tài khoản <b>BGH</b></li>
                           <li>B3: Chuẩn bị file Excel theo mẫu</li>
-                          <li>B4: Chọn biểu tượng <b>Tải danh sách lên</b><br /><br /><img src="/images/H31_B3.png" alt="" style={{ width: "100%", maxWidth: "480px", height: "auto", display: "block", margin: "0 auto" }}  /></li>                          <br />
+                          <li>B4: Chọn biểu tượng <b>Tải danh sách lên</b><br /><br /><img src="/images/H31_B3.png" alt="" style={{ width: "100%", maxWidth: "480px", height: "auto", display: "block", margin: "0 auto" }}  /></li><br />
                           <li>B5: Chọn biểu tượng <b>Chọn file Excel</b><br /><br /><img src="/images/H33_B5.png" alt="" style={{ width: "100%", maxWidth: "480px", height: "auto", display: "block", margin: "0 auto" }}  /></li><br />
                           <li>B6: Chọn file danh sách và <b>Tải lên</b> hệ thống</li>
                         </ul>
                       )
                     },
                     {
-                      title: "📄 3.4 Lịch sử đăng ký",
+                      title: "📄 4.4 Lịch sử đăng ký",
                       content: (
                         <ul>
                           <li>B1: Chọn menu <b>Quản lý</b></li>
@@ -346,66 +346,69 @@ export default function HuongDan() {
                 />
               ))}
 
-              {renderItem("4", "🗄️ 4. Cơ sở dữ liệu", (
+              {renderItem("5", "🗄️ 5. Cơ sở dữ liệu", (
                 <GroupDetails
-                  groupKey="group-4"
+                  groupKey="group-5"
                   items={[
                     {
-                      title: "📅 4.1 Sao lưu",
+                      title: "📅 5.1 Sao lưu",
                       content: (
                         <ul>
                           <li>B1: Chọn menu <b>Quản lý</b></li>                          
-                          <li>B2: Đăng nhập bằng tài khoản<b>Admin</b><br /><br /><img src="/images/H41_B2.png" alt="" style={{ width: "100%", maxWidth: "480px", height: "auto", display: "block", margin: "0 auto" }}  /></li><br />
-                          <li>B3: Vào tab <b>Backup & Restore</b><br /><br /><img src="/images/H41_B3.png" alt="" style={{ width: "100%", maxWidth: "480px", height: "auto", display: "block", margin: "0 auto" }}  /></li><br />
-                          <li>B4: Chọn loại dữ liệu và định dạng (JSON/Excel) </li>
-                          <li>B5: Nhấn <b>Sao lưu</b></li>
+                          <li>B2: Đăng nhập bằng tài khoản<b>Admin</b><br /><br /><img src="/images/H41_B2.png" alt="" style={{ width: "100%", maxWidth: "480px", height: "auto", display: "block", margin: "0 auto" }} /></li><br />     
+                          <li>B3: Vào tab <b>Backup & Restore</b></li>
+                          <li>B4: Chọn <b>Sao lưu dữ liệu</b><br /><br /><img src="/images/H41_B3.png" alt="" style={{ width: "100%", maxWidth: "480px", height: "auto", display: "block", margin: "0 auto" }} /></li> <br />
+                          <li>B5: Chọn loại dữ liệu và định dạng (JSON/Excel)</li>
+                          <li>B6: Nhấn <b>Sao lưu</b></li>
                         </ul>
                       )
                     },
                     {
-                      title: "🔁 4.2 Phục hồi",
+                      title: "🔁 5.2 Phục hồi",
                       content: (
                         <ul>
                           <li>B1: Chọn menu <b>Quản lý</b></li>
                           <li>B2: Đăng nhập bằng tài khoản <b>Admin</b></li>
-                          <li>B3: Vào tab <b>Backup & Restore</b><br /><br /><img src="/images/H42_B3.png" alt="" style={{ width: "100%", maxWidth: "480px", height: "auto", display: "block", margin: "0 auto" }}  /></li><br />
-                          <li>B4: Chọn <b>Phục hồi</b> và tìm đến tệp đã sao lưu</li>
-                          <li>B5: Chọn loại dữ liệu và định dạng (JSON/Excel) </li>
+                          <li>B3: Vào tab <b>Backup & Restore</b><br /></li>
+                          <li>B4: Chọn <b>Phục hồi dữ liệu</b> và tìm đến tệp đã sao lưu</li>
+                          <li>B5: Chọn loại dữ liệu và định dạng (JSON/Excel)<br /><br /><img src="/images/H42_B3.png" alt="" style={{ width: "100%", maxWidth: "480px", height: "auto", display: "block", margin: "0 auto" }} /></li> <br />                          
                           <li>B6: Nhấn <b>Phục hồi</b></li>
                         </ul>
                       )
                     },
                     {
-                      title: "🗑️ 4.3 Xóa toàn bộ",
+                      title: "🗑️ 5.3 Xóa toàn bộ",
                       content: (
                         <ul>
                           <li>B1: Chọn menu <b>Quản lý</b></li>
                           <li>B2: Đăng nhập bằng tài khoản <b>Admin</b></li>
-                          <li>B3: Vào tab <b>Delete & Reset</b><br /><br /><img src="/images/H43_B3.png" alt="" style={{ width: "100%", maxWidth: "480px", height: "auto", display: "block", margin: "0 auto" }}  /></li><br />
-                          <li>B4: Chọn loại dữ liệu cần xóa </li>
-                          <li>B5: Chọn <b>Xóa dữ liệu</b></li>
+                          <li>B3: Vào tab <b>Delete & Reset</b><br /></li>
+                          <li>B4: Chọn <b>Xóa database</b><br /><br /><img src="/images/H43_B3.png" alt="" style={{ width: "100%", maxWidth: "480px", height: "auto", display: "block", margin: "0 auto" }} /></li><br />
+                          <li>B5: Chọn loại dữ liệu cần xóa</li>
+                          <li>B6: Chọn <b>Xóa dữ liệu</b></li>
                         </ul>
                       )
                     },
                     {
-                      title: "🆕 4.4 Khởi tạo năm mới",
+                      title: "🆕 5.4 Khởi tạo năm mới",
                       content: (
                         <ul>
                           <li>B1: Chọn menu <b>Quản lý</b></li>
                           <li>B2: Đăng nhập bằng tài khoản <b>Admin</b></li>
-                          <li>B3: Vào tab <b>Account</b><br /><br /><img src="/images/H44_B3.png" alt="" style={{ width: "100%", maxWidth: "480px", height: "auto", display: "block", margin: "0 auto" }}  /></li><br />                    
-                          <li>B4: Chọn loại dữ liệu cần tạo </li>
-                          <li>B6: Chọn <b>Tạo Database</b> </li>
+                          <li>B3: Vào tab <b>Account</b></li>
+                          <li>B4: Chọn <b>Tạo Database năm mới</b><br /><br /><img src="/images/H44_B3.png" alt="" style={{ width: "100%", maxWidth: "480px", height: "auto", display: "block", margin: "0 auto" }} /></li><br />                     
+                          <li>B5: Chọn loại dữ liệu cần tạo</li>
+                          <li>B6: Chọn <b>Tạo Database</b></li>
                         </ul>
                       )
                     },
                     {
-                      title: "📂 4.5 Xem dữ liệu năm trước",
+                      title: "📂 5.5 Xem dữ liệu năm trước",
                       content: (
                         <ul>
                           <li>B1: Chọn menu <b>Quản lý</b></li>
                           <li>B2: Đăng nhập bằng tài khoản <b>Admin</b></li>
-                          <li>B3: Chọn năm học cần xem tại tab <b>System</b><br /><br /><img src="/images/H45_B3.png" alt="" style={{ width: "100%", maxWidth: "480px", height: "auto", display: "block", margin: "0 auto" }}  /></li><br />
+                          <li>B3: Chọn năm học cần xem tại tab <b>System</b><br /><br /><img src="/images/H45_B3.png" alt="" style={{ width: "100%", maxWidth: "480px", height: "auto", display: "block", margin: "0 auto" }} /></li><br />
                           <li>B4: Chọn <b>Hệ thống quản lý bán trú</b> để xem dữ liệu</li>
                         </ul>
                       )
