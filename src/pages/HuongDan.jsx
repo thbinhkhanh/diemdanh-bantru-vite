@@ -330,6 +330,17 @@ export default function HuongDan() {
                           <li>B6: Chọn file danh sách và <b>Tải lên</b> hệ thống</li>
                         </ul>
                       )
+                    },
+                    {
+                      title: "📄 3.4 Lịch sử đăng ký",
+                      content: (
+                        <ul>
+                          <li>B1: Chọn menu <b>Quản lý</b></li>
+                          <li>B2: Đăng nhập bằng tài khoản <b>BGH</b></li>
+                          <li>B3: Chọn biểu tượng <b>Lịch sử đăng ký</b><br /><br /><img src="/images/H31_B3.png" alt="" style={{ width: "100%", maxWidth: "480px", height: "auto", display: "block", margin: "0 auto" }}  /></li><br />
+                          <li>B4: Xem lại lịch sử đăng ký bán trú<br /><br /><img src="/images/H34_B3.png" alt="" style={{ width: "100%", maxWidth: "480px", height: "auto", display: "block", margin: "0 auto" }}  /></li>
+                        </ul>
+                      )
                     }
                   ]}
                 />
