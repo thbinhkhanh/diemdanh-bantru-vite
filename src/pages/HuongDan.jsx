@@ -457,7 +457,7 @@ export default function HuongDan() {
 
             </div>
 
-            <Box sx={{ mt: 3, textAlign: "center" }}>
+            <Box sx={{ mt: 4, textAlign: "center" }}>
               <Button
                 variant="contained"
                 color="primary"
