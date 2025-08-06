@@ -249,7 +249,7 @@ export default function HuongDan() {
                           <li>B1: Chọn menu <b>Quản lý</b></li>
                           <li>B2: Đăng nhập bằng tài khoản <b>Y tế</b></li>
                           <li>B3: Chọn biểu tượng <b>Số liệu trong ngày</b><br /><br /><img src="/images/H11_B3.png" alt="" style={{ width: "100%", maxWidth: "480px", height: "auto", display: "block", margin: "0 auto" }}  /></li><br />
-                          <li>B4: Chọn biểu tượng <b>Số liệu trong ngày</b><br /><br /><img src="/images/H11_B3b.png" alt="" style={{ width: "100%", maxWidth: "480px", height: "auto", display: "block", margin: "0 auto" }}  /></li>
+                          <li>B4: Xem bảng tổng hợp số liệu trong ngày<br /><br /><img src="/images/H11_B3b.png" alt="" style={{ width: "100%", maxWidth: "480px", height: "auto", display: "block", margin: "0 auto" }}  /></li>
                         </ul>
                       )
                     },
@@ -455,6 +455,19 @@ export default function HuongDan() {
               ))}
 
             </div>
+
+            <Box sx={{ mt: 3, textAlign: "center" }}>
+              <Button
+                variant="contained"
+                color="primary"
+                href="/docs/HuongDan.pdf"
+                target="_blank"
+                rel="noopener noreferrer"
+                startIcon={<InfoIcon />}
+              >
+                Tải hướng dẫn sử dụng
+              </Button>
+            </Box>
           </CardContent>
         </Card>
       </Container>
