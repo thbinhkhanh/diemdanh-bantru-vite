@@ -122,7 +122,7 @@ export default function HuongDan() {
               fontSize: { xs: "1.2rem", sm: "1.5rem", md: "1.8rem" },
             }}
           >
-            ỨNG DỤNG QUẢN LÝ BÁN TRÚ
+            QUẢN LÝ BÁN TRÚ - ĐIỂM DANH
           </Typography>
 
           <Divider sx={{ my: 2 }} />
