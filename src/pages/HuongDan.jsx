@@ -9,6 +9,7 @@ import {
   Button,
 } from "@mui/material";
 import InfoIcon from "@mui/icons-material/Info";
+import DownloadIcon from '@mui/icons-material/Download';
 
 const GroupDetails = ({ items, groupKey }) => {
   const [openIndex, setOpenIndex] = useState(0); // Mở mục đầu tiên
@@ -461,9 +462,7 @@ export default function HuongDan() {
                 variant="contained"
                 color="primary"
                 href="/docs/HuongDan.pdf"
-                target="_blank"
-                rel="noopener noreferrer"
-                startIcon={<InfoIcon />}
+                startIcon={<DownloadIcon />}
               >
                 Tải hướng dẫn sử dụng
               </Button>
