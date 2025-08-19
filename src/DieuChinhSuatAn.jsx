@@ -15,6 +15,7 @@ import { MySort } from './utils/MySort';
 import { useClassList } from "./context/ClassListContext";
 import { useClassData } from "./context/ClassDataContext";
 import { enrichStudents } from "./pages/ThanhPhan/enrichStudents";
+import UpdateIcon from '@mui/icons-material/Update';
 
 export default function DieuChinhSuatAn({ onBack }) {
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -338,9 +339,14 @@ export default function DieuChinhSuatAn({ onBack }) {
               color="primary"
               onClick={saveData}
               disabled={isSaving}
-              sx={{ width: 160, fontWeight: 600 }}
+              startIcon={<UpdateIcon />} // thêm icon
+              sx={{ 
+                width: 160, 
+                fontWeight: 600,
+                whiteSpace: "nowrap" // chữ không xuống hàng
+              }}
             >
-              {isSaving ? "🔄 Cập nhật" : "Cập nhật"}
+              {isSaving ? "Cập nhật" : "Cập nhật"}
             </Button>
 
             {saveSuccess === "unauthorized" && (

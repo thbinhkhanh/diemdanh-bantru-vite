@@ -26,6 +26,7 @@ import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import vi from "date-fns/locale/vi";
 import { useClassList } from "./context/ClassListContext";
+import DeleteIcon from '@mui/icons-material/Delete';
 
 import {
   collection,
@@ -250,6 +251,8 @@ export default function XoaDLNgay({ onBack }) {
               setErrorMessage("");
               handleSubmit();
             }}
+            startIcon={<DeleteIcon />} // thêm icon Xóa
+            sx={{ width: 160 }}
           >
             Thực hiện
           </Button>

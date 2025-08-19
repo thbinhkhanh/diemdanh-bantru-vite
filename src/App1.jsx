@@ -1,5 +1,7 @@
 // 📁 src/App.jsx
-import React, { useState, Suspense, useEffect, useRef } from 'react';
+//import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
+
 import {
   Routes,
   Route,
@@ -30,39 +32,13 @@ import Navigation from './utils/Navigation';
 import PrivateRoute from './utils/PrivateRoute';
 import { Navigation_Route } from './utils/Navigation_Route';
 import SwitchAccount from './pages/SwitchAccount';
-import AccountList from "./AccountList";
+import AccountList from "./AccountList"; 
 
 const Admin = React.lazy(() => import('./Admin'));
 
 function App() {
   const navigate = useNavigate();
   const [activeNavPath, setActiveNavPath] = useState('/home');
-  const lastRefreshRef = useRef(null);
-
-  // ✅ Tự động reload App lúc 5:00 sáng giờ Việt Nam mỗi ngày
-  useEffect(() => {
-    const targetHour = 21;
-    const targetMinute = 5;
-
-    const checkTimeAndRefresh = () => {
-      const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" }));
-      const currentTimeStr = now.toTimeString().slice(0, 5); // "HH:MM"
-      const todayStr = now.toISOString().slice(0, 10); // "YYYY-MM-DD"
-      const targetTimeStr = `${String(targetHour).padStart(2, "0")}:${String(targetMinute).padStart(2, "0")}`;
-
-      if (
-        currentTimeStr === targetTimeStr &&
-        lastRefreshRef.current !== todayStr
-      ) {
-        console.log("🔄 Tự động reload App lúc:", currentTimeStr);
-        lastRefreshRef.current = todayStr;
-        window.location.reload(); // ✅ reload toàn bộ app
-      }
-    };
-
-    const intervalId = setInterval(checkTimeAndRefresh, 60 * 1000);
-    return () => clearInterval(intervalId);
-  }, []);
 
   return (
     <TeacherAccountProvider>
@@ -78,16 +54,7 @@ function App() {
                   <Route path="/" element={<Navigate to="/home" replace />} />
                   <Route path="/login" element={<Login />} />
                   <Route path="/accounts" element={<AccountList />} />
-                  <Route
-                    path="/home"
-                    element={
-                      <Home
-                        handleProtectedNavigate={(path) =>
-                          Navigation_Route(path, navigate, setActiveNavPath)
-                        }
-                      />
-                    }
-                  />
+                  <Route path="/home" element={<Home handleProtectedNavigate={(path) => Navigation_Route(path, navigate, setActiveNavPath)} />} />
                   <Route path="/lop1" element={<PrivateRoute><Lop1 /></PrivateRoute>} />
                   <Route path="/lop2" element={<PrivateRoute><Lop2 /></PrivateRoute>} />
                   <Route path="/lop3" element={<PrivateRoute><Lop3 /></PrivateRoute>} />
@@ -100,14 +67,11 @@ function App() {
                   <Route path="/gioithieu" element={<About />} />
                   <Route path="/huongdan" element={<HuongDan />} />
                   <Route path="/chucnang" element={<About />} />
-                  <Route
-                    path="/admin"
-                    element={
-                      <Suspense>
-                        <PrivateRoute><Admin /></PrivateRoute>
-                      </Suspense>
-                    }
-                  />
+                  <Route path="/admin" element={
+                    <Suspense>
+                      <PrivateRoute><Admin /></PrivateRoute>
+                    </Suspense>
+                  } />
                 </Routes>
                 <Footer />
               </div>

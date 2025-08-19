@@ -484,7 +484,19 @@ export default function ThongKeNam_DiemDanh({ onBack }) {
             <Button
               variant="contained"
               color="success"
-              onClick={handleExport}
+              onClick={async () => {
+                // Kiểm tra thiết bị di động
+                const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+                if (isMobile) {
+                  alert(
+                    "❌ Chức năng xuất Excel không khả dụng trên điện thoại.\nVui lòng sử dụng máy tính để xuất file."
+                  );
+                  return;
+                }
+
+                // Nếu không phải mobile thì gọi hàm export
+                await handleExport();
+              }}
               fullWidth
               sx={{
                 maxWidth: { xs: 150, sm: 280 },
@@ -497,6 +509,7 @@ export default function ThongKeNam_DiemDanh({ onBack }) {
               📥 Xuất Excel
             </Button>
           </Box>
+
         )}
 
         <Stack spacing={2} sx={{ mt: 4, alignItems: "center" }}>

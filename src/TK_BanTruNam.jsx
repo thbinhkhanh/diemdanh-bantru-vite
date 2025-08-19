@@ -377,19 +377,32 @@ return (
           <Button
             variant="contained"
             color="success"
-            onClick={handleExport}
+            onClick={async () => {
+              // Kiểm tra thiết bị di động
+              const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+              if (isMobile) {
+                alert(
+                  "❌ Chức năng xuất Excel không khả dụng trên điện thoại.\nVui lòng sử dụng máy tính để xuất file."
+                );
+                return;
+              }
+
+              // Nếu không phải mobile thì chạy export
+              await handleExport();
+            }}
             fullWidth
             sx={{
               maxWidth: { xs: 150, sm: 280 },
-              fontSize: { xs: '13px', sm: '15px' },
+              fontSize: { xs: "13px", sm: "15px" },
               height: { xs: 38, sm: 44 },
-              fontWeight: 'bold',
+              fontWeight: "bold",
               px: { xs: 1, sm: 2 },
             }}
           >
             📥 Xuất Excel
           </Button>
         </Box>
+
       )}
 
       <Stack spacing={2} sx={{ mt: 4, alignItems: "center" }}>
