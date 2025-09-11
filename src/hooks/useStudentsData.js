@@ -14,23 +14,46 @@ export const useStudentsData = ({ year, className, useNewVersion = false }) => {
 
     setIsLoading(true);
 
-    const colRef = collection(db, `DANHSACH_${year}`, 'lop');
-    const snapshot = await getDocs(colRef);
+    try {
+      const colRef = collection(db, `DANHSACH_${year}`, 'lop');
+      const snapshot = await getDocs(colRef);
 
-    const data = snapshot.docs
-      .map(doc => ({ id: doc.id, ...doc.data() }))
-      .filter(student => useNewVersion || student.lop === className); // ⬅️ Giữ đúng logic lọc
+      const fetchedData = snapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter(student => useNewVersion || student.lop === className);
 
-    setStudents(data);
-    setIsLoading(false);
+      // Merge với state hiện tại để giữ checkbox đã toggle
+      setStudents(prev => {
+        const mapPrev = Object.fromEntries(prev.map(s => [s.id, s]));
+        return fetchedData.map(s => ({
+          ...s,
+          registered: mapPrev[s.id]?.registered ?? s.registered,
+          diemDanhBanTru: mapPrev[s.id]?.diemDanhBanTru ?? s.diemDanhBanTru,
+        }));
+      });
+
+    } catch (err) {
+      console.error("❌ Lỗi fetchStudents:", err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const updateStudent = async (id, newData) => {
-    await updateDoc(doc(db, `DANHSACH_${year}`, 'lop', id), newData);
+    // Cập nhật state cục bộ trước
+    setStudents(prev => prev.map(s => s.id === id ? { ...s, ...newData } : s));
+
+    // Ghi lên Firestore
+    try {
+      await updateDoc(doc(db, `DANHSACH_${year}`, 'lop', id), newData);
+    } catch (err) {
+      console.error("❌ Lỗi updateStudent:", err);
+    }
   };
 
   useEffect(() => {
     fetchStudents();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [year, className]);
 
   return {
@@ -38,5 +61,6 @@ export const useStudentsData = ({ year, className, useNewVersion = false }) => {
     isLoading,
     updateStudent,
     fetchStudents,
+    setStudents, // để toggle cục bộ nếu cần
   };
 };
