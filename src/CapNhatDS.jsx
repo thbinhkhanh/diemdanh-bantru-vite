@@ -334,13 +334,81 @@ const handleAddStudent = async (customHoTen) => {
     return;
   }
 
-  const newMaDinhDanh = `${selectedClass}-${nanoid(8)}`;
+  const upperName = name.toUpperCase();
 
-  // ✅ Dữ liệu dùng cho UI và context
+  // 🔎 Kiểm tra xem học sinh đã tồn tại trong lớp chưa (so sánh theo tên)
+  const existingStudent = allStudents.find(
+    (s) => (s.hoVaTen || s.hoTen)?.toUpperCase() === upperName
+  );
+
+  // ✅ Nếu học sinh đã tồn tại → chỉ bật diemDanhBanTru, KHÔNG ghi nhật ký
+  if (existingStudent) {
+    const updatedAllStudents = allStudents.map((s) =>
+      s.id === existingStudent.id ? { ...s, diemDanhBanTru: true } : s
+    );
+
+    const sortedStudents = MySort(updatedAllStudents);
+    setAllStudents(sortedStudents);
+    setFilteredStudents(
+      sortedStudents.map((s) => ({
+        ...s,
+        hoVaTen: s.hoVaTen || s.hoTen || "Không rõ tên",
+        id: s.id || s.maDinhDanh,
+      }))
+    );
+    setClassData(selectedClass, sortedStudents);
+    setSelectedStudentId(existingStudent.id);
+
+    // 🔥 Cập nhật Firestore nhưng không ghi nhật ký
+    setSaving(true);
+    try {
+      const classRef = doc(db, `DANHSACH_${namHocValue}`, selectedClass);
+      const classSnap = await getDoc(classRef);
+
+      if (!classSnap.exists()) {
+        console.warn("⚠️ Không tìm thấy dữ liệu lớp trong Firestore.");
+        return;
+      }
+
+      const classDataRaw = classSnap.data();
+      const danhSachField = "hocSinh";
+      const currentList = Array.isArray(classDataRaw[danhSachField])
+        ? classDataRaw[danhSachField]
+        : [];
+
+      const updatedList = currentList.map((hs) =>
+        (hs.hoVaTen || hs.hoTen)?.toUpperCase() === upperName
+          ? { ...hs, diemDanhBanTru: true }
+          : hs
+      );
+
+      await updateDoc(classRef, {
+        [danhSachField]: updatedList,
+        updatedAt: getNgayVN(),
+      });
+
+      setSnackbar({
+        open: true,
+        message: "✅ Học sinh đã tồn tại, bạn không cần thêm mới!",
+        severity: "info",
+      });
+      setTimeout(() => setSnackbar((prev) => ({ ...prev, open: false })), 3000);
+    } catch (err) {
+      console.error("❌ Lỗi khi cập nhật học sinh:", err);
+      showSnackbar("❌ Cập nhật học sinh thất bại khi ghi Firestore!", "error");
+    } finally {
+      setSaving(false);
+    }
+
+    return;
+  }
+
+  // ✅ Nếu học sinh chưa tồn tại → thêm mới và ghi nhật ký
+  const newMaDinhDanh = `${selectedClass}-${nanoid(8)}`;
   const newStudent = {
     id: newMaDinhDanh,
     maDinhDanh: newMaDinhDanh,
-    hoVaTen: name.toUpperCase(),
+    hoVaTen: upperName,
     lop: selectedClass,
     dangKyBanTru: true,
     diemDanh: true,
@@ -348,13 +416,12 @@ const handleAddStudent = async (customHoTen) => {
     stt: allStudents.length + 1,
   };
 
-  // ✅ Cập nhật state và context ngay
   const updatedAllStudents = [...allStudents, newStudent];
-  const sortedStudents = MySort(updatedAllStudents); // ⬅️ Sắp xếp danh sách
+  const sortedStudents = MySort(updatedAllStudents);
 
   setAllStudents(sortedStudents);
   setFilteredStudents(
-    sortedStudents.map(s => ({
+    sortedStudents.map((s) => ({
       ...s,
       hoVaTen: s.hoVaTen || s.hoTen || "Không rõ tên",
       id: s.id || s.maDinhDanh,
@@ -363,15 +430,13 @@ const handleAddStudent = async (customHoTen) => {
   setClassData(selectedClass, sortedStudents);
   setSelectedStudentId(newMaDinhDanh);
 
-  // ✅ Hiển thị thông báo thành công ngay
   setSnackbar({
     open: true,
     message: "✅ Thêm học sinh thành công!",
     severity: "success",
   });
-  setTimeout(() => setSnackbar(prev => ({ ...prev, open: false })), 3000);
+  setTimeout(() => setSnackbar((prev) => ({ ...prev, open: false })), 3000);
 
-  // ✅ Ghi Firestore bất đồng bộ
   setSaving(true);
   try {
     const classRef = doc(db, `DANHSACH_${namHocValue}`, selectedClass);
@@ -384,29 +449,35 @@ const handleAddStudent = async (customHoTen) => {
 
     const classDataRaw = classSnap.data();
     const danhSachField = "hocSinh";
-    const currentList = Array.isArray(classDataRaw[danhSachField]) ? classDataRaw[danhSachField] : [];
+    const currentList = Array.isArray(classDataRaw[danhSachField])
+      ? classDataRaw[danhSachField]
+      : [];
 
-    // ✅ Dữ liệu ghi lên Firestore (không có id, dùng hoTen)
+    // ❌ Bỏ `lop` và `ngayTao` khi lưu vào danh sách học sinh trong Firestore
     const firestoreStudent = {
-      ...newStudent,
+      maDinhDanh: newStudent.maDinhDanh,
       hoTen: newStudent.hoVaTen,
+      dangKyBanTru: true,
+      diemDanh: true,
+      diemDanhBanTru: true,
+      stt: newStudent.stt,
     };
-    delete firestoreStudent.id;
-    delete firestoreStudent.hoVaTen;
 
     await updateDoc(classRef, {
       [danhSachField]: [...currentList, firestoreStudent],
-      updatedAt: new Date().toISOString(),
+      updatedAt: getNgayVN(),
     });
 
-    // Ghi nhật ký
-    const logId = `${selectedClass}-${newMaDinhDanh}-${Date.now()}`;
+    // 📝 Ghi nhật ký với logId dạng 1.1-MF7QB0PS-1694623456789
+    const timestampNow = Date.now(); // 13 chữ số
+    const logId = `${newMaDinhDanh}-${timestampNow}`;
+
     await setDoc(doc(db, `NHATKYBANTRU_${namHocValue}`, logId), {
       maDinhDanh: newMaDinhDanh,
-      hoTen: name.toUpperCase(),
+      hoTen: upperName,
       lop: selectedClass,
       trangThai: "Đăng ký mới",
-      ngayDieuChỉnh: new Date().toISOString(),
+      ngayDieuChinh: getNgayVN(),
     });
   } catch (err) {
     console.error("❌ Lỗi khi thêm học sinh:", err);
@@ -426,7 +497,7 @@ const handleDeleteStudent = async () => {
     return;
   }
 
-  const confirm = window.confirm(`Bạn có chắc muốn xóa học sinh ${studentToDelete.hoVaTen || studentToDelete.hoTen || "Không rõ tên"}?`);
+  const confirm = window.confirm(`Bạn có chắc muốn xóa học sinh ${studentToDelete.hoVaTen || studentToDelete.hoTen || "Không rõ tên"}? Nếu xóa, dữ liệu bán trú của học sinh này sẽ không thống kê được.`);
   if (!confirm) return;
 
   // ✅ Cập nhật context và UI ngay lập tức
@@ -571,7 +642,7 @@ const handleDeleteStudent = async () => {
           maDinhDanh: selectedStudentId,
           hoTen: newName,
           lop: selectedClass,
-          trangThai: "Sửa tên học sinh",
+          trangThai: "Sửa tên",
           ngayDieuChinh: getNgayVN(),
         });
       }

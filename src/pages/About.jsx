@@ -228,8 +228,8 @@ export default function About() {
               </Link>
             </Typography>
             <Typography variant="body2" align="left" color="text.secondary">
-              📅 Phiên bản: 2.0.0<br />
-              🛠️ Cập nhật lần cuối: 01/08/2025
+              📅 Phiên bản: 2.0.2<br />
+              🛠️ Cập nhật lần cuối: 13/09/2025
             </Typography>
             <Typography variant="body2" align="center" color="text.secondary" sx={{ mt: 3 }}>
               © 2025 – Trường Tiểu học Bình Khánh
