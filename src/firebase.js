@@ -16,6 +16,20 @@ const firebaseConfig = {
   appId: "1:639395884521:web:ed052133d1c9ef8d1d6f78"
 };
 
+//const firebaseConfig = {
+
+  //thbinhkhanh3@gmail.com
+
+//  apiKey: "AIzaSyDABUgzEzkd02WfAFU-hUuol_ZFRVo97YI",
+//  authDomain: "diemdanh-bantru.firebaseapp.com",
+//  projectId: "diemdanh-bantru",
+//  storageBucket: "diemdanh-bantru.firebasestorage.app",
+//  messagingSenderId: "64783667725",
+//  appId: "1:64783667725:web:953a812eb9324429d67b44",
+//  measurementId: "G-QWRBNFD2T5",
+//};
+
+
 // Khởi tạo Firebase
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const db = getFirestore(app);

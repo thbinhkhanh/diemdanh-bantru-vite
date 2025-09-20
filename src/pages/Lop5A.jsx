@@ -28,7 +28,7 @@ import { useAdmin } from '../context/AdminContext';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
-import { scheduleDailyReset } from '../utils/scheduleDailyReset';
+
 
 export default function DanhSach() {
   const location = useLocation();
@@ -82,7 +82,7 @@ export default function DanhSach() {
     if (isManager) {
       fetchClassList({
         namHoc,
-        khoi: 'K1',
+        khoi: 'K5',
         getClassList,
         setClassList,
         setClassListForKhoi,
@@ -305,23 +305,6 @@ export default function DanhSach() {
   const title = isManager 
     ? 'DANH SÁCH HỌC SINH'
     : `DANH SÁCH LỚP ${lop}`;
-
-  const resetUncheckedToTrue = () => {
-    const updated = students.map(s => ({
-      ...s,
-      diemDanh: s.diemDanh === false ? true : s.diemDanh,
-      registered: (s.dangKyBanTru && s.registered === false) ? true : s.registered
-    }));
-
-    setStudents(updated);
-
-    console.log("✅ Reset checkbox lúc", new Date().toLocaleString());
-  };
-
-  useEffect(() => {
-    const timeoutId = scheduleDailyReset(resetUncheckedToTrue, 17, 1);
-    return () => clearTimeout(timeoutId);
-  }, [students]);
 
   return (
     <Box sx={{ display: 'flex', justifyContent: 'center', mt: 0, backgroundColor: '#e3f2fd' }}>
