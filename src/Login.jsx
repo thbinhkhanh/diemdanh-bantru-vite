@@ -201,35 +201,28 @@ export default function Login() {
     const isLopAccount = /^([1-5])\.\d$/.test(userKey);
 
     if (isLopAccount) {
-      try {
-        const docSnap = await getDoc(doc(db, "ACCOUNT", userKey));
-        if (!docSnap.exists()) {
-          alert("❌ Tài khoản không tồn tại.");
-          return;
-        }
+      const khoiKey = `K${userKey.split(".")[0]}`;
+      const accountsInKhoi = teacherAccounts[khoiKey] || [];
+      const matched = accountsInKhoi.find((acc) => acc.username === userKey);
 
-        const data = docSnap.data();
-        if (data.password !== password) {
-          alert("❌ Sai mật khẩu.");
-          return;
-        }
-
-        // Nếu đúng mật khẩu
-        setSession(userKey);
-        setIsManager(false);
-        localStorage.setItem("lop", userKey);
-        localStorage.setItem("isManager", "false");
-
-        const khoiKey = `K${userKey.split(".")[0]}`;
-        navigate(`/lop${khoiKey.slice(1)}`, { state: { lop: userKey } });
-        return;
-      } catch (err) {
-        console.error("⚠️ Lỗi đăng nhập lớp:", err);
-        alert("⚠️ Lỗi kết nối, vui lòng thử lại.");
+      if (!matched) {
+        alert("❌ Tài khoản không tồn tại trong khối.");
         return;
       }
-    }
 
+      if (matched.password !== password) {
+        alert("❌ Sai mật khẩu.");
+        return;
+      }
+
+      setSession(userKey);
+      setIsManager(false);
+      localStorage.setItem("lop", userKey);
+      localStorage.setItem("isManager", "false");
+
+      navigate(`/lop${khoiKey.slice(1)}`, { state: { lop: userKey } });
+      return;
+    }
 
     try {
       const docSnap = await getDoc(doc(db, "ACCOUNT", userKey));
