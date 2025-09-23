@@ -12,4 +12,5 @@ export default defineConfig({
   optimizeDeps: {
     include: ['xlsx-style'], // 👈 Thêm dòng này
   },
+  base: './', // 👈 thêm dòng này để build ra dùng relative path
 });
