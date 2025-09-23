@@ -12,7 +12,6 @@ import {
   FormControl,
 } from "@mui/material";
 import { doc, getDoc } from "firebase/firestore";
-import { getDocFromServer } from "firebase/firestore";
 import { db } from "./firebase";
 import { useNavigate, useLocation } from "react-router-dom";
 import Banner from "./pages/Banner";
@@ -75,7 +74,8 @@ export default function Login() {
 
       try {
         //const docSnap = await getDoc(doc(db, "ACCOUNT", userKey));
-        const docSnap = await getDocFromServer(doc(db, "ACCOUNT", userKey));
+        const docSnap = await getDoc(doc(db, "ACCOUNT", userKey), { source: "server" });
+
         if (docSnap.exists()) {
           setRealPassword(docSnap.data().password || null);
         } else {
@@ -111,7 +111,9 @@ export default function Login() {
 
     const fetchTeacherNameAndKhoi = async () => {
       try {
-        const docSnap = await getDoc(doc(db, "ACCOUNT", userKey));
+        //const docSnap = await getDoc(doc(db, "ACCOUNT", userKey));
+        const docSnap = await getDoc(doc(db, "ACCOUNT", userKey), { source: "server" });
+
         if (docSnap.exists()) {
           const data = docSnap.data();
           const name = data?.hoTen || "";
@@ -204,7 +206,9 @@ export default function Login() {
 
     if (isLopAccount) {
       try {
-        const docSnap = await getDoc(doc(db, "ACCOUNT", userKey));
+        //const docSnap = await getDoc(doc(db, "ACCOUNT", userKey));
+        const docSnap = await getDoc(doc(db, "ACCOUNT", userKey), { source: "server" });
+
         if (!docSnap.exists()) {
           alert("❌ Tài khoản không tồn tại.");
           return;
@@ -234,7 +238,9 @@ export default function Login() {
 
 
     try {
-      const docSnap = await getDoc(doc(db, "ACCOUNT", userKey));
+      //const docSnap = await getDoc(doc(db, "ACCOUNT", userKey));
+      const docSnap = await getDoc(doc(db, "ACCOUNT", userKey), { source: "server" });
+
       if (!docSnap.exists()) {
         alert("❌ Tài khoản không tồn tại.");
         return;
