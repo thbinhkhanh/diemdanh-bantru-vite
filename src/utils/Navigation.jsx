@@ -261,7 +261,7 @@ export default function Navigation() {
                 Tài khoản
               </Button>
               <Menu anchorEl={anchorElAccount} open={Boolean(anchorElAccount)} onClose={() => setAnchorElAccount(null)}>
-                <MenuItem
+                {/*<MenuItem
                   onClick={() => {
                     setAnchorElAccount(null);
                     const role = localStorage.getItem('loginRole');
@@ -272,6 +272,16 @@ export default function Navigation() {
                     navigate('/doimatkhau');
                   }}
                   disabled={['admin', 'yte', 'bgh', 'ketoan'].includes(localStorage.getItem('loginRole'))}
+                  sx={{ fontSize: '14px' }}
+                >
+                  Đổi mật khẩu
+                </MenuItem>*/}
+
+                <MenuItem
+                  onClick={() => {
+                    setAnchorElAccount(null);
+                    navigate('/doimatkhau');
+                  }}
                   sx={{ fontSize: '14px' }}
                 >
                   Đổi mật khẩu

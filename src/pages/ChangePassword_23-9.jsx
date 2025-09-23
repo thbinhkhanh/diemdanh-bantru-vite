@@ -75,12 +75,8 @@ export default function ChangePassword() {
     const oldPw = oldPassword.trim();
     const newPw = newPassword.trim();
     const confirmPw = confirmPassword.trim();
-    const normalizedUsername = username?.trim().toLowerCase();
 
-    console.log("🔑 Input Username:", username);
-    console.log("🔑 Normalized Username:", normalizedUsername);
-
-    if (!normalizedUsername || !oldPw || !newPw || !confirmPw) {
+    if (!username || !oldPw || !newPw || !confirmPw) {
       setMessage("⚠️ Vui lòng nhập đầy đủ thông tin.");
       return;
     }
@@ -90,67 +86,39 @@ export default function ChangePassword() {
       return;
     }
 
-    const isLopAccount = /^([1-5])\.\d$/.test(normalizedUsername);
-    const isQuanLyAccount = ["admin", "yte", "bgh", "ketoan"].includes(normalizedUsername);
-    const khoiKey = isLopAccount ? `K${normalizedUsername.split(".")[0]}` : null;
+    const isLopAccount = /^([1-5])\.\d$/.test(username);
+    const khoiKey = isLopAccount ? `K${username.split(".")[0]}` : null;
 
     try {
       let currentPassword = "";
 
       if (isLopAccount && teacherAccounts[khoiKey]) {
+        // ✅ Lấy mật khẩu từ context nếu là tài khoản lớp
         const accList = teacherAccounts[khoiKey] || [];
-        const matched = accList.find((acc) => acc.username === normalizedUsername);
+        const matched = accList.find((acc) => acc.username === username);
         currentPassword = matched?.password || "";
-        console.log("📘 Lấy mật khẩu từ context (lớp):", currentPassword);
-
-      } else if (isQuanLyAccount) {
-        const docId = normalizedUsername.toUpperCase(); // Document ID viết hoa
-        console.log("📘 Tài khoản quản lý → Firestore docId:", docId);
-
-        const docRef = doc(db, "ACCOUNT", docId);
-        const docSnap = await getDoc(docRef);
-
-        if (!docSnap.exists()) {
-          console.warn("⚠️ Document không tồn tại trong Firestore:", docId);
-          setMessage("❌ Tài khoản quản lý không tồn tại.");
-          return;
-        }
-
-        currentPassword = docSnap.data().password || "";
-        console.log("📘 Password trong Firestore:", currentPassword);
-
       } else {
-        const docRef = doc(db, "ACCOUNT", normalizedUsername);
-        console.log("📘 Fallback Firestore docId:", normalizedUsername);
-
-        const docSnap = await getDoc(docRef);
+        // 🧾 Fallback với Firestore
+        const docSnap = await getDoc(doc(db, "ACCOUNT", username));
         if (!docSnap.exists()) {
-          console.warn("⚠️ Document không tồn tại:", normalizedUsername);
           setMessage("❌ Tài khoản không tồn tại trên hệ thống.");
           return;
         }
-
         currentPassword = docSnap.data().password || "";
-        console.log("📘 Password trong Firestore:", currentPassword);
       }
 
       if (currentPassword !== oldPw) {
-        console.warn("❌ Sai mật khẩu cũ. Nhập:", oldPw, "DB:", currentPassword);
         setMessage("❌ Mật khẩu cũ không đúng.");
         return;
       }
 
-      const docId = isQuanLyAccount
-        ? normalizedUsername.toUpperCase()
-        : normalizedUsername;
+      // ✅ Cập nhật mật khẩu trên Firestore
+      const updatedDate = await updatePasswordInFirestore(username, newPw);
 
-      console.log("📝 Ghi mật khẩu mới vào Firestore docId:", docId, "newPw:", newPw);
-
-      const updatedDate = await updatePasswordInFirestore(docId, newPw);
-
+      // 🔁 Nếu là tài khoản lớp, cập nhật lại context
       if (isLopAccount && teacherAccounts[khoiKey]) {
         const updatedAccounts = (teacherAccounts[khoiKey] || []).map((acc) =>
-          acc.username === normalizedUsername
+          acc.username === username
             ? { ...acc, password: newPw }
             : acc
         );
@@ -162,7 +130,6 @@ export default function ChangePassword() {
       setNewPassword("");
       setConfirmPassword("");
       setLastUpdated(updatedDate);
-
     } catch (err) {
       console.error("🔥 Lỗi đổi mật khẩu:", err);
       setMessage("⚠️ Đã có lỗi xảy ra khi đổi mật khẩu.");
