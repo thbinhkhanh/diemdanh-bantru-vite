@@ -32,6 +32,9 @@ import { Navigation_Route } from './utils/Navigation_Route';
 import SwitchAccount from './pages/SwitchAccount';
 import AccountList from "./AccountList";
 
+import { db } from "./firebase";   // ✅ thêm import db
+import { clearIndexedDbPersistence } from "firebase/firestore";
+
 const Admin = React.lazy(() => import('./Admin'));
 
 function App() {
@@ -39,10 +42,16 @@ function App() {
   const [activeNavPath, setActiveNavPath] = useState('/home');
   const lastRefreshRef = useRef(null);
 
+  useEffect(() => {
+    clearIndexedDbPersistence(db).catch(() => {
+      // nếu persistence chưa enable thì bỏ qua
+    });
+  }, []);
+  
   // ✅ Tự động reload App lúc 5:00 sáng giờ Việt Nam mỗi ngày
   useEffect(() => {
-    const targetHour = 21;
-    const targetMinute = 5;
+    const targetHour = 5;
+    const targetMinute = 0;
 
     const checkTimeAndRefresh = () => {
       const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" }));
