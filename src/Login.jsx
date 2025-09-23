@@ -73,7 +73,8 @@ export default function Login() {
       }
 
       try {
-        const docSnap = await getDoc(doc(db, "ACCOUNT", userKey));
+        //const docSnap = await getDoc(doc(db, "ACCOUNT", userKey));
+        const docSnap = await getDocFromServer(doc(db, "ACCOUNT", userKey));
         if (docSnap.exists()) {
           setRealPassword(docSnap.data().password || null);
         } else {
