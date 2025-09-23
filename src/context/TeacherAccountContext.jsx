@@ -5,7 +5,7 @@ const TeacherAccountContext = createContext();
 export const TeacherAccountProvider = ({ children }) => {
   const [teacherAccounts, setTeacherAccounts] = useState({});
 
-  useEffect(() => {
+  {/*useEffect(() => {
     try {
       const saved = localStorage.getItem("teacherAccountsCache");
       if (saved) {
@@ -21,7 +21,7 @@ export const TeacherAccountProvider = ({ children }) => {
         });
       }
     } catch {}
-  }, []);
+  }, []);*/}
 
   const getAccountsByKhoi = (khoi) => teacherAccounts[khoi] || [];
 
