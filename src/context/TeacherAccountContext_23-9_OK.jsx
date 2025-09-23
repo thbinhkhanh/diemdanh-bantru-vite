@@ -1,12 +1,10 @@
-import { createContext, useContext, useState /*, useEffect */ } from "react";
+import { createContext, useContext, useState, useEffect } from "react";
 
 const TeacherAccountContext = createContext();
 
 export const TeacherAccountProvider = ({ children }) => {
   const [teacherAccounts, setTeacherAccounts] = useState({});
 
-  // ❌ Bỏ dùng localStorage cache (chỉ giữ lại để tham khảo)
-  /*
   useEffect(() => {
     try {
       const saved = localStorage.getItem("teacherAccountsCache");
@@ -24,7 +22,6 @@ export const TeacherAccountProvider = ({ children }) => {
       }
     } catch {}
   }, []);
-  */
 
   const getAccountsByKhoi = (khoi) => teacherAccounts[khoi] || [];
 
@@ -36,7 +33,7 @@ export const TeacherAccountProvider = ({ children }) => {
       return {
         username,
         hoTen: isString ? "" : item.hoTen || "",
-        password: isString ? "" : item.password || "", // ⚡ không để mặc định "1" nữa
+        password: isString ? "1" : item.password || "1",
         khoi: `K${khoiSo}`,
       };
     });
@@ -44,13 +41,10 @@ export const TeacherAccountProvider = ({ children }) => {
     const updated = { ...teacherAccounts, [khoi]: formatted };
     setTeacherAccounts(updated);
 
-    // ❌ Bỏ lưu cache xuống localStorage (chỉ giữ lại để tham khảo)
-    /*
     try {
       localStorage.setItem("teacherAccountsCache", JSON.stringify(updated));
       localStorage.setItem("teacherAccountsCacheTime", Date.now());
     } catch {}
-    */
   };
 
   return (
