@@ -183,23 +183,12 @@ export default function ThongKeThang({ onBack }) {
           setFetchedClasses(prev => ({ ...prev, [selectedClass]: true }));
         }
 
-        // 📦 Lấy dữ liệu bán trú chỉ trong tháng được chọn
+        // 📦 Lấy dữ liệu bán trú
         const banTruSnap = await getDocs(collection(db, `BANTRU_${namHocValue}`));
-
-        const selectedMonth = selectedDate.getMonth() + 1;
-        const selectedYear = selectedDate.getFullYear();
-
-        const banTruData = banTruSnap.docs
-          .filter(doc => {
-            // Mỗi doc.id dạng yyyy-MM-dd
-            const [y, m] = doc.id.split("-").map(Number);
-            return y === selectedYear && m === selectedMonth;
-          })
-          .map(doc => ({
-            id: doc.id,
-            danhSachAn: doc.data().danhSachAn || []
-          }));
-
+        const banTruData = banTruSnap.docs.map(doc => ({
+          id: doc.id,
+          danhSachAn: doc.data().danhSachAn || []
+        }));
 
         // 📊 Xử lý và render
         processStudentData(rawData, banTruData, selectedClass, selectedDate);
