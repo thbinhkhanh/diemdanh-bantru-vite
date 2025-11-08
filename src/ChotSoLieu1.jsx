@@ -202,11 +202,6 @@ export default function ChotSoLieu({ onBack }) {
       await setDoc(attendanceRef, {
         ngay: formattedDate,
         danhSachAn: Array.from(currentSet),
-        siso: Object.fromEntries(
-          Object.values(lopMap).flatMap(group =>
-            Object.keys(group.children).map(lop => [lop, group.children[lop].siSo])
-          )
-        ),
       });
 
       //console.log("✅ Đã cập nhật:", formattedDate, "| Ghi mới:", newList.length, "| Xoá:", removed.length);

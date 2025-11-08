@@ -13,93 +13,73 @@ import { format } from "date-fns";
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 
-function groupData1(banTruDataRaw, danhSachData, sisoData) {
+function groupData(banTruDataRaw, danhSachData) {
+  // 🔄 Chuyển dữ liệu điểm danh từ object field số → mảng mã học sinh
   const banTruData = Array.isArray(banTruDataRaw)
     ? banTruDataRaw
-    : Object.values(banTruDataRaw || {});
+    : Object.values(banTruDataRaw || {}); // Đề phòng dữ liệu rỗng hoặc lỗi
+
+  // ✅ Tạo Set chứa mã học sinh đã điểm danh
   const banTruIds = new Set(banTruData.map(id => id?.trim()));
+
+  //console.log("📦 Tổng mã học sinh điểm danh hôm nay:", banTruIds.size);
+  //console.log("📌 Mã học sinh đã điểm danh:", Array.from(banTruIds));
 
   const khoiData = {};
   let truongSiSo = 0;
   let truongAn = 0;
 
-  // ✅ Nếu có sisoData, dùng sĩ số đã lưu
-  if (sisoData && typeof sisoData === "object") {
-    Object.entries(sisoData).forEach(([key, value]) => {
-      if (key === "TRƯỜNG") {
-        truongSiSo = value;
-      } else if (key.startsWith("KHỐI") && value && typeof value === "object") {
-        const khoi = key.split(" ")[1];
-        khoiData[khoi] = {
-          group: key,
-          siSo: value.siSo || 0,
-          anBanTru: 0,
-          isGroup: true,
-          children: {},
-        };
-        if (value.children) {
-          Object.entries(value.children).forEach(([lop, si]) => {
-            khoiData[khoi].children[lop] = {
-              group: lop,
-              siSo: si,
-              anBanTru: 0,
-              isGroup: false,
-            };
-          });
-        }
-      }
-    });
-  }
+  danhSachData.forEach((student, index) => {
+    const {
+      maDinhDanh,
+      lop,
+      dangKyBanTru
+    } = student;
 
-  // ✅ Nếu chưa có sisoData, tính sĩ số từ danhSachData
-  if (!sisoData) {
-    danhSachData.forEach((student) => {
-      const { maDinhDanh, lop, dangKyBanTru } = student;
-      if (!lop || !maDinhDanh) return;
-      const khoi = lop.toString().trim().split(".")[0];
-      const maID = maDinhDanh.trim();
+    //console.log(`🧪 [${index + 1}] học sinh:`, student);
 
-      khoiData[khoi] = khoiData[khoi] || {
-        group: `KHỐI ${khoi}`,
-        siSo: 0,
-        anBanTru: 0,
-        isGroup: true,
-        children: {},
-      };
+    if (!lop || !dangKyBanTru || !maDinhDanh) {
+      //console.log(`⚠️ Bỏ qua: maDinhDanh=${maDinhDanh}, lop=${lop}, dangKyBanTru=${dangKyBanTru}`);
+      return;
+    }
 
-      khoiData[khoi].children[lop] = khoiData[khoi].children[lop] || {
-        group: lop,
-        siSo: 0,
-        anBanTru: 0,
-        isGroup: false,
-      };
-
-      if (dangKyBanTru) {
-        khoiData[khoi].children[lop].siSo += 1;
-        khoiData[khoi].siSo += 1;
-        truongSiSo += 1;
-      }
-    });
-  }
-
-  // ✅ Tăng số ăn bán trú dựa trên banTruData
-  danhSachData.forEach((student) => {
-    const { maDinhDanh, lop } = student;
-    if (!lop || !maDinhDanh) return;
     const khoi = lop.toString().trim().split(".")[0];
     const maID = maDinhDanh.trim();
 
-    if (!khoiData[khoi]) return;
-    if (!khoiData[khoi].children[lop]) return;
+    khoiData[khoi] = khoiData[khoi] || {
+      group: `KHỐI ${khoi}`,
+      siSo: 0,
+      anBanTru: 0,
+      isGroup: true,
+      children: {},
+    };
 
+    khoiData[khoi].children[lop] = khoiData[khoi].children[lop] || {
+      group: lop,
+      siSo: 0,
+      anBanTru: 0,
+      isGroup: false,
+    };
+
+    // ✅ Tăng sĩ số nếu đăng ký ăn bán trú hiện tại
+    khoiData[khoi].children[lop].siSo += 1;
+    khoiData[khoi].siSo += 1;
+    truongSiSo += 1;
+
+    // ✅ Tăng số học sinh ăn nếu có mặt trong điểm danh hôm nay
     if (banTruIds.has(maID)) {
       khoiData[khoi].children[lop].anBanTru += 1;
       khoiData[khoi].anBanTru += 1;
       truongAn += 1;
+      //console.log(`✅ ${maID} đã điểm danh`);
+    } else {
+      //console.log(`🚫 ${maID} chưa điểm danh`);
     }
   });
 
-  // Tạo summaryData
+  //console.log("✅ Tổng sĩ số toàn trường:", truongSiSo);
+  //console.log("✅ Tổng học sinh đã ăn bán trú:", truongAn);
+
   const summaryData = [];
   const khoiList = Object.keys(khoiData).sort();
 
@@ -125,122 +105,10 @@ function groupData1(banTruDataRaw, danhSachData, sisoData) {
     isGroup: true,
   });
 
-  return summaryData;
-}
-
-function groupData(banTruDataRaw, danhSachData, sisoData) {
-  const banTruData = Array.isArray(banTruDataRaw)
-    ? banTruDataRaw
-    : Object.values(banTruDataRaw || {});
-  const banTruIds = new Set(banTruData.map(id => id?.trim()));
-
-  const khoiData = {};
-  let truongSiSo = 0;
-  let truongAn = 0;
-
-  // ✅ Lấy sĩ số từ sisoData flat map
-  if (sisoData && typeof sisoData === "object") {
-    Object.entries(sisoData).forEach(([lop, si]) => {
-      if (!lop || typeof si !== "number") return;
-      const khoi = lop.split(".")[0];
-
-      if (!khoiData[khoi]) {
-        khoiData[khoi] = {
-          group: `KHỐI ${khoi}`,
-          siSo: 0,
-          anBanTru: 0,
-          isGroup: true,
-          children: {},
-        };
-      }
-
-      khoiData[khoi].children[lop] = {
-        group: lop,
-        siSo: si,
-        anBanTru: 0,
-        isGroup: false,
-      };
-
-      khoiData[khoi].siSo += si;
-      truongSiSo += si;
-    });
-  } else {
-    // Nếu không có sisoData, tính sĩ số từ danhSachData
-    danhSachData.forEach(student => {
-      const { maDinhDanh, lop, dangKyBanTru } = student;
-      if (!lop || !maDinhDanh) return;
-      const khoi = lop.split(".")[0];
-
-      if (!khoiData[khoi]) {
-        khoiData[khoi] = {
-          group: `KHỐI ${khoi}`,
-          siSo: 0,
-          anBanTru: 0,
-          isGroup: true,
-          children: {},
-        };
-      }
-
-      if (!khoiData[khoi].children[lop]) {
-        khoiData[khoi].children[lop] = {
-          group: lop,
-          siSo: 0,
-          anBanTru: 0,
-          isGroup: false,
-        };
-      }
-
-      if (dangKyBanTru) {
-        khoiData[khoi].children[lop].siSo += 1;
-        khoiData[khoi].siSo += 1;
-        truongSiSo += 1;
-      }
-    });
-  }
-
-  // ✅ Tăng số ăn bán trú
-  danhSachData.forEach(student => {
-    const { maDinhDanh, lop } = student;
-    if (!lop || !maDinhDanh) return;
-    const khoi = lop.split(".")[0];
-    const maID = maDinhDanh.trim();
-
-    if (!khoiData[khoi] || !khoiData[khoi].children[lop]) return;
-
-    if (banTruIds.has(maID)) {
-      khoiData[khoi].children[lop].anBanTru += 1;
-      khoiData[khoi].anBanTru += 1;
-      truongAn += 1;
-    }
-  });
-
-  // ✅ Tạo summaryData
-  const summaryData = [];
-  Object.keys(khoiData).sort().forEach(khoi => {
-    const khoiItem = khoiData[khoi];
-    summaryData.push({
-      group: khoiItem.group,
-      siSo: khoiItem.siSo,
-      anBanTru: khoiItem.anBanTru,
-      isGroup: true,
-    });
-
-    Object.keys(khoiItem.children).sort().forEach(lop => {
-      summaryData.push(khoiItem.children[lop]);
-    });
-  });
-
-  summaryData.push({
-    group: "TRƯỜNG",
-    siSo: truongSiSo,
-    anBanTru: truongAn,
-    isGroup: true,
-  });
+  //console.log("📊 Kết quả thống kê tóm tắt:", summaryData);
 
   return summaryData;
 }
-
-
 
 function Row({ row, openGroups, setOpenGroups, summaryData }) {
   const isOpen = openGroups.includes(row.group);
@@ -327,7 +195,6 @@ export default function ThongKeTheoNgay({ onBack }) {
         ]);
 
         const banTruData = banTruDoc.exists() ? banTruDoc.data().danhSachAn : [];
-        const sisoData = banTruDoc.exists() ? banTruDoc.data().siso : null;
 
         // 📚 Duyệt qua các lớp và lấy tất cả học sinh từ các field mảng
         const danhSachData = [];
@@ -353,8 +220,7 @@ export default function ThongKeTheoNgay({ onBack }) {
 
         // 🚀 Gọi hàm thống kê với dữ liệu đã chuẩn hóa
         setDataList(banTruData);
-        //const summary = groupData(banTruData, danhSachData);
-        const summary = groupData(banTruData, danhSachData, sisoData);
+        const summary = groupData(banTruData, danhSachData);
         setSummaryData(summary);
       } catch (err) {
         console.error("❌ Lỗi khi tải dữ liệu:", err);
