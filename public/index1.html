@@ -5,24 +5,26 @@
     <link rel="icon" href="/logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#000000" />
+
     <meta name="description" content="Nền tảng điểm danh và quản lý học sinh bán trú hiệu quả, trực quan và dễ sử dụng." />
 
     <!-- Open Graph (mạng xã hội) -->
     <meta property="og:title" content="ĐIỂM DANH & QUẢN LÝ BÁN TRÚ 2026-2027" />
     <meta property="og:description" content="Nền tảng hỗ trợ điểm danh và quản lý học sinh bán trú nhanh chóng, chính xác, dễ sử dụng." />
-    <!-- Sửa lại đúng domain mà bạn đang deploy để Zalo/Facebook lấy được ảnh -->
-    <meta property="og:image" content="https://diemdanh-bantru-vite-nu.vercel.app/thumbnail.png" />
-    <meta property="og:url" content="https://diemdanh-bantru-vite-nu.vercel.app/" />
+    <meta property="og:image" content="https://binhkhanh-bantru.vercel.app/thumbnail.png" />
+    <meta property="og:url" content="https://binhkhanh-bantru.vercel.app/" />
     <meta property="og:type" content="website" />
 
     <link rel="apple-touch-icon" href="/logo192.png" />
     <link rel="manifest" href="/manifest.json" />
     <title>Điểm Danh & Quản Lý Bán Trú Học Sinh</title>
+
+    <!-- Redirect người dùng thật về trang chính -->
+    <script>
+      window.location.replace("/");
+    </script>
   </head>
   <body>
-    <!-- Vị trí bắt buộc để React render ứng dụng -->
-    <div id="root"></div>
-    <!-- Script bắt buộc của Vite để chạy code React -->
-    <script type="module" src="/src/main.jsx"></script>
+    <!-- Không cần nội dung gì ở đây -->
   </body>
 </html>
